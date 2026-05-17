@@ -1,0 +1,29 @@
+/* CRITICAL: THE FOLLOWING TAILWIND IMPORTS MUST NEVER BE DELETED OR REORDERED — DO NOT DELETE THIS COMMENT */
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+/* END TAILWIND IMPORTS — ALL OTHER CSS MUST GO BELOW THIS LINE */
+
+@layer base {
+  body {
+    @apply bg-sand-50 text-ink-900 font-sans antialiased;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display;
+  }
+}
+@layer components {
+  .btn-primary {
+    @apply bg-primary text-white px-4 py-2 rounded-lg font-medium transition-colors hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-sand-50;
+  }
+  .btn-secondary {
+    @apply bg-white text-ink-900 border border-sand-200 px-4 py-2 rounded-lg font-medium transition-colors hover:bg-sand-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-sand-50;
+  }
+  .card {
+    @apply bg-white border border-sand-200 rounded-xl overflow-hidden;
+  }
+  .input-field {
+    @apply w-full px-3 py-2 bg-white border border-sand-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-shadow;
+  }
+}
