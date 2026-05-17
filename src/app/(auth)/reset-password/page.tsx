@@ -3,11 +3,12 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import Link from 'next/link';
-import { supabaseBrowser } from '@/lib/supabase-browser';
+import { getSupabaseBrowserClient } from '@/lib/supabase-browser';
 
 export default function ResetPasswordPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isReady, setIsReady] = useState(false);
+  const [hasSupabaseConfig, setHasSupabaseConfig] = useState(true);
   const [passwordData, setPasswordData] = useState({
     newPassword: '',
     confirmPassword: '',
@@ -15,10 +16,22 @@ export default function ResetPasswordPage() {
 
   useEffect(() => {
     let isMounted = true;
+    const supabaseClient = getSupabaseBrowserClient();
+
+    if (!supabaseClient) {
+      if (isMounted) {
+        setHasSupabaseConfig(false);
+        setIsReady(false);
+      }
+      return () => {
+        isMounted = false;
+      };
+    }
+
+    const client = supabaseClient;
 
     async function initializeAuth() {
-      await supabaseBrowser.auth.initialize();
-      const { data } = await supabaseBrowser.auth.getSession();
+      const { data } = await client.auth.getSession();
 
       if (isMounted) {
         setIsReady(Boolean(data.session));
@@ -36,13 +49,21 @@ export default function ResetPasswordPage() {
     event.preventDefault();
     setIsSubmitting(true);
 
+    const supabase = getSupabaseBrowserClient();
+
+    if (!supabase) {
+      toast.error('Reset password is unavailable until Supabase public env vars are configured.');
+      setIsSubmitting(false);
+      return;
+    }
+
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       toast.error('Passwords do not match');
       setIsSubmitting(false);
       return;
     }
 
-    const { data: sessionData } = await supabaseBrowser.auth.getSession();
+    const { data: sessionData } = await supabase.auth.getSession();
     const accessToken = sessionData.session?.access_token;
 
     if (!accessToken) {
@@ -51,7 +72,7 @@ export default function ResetPasswordPage() {
       return;
     }
 
-    const { error } = await supabaseBrowser.auth.updateUser({ password: passwordData.newPassword });
+    const { error } = await supabase.auth.updateUser({ password: passwordData.newPassword });
 
     if (error) {
       setIsSubmitting(false);
@@ -84,7 +105,11 @@ export default function ResetPasswordPage() {
     <div className="min-h-screen flex items-center justify-center bg-sand-100">
       <div className="card p-8 w-full max-w-md">
         <h1 className="text-2xl font-bold text-center mb-6">Reset Password</h1>
-        {!isReady ? (
+        {!hasSupabaseConfig ? (
+          <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900 mb-4">
+            Missing Supabase public configuration. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to use password reset.
+          </div>
+        ) : !isReady ? (
           <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 mb-4">
             Open the password reset link from your email first. This page needs the Supabase recovery session from that link.
           </div>
