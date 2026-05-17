@@ -1,6 +1,14 @@
-﻿import React from "react";
-import Layout from "@/components/Layout";
+﻿import React from 'react';
+import { redirect } from 'next/navigation';
+import Layout from '@/components/Layout';
+import { getServerSession } from '@/lib/auth-server';
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const session = await getServerSession();
+
+  if (!session) {
+    redirect('/login');
+  }
+
   return <Layout>{children}</Layout>;
 }

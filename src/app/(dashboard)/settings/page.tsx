@@ -1,7 +1,6 @@
 'use client';
 
-import { FormEvent, useState, useEffect } from 'react';
-import ProtectedPage from '@/components/ProtectedPage';
+import { FormEvent, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { useApi } from '@/hooks/useApi';
 import { User } from '@/types';
@@ -83,15 +82,13 @@ export default function SettingsPage() {
     });
 
     setIsSaving(false);
-    toast[response.ok ? 'success' : 'error'](
-      response.ok ? 'Profile updated' : 'Unable to update profile'
-    );
+    toast[response.ok ? 'success' : 'error'](response.ok ? 'Profile updated' : 'Unable to update profile');
     if (response.ok) mutate();
   }
 
   async function handlePasswordUpdate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    
+
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       toast.error('Passwords do not match');
       return;
@@ -108,9 +105,7 @@ export default function SettingsPage() {
     });
 
     setIsSaving(false);
-    toast[response.ok ? 'success' : 'error'](
-      response.ok ? 'Password updated' : 'Unable to update password'
-    );
+    toast[response.ok ? 'success' : 'error'](response.ok ? 'Password updated' : 'Unable to update password');
     if (response.ok) {
       setPasswordData({
         currentPassword: '',
@@ -176,181 +171,165 @@ export default function SettingsPage() {
     });
 
     setIsContentSaving(false);
-    toast[response.ok ? 'success' : 'error'](
-      response.ok ? 'About content updated' : 'Unable to update about content'
-    );
+    toast[response.ok ? 'success' : 'error'](response.ok ? 'About content updated' : 'Unable to update about content');
   }
 
   return (
-    <ProtectedPage>
-      <div className="max-w-4xl space-y-8 animate-in fade-in duration-500">
-        <div className="card p-6">
-          <h2 className="text-xl font-semibold mb-4">Update Profile</h2>
-          <form onSubmit={handleProfileUpdate} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">Full Name</label>
-              <input
-                type="text"
-                value={formData.fullName}
-                onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                className="input-field w-full"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Email</label>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="input-field w-full"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Phone Number</label>
-              <input
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className="input-field w-full"
-              />
-            </div>
-            <button type="submit" disabled={isSaving} className="btn-primary disabled:opacity-50">
-              {isSaving ? 'Saving...' : 'Save Profile'}
-            </button>
-          </form>
-        </div>
-
-        <div className="card p-6">
-          <h2 className="text-xl font-semibold mb-4">Update Password</h2>
-          <form onSubmit={handlePasswordUpdate} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">Current Password</label>
-              <input
-                type="password"
-                value={passwordData.currentPassword}
-                onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
-                className="input-field w-full"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">New Password</label>
-              <input
-                type="password"
-                value={passwordData.newPassword}
-                onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-                className="input-field w-full"
-                minLength={8}
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Confirm New Password</label>
-              <input
-                type="password"
-                value={passwordData.confirmPassword}
-                onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-                className="input-field w-full"
-                minLength={8}
-                required
-              />
-            </div>
-            <button type="submit" disabled={isSaving} className="btn-primary disabled:opacity-50">
-              {isSaving ? 'Saving...' : 'Update Password'}
-            </button>
-          </form>
-        </div>
-
-        <div className="card p-6">
-          <h2 className="text-xl font-semibold mb-4">Profile Picture</h2>
-          <div className="flex items-center gap-4">
-            <div className="w-20 h-20 rounded-full bg-sand-200 flex items-center justify-center overflow-hidden">
-              {user?.name?.charAt(0) || 'U'}
-            </div>
-            <label className="btn-secondary cursor-pointer">
-              Change Picture
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleImageUpload}
-                className="hidden"
-              />
-            </label>
+    <div className="max-w-4xl space-y-8 animate-in fade-in duration-500">
+      <div className="card p-6">
+        <h2 className="text-xl font-semibold mb-4">Update Profile</h2>
+        <form onSubmit={handleProfileUpdate} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Full Name</label>
+            <input
+              type="text"
+              value={formData.fullName}
+              onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+              className="input-field w-full"
+              required
+            />
           </div>
-        </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Email</label>
+            <input
+              type="email"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              className="input-field w-full"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Phone Number</label>
+            <input
+              type="tel"
+              value={formData.phone}
+              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              className="input-field w-full"
+            />
+          </div>
+          <button type="submit" disabled={isSaving} className="btn-primary disabled:opacity-50">
+            {isSaving ? 'Saving...' : 'Save Profile'}
+          </button>
+        </form>
+      </div>
 
-        <div className="card p-6">
-          <h2 className="text-xl font-semibold mb-4">About Page Content</h2>
-          <form onSubmit={handleAboutSave} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">Title</label>
-              <input
-                type="text"
-                value={aboutData.title}
-                onChange={(e) => setAboutData({ ...aboutData, title: e.target.value })}
-                className="input-field w-full"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Subtitle</label>
-              <input
-                type="text"
-                value={aboutData.subtitle}
-                onChange={(e) => setAboutData({ ...aboutData, subtitle: e.target.value })}
-                className="input-field w-full"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Body</label>
-              <textarea
-                value={aboutData.body}
-                onChange={(e) => setAboutData({ ...aboutData, body: e.target.value })}
-                className="input-field w-full min-h-40"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Highlights</label>
-              <textarea
-                value={aboutData.highlightsText}
-                onChange={(e) => setAboutData({ ...aboutData, highlightsText: e.target.value })}
-                className="input-field w-full min-h-32"
-                placeholder="One highlight per line"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Metrics</label>
-              <textarea
-                value={aboutData.metricsText}
-                onChange={(e) => setAboutData({ ...aboutData, metricsText: e.target.value })}
-                className="input-field w-full min-h-32"
-                placeholder="Label|Value per line"
-              />
-            </div>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <label className="btn-secondary cursor-pointer inline-flex w-fit">
-                Upload About Image
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="hidden"
-                />
-              </label>
-              {aboutData.imagePath ? (
-                <span className="text-sm text-ink-600 break-all">{aboutData.imagePath}</span>
-              ) : null}
-            </div>
-            <button type="submit" disabled={isContentSaving} className="btn-primary disabled:opacity-50">
-              {isContentSaving ? 'Saving...' : 'Save About Content'}
-            </button>
-          </form>
+      <div className="card p-6">
+        <h2 className="text-xl font-semibold mb-4">Update Password</h2>
+        <form onSubmit={handlePasswordUpdate} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Current Password</label>
+            <input
+              type="password"
+              value={passwordData.currentPassword}
+              onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
+              className="input-field w-full"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">New Password</label>
+            <input
+              type="password"
+              value={passwordData.newPassword}
+              onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+              className="input-field w-full"
+              minLength={8}
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Confirm New Password</label>
+            <input
+              type="password"
+              value={passwordData.confirmPassword}
+              onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+              className="input-field w-full"
+              minLength={8}
+              required
+            />
+          </div>
+          <button type="submit" disabled={isSaving} className="btn-primary disabled:opacity-50">
+            {isSaving ? 'Updating...' : 'Update Password'}
+          </button>
+        </form>
+      </div>
+
+      <div className="card p-6">
+        <h2 className="text-xl font-semibold mb-4">Profile Picture</h2>
+        <div className="flex items-center gap-4">
+          <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-sand-200">
+            {user?.name?.charAt(0) || 'U'}
+          </div>
+          <label className="btn-secondary cursor-pointer">
+            Change Picture
+            <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+          </label>
         </div>
       </div>
-    </ProtectedPage>
+
+      <div className="card p-6">
+        <h2 className="text-xl font-semibold mb-4">About Page Content</h2>
+        <form onSubmit={handleAboutSave} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Title</label>
+            <input
+              type="text"
+              value={aboutData.title}
+              onChange={(e) => setAboutData({ ...aboutData, title: e.target.value })}
+              className="input-field w-full"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Subtitle</label>
+            <input
+              type="text"
+              value={aboutData.subtitle}
+              onChange={(e) => setAboutData({ ...aboutData, subtitle: e.target.value })}
+              className="input-field w-full"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Body</label>
+            <textarea
+              value={aboutData.body}
+              onChange={(e) => setAboutData({ ...aboutData, body: e.target.value })}
+              className="input-field w-full min-h-40"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Highlights</label>
+            <textarea
+              value={aboutData.highlightsText}
+              onChange={(e) => setAboutData({ ...aboutData, highlightsText: e.target.value })}
+              className="input-field w-full min-h-32"
+              placeholder="One highlight per line"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Metrics</label>
+            <textarea
+              value={aboutData.metricsText}
+              onChange={(e) => setAboutData({ ...aboutData, metricsText: e.target.value })}
+              className="input-field w-full min-h-32"
+              placeholder="Label|Value per line"
+            />
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <label className="btn-secondary inline-flex w-fit cursor-pointer">
+              Upload About Image
+              <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+            </label>
+            {aboutData.imagePath ? <span className="break-all text-sm text-ink-600">{aboutData.imagePath}</span> : null}
+          </div>
+          <button type="submit" disabled={isContentSaving} className="btn-primary disabled:opacity-50">
+            {isContentSaving ? 'Saving...' : 'Save About Content'}
+          </button>
+        </form>
+      </div>
+    </div>
   );
 }
