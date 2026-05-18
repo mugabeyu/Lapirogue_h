@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { z } from 'zod';
-import { verifyToken } from '@/services/auth';
+import { getRouteHandlerSupabaseClient } from '@/lib/supabase-server';
 
 type MessageRow = {
   id: string;
@@ -23,14 +23,15 @@ const messageSchema = z.object({
   attachmentUrl: z.string().optional().nullable(),
 });
 
-function requireAuth(request: NextRequest) {
-  const token = request.cookies.get('auth-token')?.value;
-  if (!token) return null;
-  return verifyToken(token);
+async function requireAuth(request: NextRequest) {
+  const res = NextResponse.next();
+  const authClient = getRouteHandlerSupabaseClient(request, res);
+  const { data: { user } } = await authClient.auth.getUser();
+  return user ?? null;
 }
 
 export async function GET(request: NextRequest) {
-  const decoded = requireAuth(request);
+  const decoded = await requireAuth(request);
   if (!decoded) {
     return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 });
   }
@@ -69,7 +70,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const decoded = requireAuth(request);
+  const decoded = await requireAuth(request);
   if (!decoded) {
     return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 });
   }
@@ -100,7 +101,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  const decoded = requireAuth(request);
+  const decoded = await requireAuth(request);
   if (!decoded) {
     return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 });
   }

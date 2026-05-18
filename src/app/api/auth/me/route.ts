@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { z } from 'zod';
-import { verifyToken } from '@/services/auth';
+import { getRouteHandlerSupabaseClient } from '@/lib/supabase-server';
 
 const profileSchema = z.object({
   fullName: z.string().min(1),
@@ -10,20 +10,17 @@ const profileSchema = z.object({
 });
 
 export async function GET(request: NextRequest) {
-  const token = request.cookies.get('auth-token')?.value;
-  if (!token) {
+  const res = NextResponse.next();
+  const authClient = getRouteHandlerSupabaseClient(request, res);
+  const { data: { user }, error: userError } = await authClient.auth.getUser();
+  if (!user || userError) {
     return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 });
   }
 
-  const decoded = verifyToken(token);
-  if (!decoded) {
-    return NextResponse.json({ success: false, error: 'Invalid token' }, { status: 401 });
-  }
-
-  const { data: user, error } = await getSupabaseAdmin()
+  const { data: userRow, error } = await getSupabaseAdmin()
     .from('users')
     .select('id, email, full_name, role, phone, is_active, created_at, updated_at')
-    .eq('id', decoded.userId)
+    .eq('id', user.id)
     .single();
 
   if (error || !user) {
@@ -33,27 +30,24 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     success: true,
     data: {
-      id: user.id,
-      email: user.email,
-      name: user.full_name,
-      role: user.role,
-      phone: user.phone,
-      isActive: user.is_active,
-      createdAt: user.created_at,
-      updatedAt: user.updated_at,
+      id: userRow.id,
+      email: userRow.email,
+      name: userRow.full_name,
+      role: userRow.role,
+      phone: userRow.phone,
+      isActive: userRow.is_active,
+      createdAt: userRow.created_at,
+      updatedAt: userRow.updated_at,
     },
   });
 }
 
 export async function PUT(request: NextRequest) {
-  const token = request.cookies.get('auth-token')?.value;
-  if (!token) {
+  const res = NextResponse.next();
+  const authClient = getRouteHandlerSupabaseClient(request, res);
+  const { data: { user }, error: userError } = await authClient.auth.getUser();
+  if (!user || userError) {
     return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 });
-  }
-
-  const decoded = verifyToken(token);
-  if (!decoded) {
-    return NextResponse.json({ success: false, error: 'Invalid token' }, { status: 401 });
   }
 
   try {
@@ -67,7 +61,7 @@ export async function PUT(request: NextRequest) {
         email: validatedData.email,
         phone: validatedData.phone,
       })
-      .eq('id', decoded.userId)
+      .eq('id', user.id)
       .select('id, email, full_name, role, phone, is_active, created_at, updated_at')
       .single();
 

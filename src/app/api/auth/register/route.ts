@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { hashPassword, generateToken } from '@/services/auth';
+import { hashPassword } from '@/services/auth';
+import { getRouteHandlerSupabaseClient } from '@/lib/supabase-server';
 import { z } from 'zod';
 
 const registerSchema = z.object({
@@ -16,6 +17,25 @@ export async function POST(request: NextRequest) {
     const validatedData = registerSchema.parse(body);
     const supabase = getSupabaseAdmin();
 
+    // Create the user in Supabase Auth (so Supabase issues the session/token)
+    const res = NextResponse.next();
+    const authClient = getRouteHandlerSupabaseClient(request, res);
+
+    const { data: signUpData, error: signUpError } = await authClient.auth.signUp({
+      email: validatedData.email,
+      password: validatedData.password,
+    }, {
+      data: { full_name: validatedData.name, role: validatedData.role || 'STAFF' },
+    });
+
+    if (signUpError) {
+      return NextResponse.json(
+        { success: false, error: signUpError.message },
+        { status: 500 }
+      );
+    }
+
+    // Keep a mirrored record in the application `users` table for legacy flows
     const { data: existingUser } = await supabase
       .from('users')
       .select('id')
@@ -49,16 +69,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const token = generateToken({
-      id: user.id,
-      email: user.email,
-      name: user.full_name,
-      role: user.role,
-      isActive: user.is_active,
-      createdAt: user.created_at,
-      updatedAt: user.updated_at,
-    });
-
     return NextResponse.json({
       success: true,
       data: {
@@ -68,7 +78,6 @@ export async function POST(request: NextRequest) {
           name: user.full_name,
           role: user.role,
         },
-        token,
       },
     });
   } catch (error) {

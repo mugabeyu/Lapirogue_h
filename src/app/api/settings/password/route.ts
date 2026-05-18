@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { z } from 'zod';
-import { verifyToken, comparePassword, hashPassword } from '@/services/auth';
+import { comparePassword, hashPassword } from '@/services/auth';
+import { getRouteHandlerSupabaseClient } from '@/lib/supabase-server';
 
 const passwordSchema = z.object({
   currentPassword: z.string().min(1),
@@ -9,14 +10,11 @@ const passwordSchema = z.object({
 });
 
 export async function PUT(request: NextRequest) {
-  const token = request.cookies.get('auth-token')?.value;
-  if (!token) {
+  const res = NextResponse.next();
+  const authClient = getRouteHandlerSupabaseClient(request, res);
+  const { data: { user }, error: userError } = await authClient.auth.getUser();
+  if (!user || userError) {
     return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 });
-  }
-
-  const decoded = verifyToken(token);
-  if (!decoded) {
-    return NextResponse.json({ success: false, error: 'Invalid token' }, { status: 401 });
   }
 
   try {
@@ -24,10 +22,10 @@ export async function PUT(request: NextRequest) {
     const validatedData = passwordSchema.parse(body);
 
     // Get current user with password hash
-    const { data: user, error: fetchError } = await getSupabaseAdmin()
+    const { data: userRow, error: fetchError } = await getSupabaseAdmin()
       .from('users')
       .select('id, password_hash')
-      .eq('id', decoded.userId)
+      .eq('id', user.id)
       .single();
 
     if (fetchError || !user) {
@@ -35,7 +33,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Verify current password
-    const isValid = await comparePassword(validatedData.currentPassword, user.password_hash);
+    const isValid = await comparePassword(validatedData.currentPassword, userRow.password_hash);
     if (!isValid) {
       return NextResponse.json({ success: false, error: 'Current password is incorrect' }, { status: 401 });
     }
@@ -47,7 +45,7 @@ export async function PUT(request: NextRequest) {
     const { error } = await getSupabaseAdmin()
       .from('users')
       .update({ password_hash: newPasswordHash })
-      .eq('id', decoded.userId);
+      .eq('id', user.id);
 
     if (error) throw error;
 

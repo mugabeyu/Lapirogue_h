@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { z } from 'zod';
-import { verifyToken } from '@/services/auth';
+import { getRouteHandlerSupabaseClient } from '@/lib/supabase-server';
 
 const contentSchema = z.object({
   title: z.string().min(1),
@@ -12,16 +12,15 @@ const contentSchema = z.object({
   imagePath: z.string().optional().nullable(),
 });
 
-function requireAuth(request: NextRequest) {
-  const token = request.cookies.get('auth-token')?.value;
-  if (!token) return null;
-
-  const decoded = verifyToken(token);
-  return decoded;
+async function requireAuth(request: NextRequest) {
+  const res = NextResponse.next();
+  const authClient = getRouteHandlerSupabaseClient(request, res);
+  const { data: { user } } = await authClient.auth.getUser();
+  return user ?? null;
 }
 
 export async function GET(request: NextRequest) {
-  const decoded = requireAuth(request);
+  const decoded = await requireAuth(request);
   if (!decoded) {
     return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 });
   }
@@ -58,7 +57,7 @@ export async function PUT(request: NextRequest) {
         highlights: body.highlights,
         metrics: body.metrics,
         image_path: body.imagePath ?? null,
-        updated_by: decoded.userId,
+          updated_by: decoded.id,
         is_active: true,
       }, { onConflict: 'slug' })
       .select('*')
