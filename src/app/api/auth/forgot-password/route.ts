@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { error: resetError } = await getSupabaseAdmin().auth.resetPasswordForEmail(validatedData.email, {
-      redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/reset-password`,
+      redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'https://lapirogue-website.vercel.app'}/reset-password`,
     });
 
     if (resetError) throw resetError;

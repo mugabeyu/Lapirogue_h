@@ -416,6 +416,19 @@ create index if not exists hotel_services_category_id_idx on hotel_services (cat
 create index if not exists hotel_services_sort_order_idx on hotel_services (sort_order);
 create index if not exists emergency_contacts_display_order_idx on emergency_contacts (display_order);
 
+-- Additional FK indexes for common join/lookups
+create index if not exists reservations_guest_id_idx on reservations (guest_id);
+create index if not exists reservations_room_id_idx on reservations (room_id);
+create index if not exists payments_reservation_id_idx on payments (reservation_id);
+create index if not exists payments_guest_id_idx on payments (guest_id);
+create index if not exists activity_bookings_activity_id_idx on activity_bookings (activity_id);
+create index if not exists activity_bookings_guest_id_idx on activity_bookings (guest_id);
+create index if not exists guest_orders_guest_id_idx on guest_orders (guest_id);
+create index if not exists guest_orders_room_id_idx on guest_orders (room_id);
+create index if not exists guest_order_items_order_id_idx on guest_order_items (order_id);
+create index if not exists sessions_user_id_idx on sessions (user_id);
+create index if not exists sessions_expires_at_idx on sessions (expires_at);
+
 -- =====================
 -- Attach update triggers
 -- =====================
