@@ -12,7 +12,7 @@ Backend APIs
 Supabase Database
 ```
 
-The browser must never connect to Supabase directly. Keep `SUPABASE_SERVICE_ROLE_KEY` on the server only and put all database reads/writes inside `src/app/api`.
+Backend API routes should be used for privileged operations. Do not expose secret keys in client code; rely on Supabase Auth and RLS policies for authorization. Put sensitive server-only secrets in your hosting provider (e.g., Vercel) environment variables.
 
 ## Setup
 
@@ -24,7 +24,7 @@ npm install
 
 2. Create a `.env` file at the project root and add your production values.
 
-3. Add your Supabase URL, service role key, public anon key, JWT secret, and app URL in `.env`.
+3. Add your Supabase URL, public anon key, JWT secret, and app URL in `.env` (do not put secret service keys in client-side `.env` files).
 
 4. In Supabase Auth settings, configure the email templates for invite and recovery flows. The invite template can show the generated password from `{{ .Data.temp_password }}`.
 

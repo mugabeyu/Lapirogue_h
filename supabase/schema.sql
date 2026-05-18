@@ -1,9 +1,24 @@
--- Standardized and organized schema for the application
--- Preserves existing table names and relationships used by application code
+-- Standardized schema for the application
+--
+-- Architecture guide:
+-- 1. auth.users: Supabase-managed security identities for login and password handling.
+-- 2. public.users: hotel operations profile table used by this app for roles, status, and staff metadata.
+-- 3. Private operational tables: reservations, payments, guests, staff, logs, and related hotel workflows.
+--
+-- This file keeps your current table names and relationships so the app continues to work.
 
 create extension if not exists pgcrypto;
 
--- ENUMS (seed-ready; keep uppercase values to match app types)
+-- =====================
+-- SECURITY / AUTH SETUP
+-- =====================
+-- Supabase auth.users is managed by the platform and is not created here.
+-- The app-specific users table below stores hotel staff/admin profile details.
+
+-- =====================
+-- ENUMS
+-- =====================
+-- Seed-ready; keep uppercase values to match app types.
 do $$ begin
   create type user_role as enum ('ADMIN', 'MANAGER', 'RECEPTION', 'RESTAURANT', 'TOUR_MANAGER', 'STAFF');
 exception when duplicate_object then null; end $$;
@@ -40,12 +55,18 @@ do $$ begin
   create type order_status as enum ('PENDING', 'PREPARING', 'SERVED', 'CANCELLED');
 exception when duplicate_object then null; end $$;
 
--- Sequences used for human-friendly identifiers
+-- =====================
+-- SEQUENCES
+-- =====================
+-- Human-friendly identifiers for hotel operations.
 create sequence if not exists guest_seq start 1042;
 create sequence if not exists reservation_seq start 20261042;
 create sequence if not exists payment_seq start 1001;
 create sequence if not exists food_order_seq start 1001;
 
+-- =====================
+-- FUNCTIONS
+-- =====================
 -- Utility function: auto-update updated_at
 create or replace function set_updated_at()
 returns trigger as $$
@@ -91,10 +112,11 @@ end;
 $$ language plpgsql;
 
 -- =====================
--- Tables referenced by the application
+-- HOTEL OPERATIONS / APP TABLES
 -- =====================
 
--- users (staff/admin accounts)
+-- users (hotel operations staff/admin accounts)
+-- This is the application profile table that pairs with Supabase auth.users.
 create table if not exists users (
   id uuid primary key default gen_random_uuid(),
   email text not null unique,
@@ -107,6 +129,23 @@ create table if not exists users (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+-- =====================
+-- PROFILES (link auth.uid -> app role)
+-- =====================
+create table if not exists profiles (
+  auth_id uuid primary key,
+  full_name text,
+  email text,
+  role user_role not null default 'STAFF',
+  is_main boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+drop trigger if exists profiles_set_updated_at on profiles;
+create trigger profiles_set_updated_at before update on profiles for each row execute function set_updated_at();
+
 
 -- sessions (server session tokens)
 create table if not exists sessions (
@@ -401,7 +440,7 @@ create table if not exists audit_logs (
 );
 
 -- =====================
--- Indexes
+-- INDEXES
 -- =====================
 create index if not exists guests_name_idx on guests (first_name, last_name);
 create index if not exists rooms_status_idx on rooms (status);
@@ -430,7 +469,7 @@ create index if not exists sessions_user_id_idx on sessions (user_id);
 create index if not exists sessions_expires_at_idx on sessions (expires_at);
 
 -- =====================
--- Attach update triggers
+-- TRIGGERS
 -- =====================
 drop trigger if exists users_set_updated_at on users;
 create trigger users_set_updated_at before update on users for each row execute function set_updated_at();
@@ -474,9 +513,10 @@ drop trigger if exists guest_order_items_set_updated_at on guest_order_items;
 create trigger guest_order_items_set_updated_at before update on guest_order_items for each row execute function set_updated_at();
 
 -- =====================
--- Row Level Security
+-- ROW LEVEL SECURITY
 -- =====================
 alter table users enable row level security;
+alter table profiles enable row level security;
 alter table sessions enable row level security;
 alter table guests enable row level security;
 alter table rooms enable row level security;
@@ -499,13 +539,80 @@ alter table itinerary_events enable row level security;
 alter table guest_orders enable row level security;
 alter table guest_order_items enable row level security;
 
+-- =====================
+-- RLS POLICIES (role based access)
+-- =====================
+
+-- Helper policies are expressed inline per table.
+
+-- Profiles: users can read their own profile; main admins can manage all.
+create policy if not exists "profiles_select" on profiles for select using (
+  auth.uid() = auth_id
+  or exists (select 1 from profiles p where p.auth_id = auth.uid() and p.role = 'ADMIN' and p.is_main = true)
+);
+
+create policy if not exists "profiles_insert" on profiles for insert with check (
+  auth.uid() = auth_id
+  or exists (select 1 from profiles p where p.auth_id = auth.uid() and p.role = 'ADMIN' and p.is_main = true)
+);
+
+create policy if not exists "profiles_update" on profiles for update using (
+  auth.uid() = auth_id
+  or exists (select 1 from profiles p where p.auth_id = auth.uid() and p.role = 'ADMIN')
+) with check (
+  auth.uid() = auth_id
+  or exists (select 1 from profiles p where p.auth_id = auth.uid() and p.role = 'ADMIN')
+);
+
+create policy if not exists "profiles_delete" on profiles for delete using (
+  exists (select 1 from profiles p where p.auth_id = auth.uid() and p.role = 'ADMIN' and p.is_main = true)
+);
+
+-- Generic admin check: exists a profile for current user with role ADMIN
+-- Rooms: select by authenticated users; create/update by any ADMIN; delete only by main ADMIN
+create policy if not exists "rooms_select_auth" on rooms for select using (auth.uid() is not null);
+create policy if not exists "rooms_modify_admins" on rooms for insert, update using (exists (select 1 from profiles p where p.auth_id = auth.uid() and p.role = 'ADMIN')) with check (exists (select 1 from profiles p where p.auth_id = auth.uid() and p.role = 'ADMIN'));
+create policy if not exists "rooms_delete_main_admin" on rooms for delete using (exists (select 1 from profiles p where p.auth_id = auth.uid() and p.role = 'ADMIN' and p.is_main = true));
+
+-- Reservations: authenticated can select; admins can insert/update; delete only main admin
+create policy if not exists "reservations_select_auth" on reservations for select using (auth.uid() is not null);
+create policy if not exists "reservations_modify_admins" on reservations for insert, update using (exists (select 1 from profiles p where p.auth_id = auth.uid() and p.role = 'ADMIN')) with check (exists (select 1 from profiles p where p.auth_id = auth.uid() and p.role = 'ADMIN'));
+create policy if not exists "reservations_delete_main_admin" on reservations for delete using (exists (select 1 from profiles p where p.auth_id = auth.uid() and p.role = 'ADMIN' and p.is_main = true));
+
+-- Payments: only admins can create/update; delete only main admin
+create policy if not exists "payments_select_auth" on payments for select using (auth.uid() is not null);
+create policy if not exists "payments_modify_admins" on payments for insert, update using (exists (select 1 from profiles p where p.auth_id = auth.uid() and p.role = 'ADMIN')) with check (exists (select 1 from profiles p where p.auth_id = auth.uid() and p.role = 'ADMIN'));
+create policy if not exists "payments_delete_main_admin" on payments for delete using (exists (select 1 from profiles p where p.auth_id = auth.uid() and p.role = 'ADMIN' and p.is_main = true));
+
+-- Activities and menu items: select by authenticated; modify by admins; delete only main admin
+create policy if not exists "activities_select_auth" on activities for select using (auth.uid() is not null);
+create policy if not exists "activities_modify_admins" on activities for insert, update using (exists (select 1 from profiles p where p.auth_id = auth.uid() and p.role = 'ADMIN')) with check (exists (select 1 from profiles p where p.auth_id = auth.uid() and p.role = 'ADMIN'));
+create policy if not exists "activities_delete_main_admin" on activities for delete using (exists (select 1 from profiles p where p.auth_id = auth.uid() and p.role = 'ADMIN' and p.is_main = true));
+
+create policy if not exists "menu_items_select_auth" on menu_items for select using (is_available = true or auth.uid() is not null);
+create policy if not exists "menu_items_modify_admins" on menu_items for insert, update using (exists (select 1 from profiles p where p.auth_id = auth.uid() and p.role = 'ADMIN')) with check (exists (select 1 from profiles p where p.auth_id = auth.uid() and p.role = 'ADMIN'));
+create policy if not exists "menu_items_delete_main_admin" on menu_items for delete using (exists (select 1 from profiles p where p.auth_id = auth.uid() and p.role = 'ADMIN' and p.is_main = true));
+
+-- Guests and orders: select by authenticated; modify by admins; delete only main admin
+create policy if not exists "guests_select_auth" on guests for select using (auth.uid() is not null);
+create policy if not exists "guests_modify_admins" on guests for insert, update using (exists (select 1 from profiles p where p.auth_id = auth.uid() and p.role = 'ADMIN')) with check (exists (select 1 from profiles p where p.auth_id = auth.uid() and p.role = 'ADMIN'));
+create policy if not exists "guests_delete_main_admin" on guests for delete using (exists (select 1 from profiles p where p.auth_id = auth.uid() and p.role = 'ADMIN' and p.is_main = true));
+
+-- Staff, roles: only main admin may delete roles; admins can insert/update staff; non-main admins cannot create admins via profiles policy
+create policy if not exists "staff_select_auth" on staff for select using (auth.uid() is not null);
+create policy if not exists "staff_modify_admins" on staff for insert, update using (exists (select 1 from profiles p where p.auth_id = auth.uid() and p.role = 'ADMIN')) with check (exists (select 1 from profiles p where p.auth_id = auth.uid() and p.role = 'ADMIN'));
+create policy if not exists "staff_delete_main_admin" on staff for delete using (exists (select 1 from profiles p where p.auth_id = auth.uid() and p.role = 'ADMIN' and p.is_main = true));
+
+-- Public content pages: allow public select
+create policy if not exists "site_content_public_select" on site_content_pages for select using (is_active = true);
+
+
 -- The Next.js backend uses SUPABASE_SERVICE_ROLE_KEY, which bypasses RLS.
 -- No anon policies are created for private tables.
 
--- =====================
--- Storage buckets and policies
--- =====================
-insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+-- The application relies on Supabase Auth and RLS to enforce authorization.
+-- Server-side routes should use authenticated sessions and RLS-aware clients.
+-- No client-side secret keys should be exposed.
 values
   ('room-images', 'room-images', true, 5242880, array['image/jpeg', 'image/png', 'image/webp']),
   ('activity-images', 'activity-images', true, 5242880, array['image/jpeg', 'image/png', 'image/webp']),

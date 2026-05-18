@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { getSupabaseBrowserClient } from '@/lib/supabase-browser';
 
 const REMEMBER_EMAIL_KEY = 'login.rememberedEmail';
 
@@ -32,15 +33,21 @@ export default function LoginPage() {
     setErrorMessage('');
 
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, rememberMe }),
+      const supabase = getSupabaseBrowserClient();
+
+      if (!supabase) {
+        setErrorMessage('Supabase client not configured');
+        return;
+      }
+
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
 
-      const data = await response.json();
-
-      if (data.success) {
+      if (error) {
+        setErrorMessage(error.message || 'Login failed');
+      } else if (data) {
         if (rememberMe) {
           window.localStorage.setItem(REMEMBER_EMAIL_KEY, email);
         } else {
@@ -48,8 +55,6 @@ export default function LoginPage() {
         }
 
         router.push('/dashboard');
-      } else {
-        setErrorMessage(data.error || 'Login failed');
       }
     } catch (err) {
       console.error(err);
