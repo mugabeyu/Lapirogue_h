@@ -24,7 +24,7 @@ npm install
 
 2. Create a `.env` file at the project root and add your production values.
 
-3. Add your Supabase URL, public anon key, JWT secret, and app URL in `.env` (do not put secret service keys in client-side `.env` files).
+3. Add your Supabase URL, public anon key, and app URL in `.env` (do not put secret service keys in client-side `.env` files). Supabase Auth handles session tokens — you do not need to manage `JWT_SECRET` locally when using Supabase sessions.
 
 4. In Supabase Auth settings, configure the email templates for invite and recovery flows. The invite template can show the generated password from `{{ .Data.temp_password }}`.
 

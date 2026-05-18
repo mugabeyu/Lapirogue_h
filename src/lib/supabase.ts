@@ -12,6 +12,9 @@ if (!supabaseUrl || !supabaseAnonKey) {
 export function getSupabaseAdmin() {
   // Note: we intentionally do not use a service role key here.
   // All authorization should be enforced via RLS and policies in the database.
+  // Because this client is created with the anon key, Row-Level Security (RLS)
+  // is enforced by Postgres. Use `supabase.auth.getUser()` on the server to
+  // identify the current user and rely on DB policies for access control.
   return createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
       autoRefreshToken: false,
