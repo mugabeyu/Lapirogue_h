@@ -65,8 +65,8 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const body = activitySchema.parse(await request.json());
-    const { id, ...updateData } = body as typeof body & { id?: string };
+    const body = activitySchema.extend({ id: z.string().uuid() }).parse(await request.json());
+    const { id, ...updateData } = body;
     const { data, error } = await getSupabaseAdmin()
       .from('activities')
       .update(updateData)

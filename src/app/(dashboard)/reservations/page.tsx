@@ -1,14 +1,16 @@
 import ProtectedPage from '@/components/ProtectedPage';
-import DataTablePage from '@/components/DataTablePage';
+import CrudDataTablePage from '@/components/CrudDataTablePage';
 
 export default function ReservationsPage() {
   return (
     <ProtectedPage>
-      <DataTablePage
+      <CrudDataTablePage
         title="Reservations"
         subtitle="Manage bookings and check-ins."
         endpoint="/api/reservations"
         searchPlaceholder="Search reservations..."
+        addLabel="Add Reservation"
+        entityType="reservation"
         columns={[
           { key: 'reservationId', label: 'Reservation ID' },
           { key: 'guest', label: 'Guest' },

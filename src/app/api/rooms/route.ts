@@ -176,8 +176,8 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    const validatedData = roomSchema.parse(body);
-    const { id, ...updateData } = validatedData as typeof validatedData & { id?: string };
+    const validatedData = roomSchema.extend({ id: z.string().uuid() }).parse(body);
+    const { id, ...updateData } = validatedData;
     const supabase = getSupabaseAdmin();
 
     const { data, error } = await supabase

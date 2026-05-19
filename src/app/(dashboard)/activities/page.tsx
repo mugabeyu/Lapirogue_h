@@ -1,14 +1,16 @@
 import ProtectedPage from '@/components/ProtectedPage';
-import DataTablePage from '@/components/DataTablePage';
+import CrudDataTablePage from '@/components/CrudDataTablePage';
 
 export default function ActivitiesPage() {
   return (
     <ProtectedPage>
-      <DataTablePage
+      <CrudDataTablePage
         title="Activities & Tours"
         subtitle="Manage hotel experiences and excursions."
         endpoint="/api/activities"
         searchPlaceholder="Search activities..."
+        addLabel="Add Activity"
+        entityType="activity"
         columns={[
           { key: 'name', label: 'Activity' },
           { key: 'category', label: 'Category' },

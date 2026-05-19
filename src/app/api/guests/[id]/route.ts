@@ -88,20 +88,21 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const body = await request.json();
     const validatedData = guestUpdateSchema.parse(body);
 
+    const updatePayload: Record<string, unknown> = {};
+    if (validatedData.firstName !== undefined) updatePayload.first_name = validatedData.firstName;
+    if (validatedData.lastName !== undefined) updatePayload.last_name = validatedData.lastName;
+    if (validatedData.email !== undefined) updatePayload.email = validatedData.email;
+    if (validatedData.phone !== undefined) updatePayload.phone = validatedData.phone;
+    if (validatedData.nationality !== undefined) updatePayload.nationality = validatedData.nationality;
+    if (validatedData.passport !== undefined) updatePayload.passport = validatedData.passport;
+    if (validatedData.dateOfBirth !== undefined) updatePayload.date_of_birth = validatedData.dateOfBirth;
+    if (validatedData.vip !== undefined) updatePayload.vip = validatedData.vip;
+    if (validatedData.status !== undefined) updatePayload.status = validatedData.status;
+    if (validatedData.notes !== undefined) updatePayload.notes = validatedData.notes;
+
     const { data: guest, error } = await getSupabaseAdmin()
       .from('guests')
-      .update({
-        first_name: validatedData.firstName,
-        last_name: validatedData.lastName,
-        email: validatedData.email,
-        phone: validatedData.phone,
-        nationality: validatedData.nationality,
-        passport: validatedData.passport,
-        date_of_birth: validatedData.dateOfBirth,
-        vip: validatedData.vip,
-        status: validatedData.status,
-        notes: validatedData.notes,
-      })
+      .update(updatePayload)
       .eq('id', id)
       .select('*')
       .single();

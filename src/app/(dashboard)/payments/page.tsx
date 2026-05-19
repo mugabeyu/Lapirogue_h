@@ -1,14 +1,16 @@
 import ProtectedPage from '@/components/ProtectedPage';
-import DataTablePage from '@/components/DataTablePage';
+import CrudDataTablePage from '@/components/CrudDataTablePage';
 
 export default function PaymentsPage() {
   return (
     <ProtectedPage>
-      <DataTablePage
+      <CrudDataTablePage
         title="Payments"
         subtitle="Track guest payments and balances."
         endpoint="/api/payments"
         searchPlaceholder="Search payments..."
+        addLabel="Record Payment"
+        entityType="payment"
         columns={[
           { key: 'paymentId', label: 'Payment ID' },
           { key: 'reservation', label: 'Reservation' },

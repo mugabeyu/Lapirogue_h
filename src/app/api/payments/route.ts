@@ -15,10 +15,12 @@ const paymentSchema = z.object({
 type PaymentRow = {
   id: string;
   payment_id?: string | null;
+  reservation_id?: string | null;
   amount?: number | string | null;
   method?: string | null;
   status?: string | null;
   reference?: string | null;
+  notes?: string | null;
   created_at?: string | null;
   reservations?: {
     reservation_id?: string | null;
@@ -31,7 +33,7 @@ export async function GET(request: NextRequest) {
     const search = request.nextUrl.searchParams.get('search') ?? '';
     const { data, error } = await getSupabaseAdmin()
       .from('payments')
-      .select('id,payment_id,amount,method,status,reference,created_at,reservations(reservation_id,guests(first_name,last_name))')
+      .select('id,payment_id,reservation_id,amount,method,status,reference,notes,created_at,reservations(reservation_id,guests(first_name,last_name))')
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -40,11 +42,14 @@ export async function GET(request: NextRequest) {
     const payments = rows.map((payment) => ({
       id: payment.id,
       paymentId: payment.payment_id ?? null,
+      reservationId: payment.reservation_id ?? null,
       reservation: payment.reservations?.reservation_id ?? null,
       guest: payment.reservations?.guests ? `${payment.reservations.guests.first_name ?? ''} ${payment.reservations.guests.last_name ?? ''}`.trim() || null : null,
       amount: payment.amount === undefined || payment.amount === null ? 0 : Number(payment.amount),
       method: payment.method ?? null,
       status: payment.status ?? null,
+      reference: payment.reference ?? null,
+      notes: payment.notes ?? null,
       createdAt: payment.created_at ?? null,
     }));
 
@@ -87,7 +92,7 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const body = paymentSchema.parse(await request.json());
+    const body = paymentSchema.extend({ id: z.string().uuid() }).parse(await request.json());
     const { id, ...updateData } = body;
     const { data, error } = await getSupabaseAdmin()
       .from('payments')

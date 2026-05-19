@@ -1,14 +1,16 @@
 import ProtectedPage from '@/components/ProtectedPage';
-import DataTablePage from '@/components/DataTablePage';
+import CrudDataTablePage from '@/components/CrudDataTablePage';
 
 export default function FoodBeveragePage() {
   return (
     <ProtectedPage>
-      <DataTablePage
+      <CrudDataTablePage
         title="Food & Beverage Menu"
         subtitle="Manage restaurant and room service offerings."
         endpoint="/api/menu-items"
         searchPlaceholder="Search menu items..."
+        addLabel="Add Menu Item"
+        entityType="menu-item"
         columns={[
           { key: 'name', label: 'Item' },
           { key: 'category', label: 'Category' },

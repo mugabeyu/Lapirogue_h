@@ -30,11 +30,16 @@ type ReservationRow = {
 export async function GET(request: NextRequest) {
   try {
     const search = request.nextUrl.searchParams.get('search') ?? '';
+    const guestId = request.nextUrl.searchParams.get('guestId') ?? '';
     const supabase = getSupabaseAdmin();
     let query = supabase
       .from('reservations')
-      .select('id,reservation_id,check_in,check_out,adults,children,status,total_amount,guests(first_name,last_name),rooms(room_number,type)')
+      .select('id,reservation_id,guest_id,room_id,check_in,check_out,adults,children,status,total_amount,guests(first_name,last_name),rooms(room_number,type)')
       .order('created_at', { ascending: false });
+
+    if (guestId) {
+      query = query.eq('guest_id', guestId);
+    }
 
     if (search) {
       query = query.or(`reservation_id.ilike.%${search}%`);
@@ -47,6 +52,8 @@ export async function GET(request: NextRequest) {
     const mapped = rows.map((reservation) => ({
       id: reservation.id,
       reservationId: reservation.reservation_id ?? null,
+      guestId: (reservation as ReservationRow & { guest_id?: string }).guest_id ?? null,
+      roomId: (reservation as ReservationRow & { room_id?: string }).room_id ?? null,
       guest: reservation.guests ? `${reservation.guests.first_name ?? ''} ${reservation.guests.last_name ?? ''}`.trim() || null : null,
       room: reservation.rooms?.room_number ?? null,
       roomType: reservation.rooms?.type ?? null,
@@ -112,7 +119,8 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    const { id, roomId, checkIn, checkOut, ...updateData } = reservationSchema.parse(body);
+    const parsed = reservationSchema.extend({ id: z.string().uuid() }).parse(body);
+    const { id, guestId, roomId, checkIn, checkOut, adults, children, totalAmount, status } = parsed;
     const supabase = getSupabaseAdmin();
 
     const { data: conflicting, error: conflictError } = await supabase
@@ -135,14 +143,14 @@ export async function PUT(request: NextRequest) {
     const { data, error } = await supabase
       .from('reservations')
       .update({
-        guest_id: updateData.guestId,
+        guest_id: guestId,
         room_id: roomId,
         check_in: checkIn,
         check_out: checkOut,
-        adults: updateData.adults,
-        children: updateData.children,
-        total_amount: updateData.totalAmount,
-        status: updateData.status,
+        adults,
+        children,
+        total_amount: totalAmount,
+        status,
       })
       .eq('id', id)
       .select('*')

@@ -34,6 +34,12 @@ type GuestRow = {
   updated_at: string;
 };
 
+async function generateGuestId() {
+  const timestamp = Date.now().toString().slice(-6);
+  const suffix = Math.floor(Math.random() * 90 + 10);
+  return `G-${timestamp}${suffix}`;
+}
+
 function toGuest(row: GuestRow) {
   return {
     id: row.id,
@@ -85,7 +91,42 @@ export async function GET(request: NextRequest) {
       throw error;
     }
 
-    const guests = (data ?? []).map((row) => toGuest(row as GuestRow));
+    const guestRows = (data ?? []) as GuestRow[];
+    const guestIds = guestRows.map((row) => row.id);
+
+    let stayByGuest = new Map<string, { checkIn: string; checkOut: string; roomNumber: string | null; roomType: string | null }>();
+
+    if (guestIds.length > 0) {
+      const { data: stays } = await supabase
+        .from('reservations')
+        .select('guest_id,check_in,check_out,status,rooms(room_number,type)')
+        .in('guest_id', guestIds)
+        .neq('status', 'CANCELLED')
+        .order('check_in', { ascending: false });
+
+      for (const stay of stays ?? []) {
+        const guestId = stay.guest_id as string;
+        if (stayByGuest.has(guestId)) continue;
+        const room = stay.rooms as { room_number?: string; type?: string } | null;
+        stayByGuest.set(guestId, {
+          checkIn: stay.check_in as string,
+          checkOut: stay.check_out as string,
+          roomNumber: room?.room_number ?? null,
+          roomType: room?.type ?? null,
+        });
+      }
+    }
+
+    const guests = guestRows.map((row) => {
+      const stay = stayByGuest.get(row.id);
+      return {
+        ...toGuest(row),
+        checkIn: stay?.checkIn,
+        checkOut: stay?.checkOut,
+        roomNumber: stay?.roomNumber,
+        roomType: stay?.roomType,
+      };
+    });
     const total = count ?? 0;
 
     return NextResponse.json({
@@ -111,10 +152,12 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = guestSchema.parse(body);
     const supabase = getSupabaseAdmin();
+    const guestId = await generateGuestId();
 
     const { data, error } = await supabase
       .from('guests')
       .insert({
+        guest_id: guestId,
         first_name: validatedData.firstName,
         last_name: validatedData.lastName,
         email: validatedData.email,
@@ -123,6 +166,7 @@ export async function POST(request: NextRequest) {
         passport: validatedData.passport,
         date_of_birth: validatedData.dateOfBirth,
         vip: validatedData.vip ?? false,
+        status: validatedData.status ?? 'RESERVED',
         notes: validatedData.notes,
       })
       .select('*')
@@ -137,6 +181,7 @@ export async function POST(request: NextRequest) {
       data: toGuest(data as GuestRow),
     }, { status: 201 });
   } catch (error) {
+    console.error('Guest create failed:', error);
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { success: false, error: 'Validation error', details: error.errors },
@@ -145,7 +190,11 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { success: false, error: 'Failed to create guest' },
+      {
+        success: false,
+        error: 'Failed to create guest',
+        details: error instanceof Error ? error.message : JSON.stringify(error),
+      },
       { status: 500 }
     );
   }

@@ -1,0 +1,392 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { getSupabaseAdmin } from '@/lib/supabase';
+
+type GuestRow = {
+  id: string;
+  guest_id: string;
+  first_name: string;
+  last_name: string;
+  status: string;
+  vip: boolean;
+};
+
+type ScheduleRow = {
+  id: string;
+  guest_id: string;
+  title: string;
+  item_type: 'RESERVATION' | 'ACTIVITY' | 'BOOKING' | 'ORDER' | 'SERVICE' | 'CUSTOM';
+  source_module: string | null;
+  source_record_id: string | null;
+  start_at: string;
+  end_at: string;
+  status: 'SCHEDULED' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED';
+  notes: string | null;
+  color: string | null;
+  created_at: string;
+  updated_at: string;
+  guests?: { first_name?: string | null; last_name?: string | null } | null;
+};
+
+function parseDate(value: string | null, fallback: Date) {
+  if (!value) return new Date(fallback);
+  const parsed = new Date(`${value}T00:00:00`);
+  return Number.isNaN(parsed.getTime()) ? new Date(fallback) : parsed;
+}
+
+function startOfWeek(date: Date) {
+  const result = new Date(date);
+  const day = result.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  result.setDate(result.getDate() + diff);
+  result.setHours(0, 0, 0, 0);
+  return result;
+}
+
+function addDays(date: Date, days: number) {
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
+}
+
+function toDateKey(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function formatWeekLabel(start: Date) {
+  const end = addDays(start, 6);
+  const formatter = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  return `${formatter.format(start)} - ${formatter.format(end)}`;
+}
+
+function buildGuestName(firstName?: string | null, lastName?: string | null) {
+  return `${firstName ?? ''} ${lastName ?? ''}`.trim();
+}
+
+function minuteOffset(value: string) {
+  return new Date(value).getHours() * 60 + new Date(value).getMinutes();
+}
+
+function overlapsWeek(startAt: string, endAt: string, weekStart: Date, weekEnd: Date) {
+  const start = new Date(startAt);
+  const end = new Date(endAt);
+  return start <= weekEnd && end >= weekStart;
+}
+
+function colorForType(type: ScheduleRow['item_type']) {
+  switch (type) {
+    case 'RESERVATION':
+      return '#C9A56A';
+    case 'ACTIVITY':
+      return '#97B7F5';
+    case 'BOOKING':
+      return '#E9A8F6';
+    case 'ORDER':
+      return '#FFCA8B';
+    case 'SERVICE':
+      return '#9DEFD9';
+    default:
+      return '#E7D7F0';
+  }
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    const searchParams = request.nextUrl.searchParams;
+    const weekStartParam = searchParams.get('weekStart');
+    const selectedGuestId = searchParams.get('guestId') || '';
+
+    const requestedWeekStart = startOfWeek(parseDate(weekStartParam, new Date()));
+    const requestedWeekEnd = addDays(requestedWeekStart, 6);
+    requestedWeekEnd.setHours(23, 59, 59, 999);
+
+    const supabase = getSupabaseAdmin();
+
+    const [guestsResult, reservationsResult] = await Promise.all([
+      supabase
+        .from('guests')
+        .select('id, guest_id, first_name, last_name, status, vip')
+        .order('first_name', { ascending: true }),
+      supabase
+        .from('reservations')
+        .select('id, guest_id, check_in, check_out, status, rooms(room_number)')
+        .neq('status', 'CANCELLED')
+        .lte('check_in', toDateKey(requestedWeekEnd))
+        .gte('check_out', toDateKey(requestedWeekStart)),
+    ]);
+
+    if (guestsResult.error) throw guestsResult.error;
+    if (reservationsResult.error) throw reservationsResult.error;
+
+    const guests = (guestsResult.data ?? []) as GuestRow[];
+    const roomMap = new Map<string, string>();
+    const stayMap = new Map<string, { checkIn: string | null; checkOut: string | null }>();
+
+    (reservationsResult.data ?? []).forEach((reservation) => {
+      const guestId = reservation.guest_id as string;
+      const roomNumber = (reservation.rooms as { room_number?: string | null } | null)?.room_number ?? '';
+      if (guestId && roomNumber && !roomMap.has(guestId)) {
+        roomMap.set(guestId, roomNumber);
+      }
+      if (guestId && !stayMap.has(guestId)) {
+        stayMap.set(guestId, {
+          checkIn: reservation.check_in ?? null,
+          checkOut: reservation.check_out ?? null,
+        });
+      }
+    });
+
+    const selectedGuest = guests.find((guest) => guest.id === selectedGuestId) ?? null;
+    const selectedGuestLabel = selectedGuest ? buildGuestName(selectedGuest.first_name, selectedGuest.last_name) : null;
+
+    const mappedGuests = guests.map((guest) => ({
+      id: guest.id,
+      guestId: guest.guest_id,
+      firstName: guest.first_name,
+      lastName: guest.last_name,
+      status: guest.status,
+      vip: guest.vip,
+      roomNumber: roomMap.get(guest.id) ?? null,
+    }));
+
+    const scheduledItems: ScheduleRow[] = [];
+
+    if (selectedGuestId) {
+      (reservationsResult.data ?? []).forEach((reservation) => {
+        if (reservation.guest_id !== selectedGuestId) return;
+
+        const checkIn = reservation.check_in as string | null;
+        const checkOut = reservation.check_out as string | null;
+        if (!checkIn || !checkOut) return;
+
+        const startAt = `${checkIn}T00:00:00`;
+        const endAt = `${checkOut}T23:59:59`;
+        const roomNumber = (reservation.rooms as { room_number?: string | null } | null)?.room_number ?? 'Room';
+
+        scheduledItems.push({
+          id: `reservation-${reservation.id}`,
+          guest_id: selectedGuestId,
+          title: `${roomNumber} reservation`,
+          item_type: 'RESERVATION',
+          source_module: 'reservations',
+          source_record_id: reservation.id,
+          start_at: startAt,
+          end_at: endAt,
+          status: (reservation.status as ScheduleRow['status']) ?? 'CONFIRMED',
+          notes: null,
+          color: colorForType('RESERVATION'),
+          created_at: startAt,
+          updated_at: startAt,
+        });
+      });
+
+      const [customItemsResult, activityBookingsResult, foodOrdersResult, guestOrdersResult, itineraryEventsResult] = await Promise.all([
+        supabase
+          .from('guest_schedule_items')
+          .select('id,guest_id,title,item_type,source_module,source_record_id,start_at,end_at,status,notes,color,created_at,updated_at')
+          .eq('guest_id', selectedGuestId)
+          .gte('start_at', requestedWeekStart.toISOString())
+          .lte('start_at', requestedWeekEnd.toISOString()),
+        supabase
+          .from('activity_bookings')
+          .select('id,guest_id,booking_date,participants,status,notes,activities(name),guests(first_name,last_name)')
+          .eq('guest_id', selectedGuestId)
+          .gte('booking_date', toDateKey(requestedWeekStart))
+          .lte('booking_date', toDateKey(requestedWeekEnd)),
+        supabase
+          .from('food_orders')
+          .select('id,guest_id,created_at,status,notes,guests(first_name,last_name)')
+          .eq('guest_id', selectedGuestId)
+          .gte('created_at', requestedWeekStart.toISOString())
+          .lte('created_at', requestedWeekEnd.toISOString()),
+        supabase
+          .from('guest_orders')
+          .select('id,guest_id,order_time,status,notes,order_type,guests(first_name,last_name)')
+          .eq('guest_id', selectedGuestId)
+          .gte('order_time', requestedWeekStart.toISOString())
+          .lte('order_time', requestedWeekEnd.toISOString()),
+        supabase
+          .from('itinerary_events')
+          .select('id,guest_id,title,category,description,event_time,status,guests(first_name,last_name)')
+          .eq('guest_id', selectedGuestId)
+          .gte('event_time', requestedWeekStart.toISOString())
+          .lte('event_time', requestedWeekEnd.toISOString()),
+      ]);
+
+      if (customItemsResult.error) throw customItemsResult.error;
+      if (activityBookingsResult.error) throw activityBookingsResult.error;
+      if (foodOrdersResult.error) throw foodOrdersResult.error;
+      if (guestOrdersResult.error) throw guestOrdersResult.error;
+      if (itineraryEventsResult.error) throw itineraryEventsResult.error;
+
+      const customItems = (customItemsResult.data ?? []) as ScheduleRow[];
+      customItems.forEach((item) => scheduledItems.push({
+        ...item,
+        color: item.color ?? colorForType(item.item_type),
+      }));
+
+      (activityBookingsResult.data ?? []).forEach((booking) => {
+        const bookingDate = booking.booking_date as string;
+        const startAt = `${bookingDate}T09:00:00`;
+        const endAt = `${bookingDate}T10:00:00`;
+        scheduledItems.push({
+          id: booking.id,
+          guest_id: selectedGuestId,
+          title: `${(booking.activities as { name?: string | null } | null)?.name ?? 'Activity'} booking`,
+          item_type: 'ACTIVITY',
+          source_module: 'activity_bookings',
+          source_record_id: booking.id,
+          start_at: startAt,
+          end_at: endAt,
+          status: (booking.status as ScheduleRow['status']) ?? 'CONFIRMED',
+          notes: booking.notes ?? null,
+          color: colorForType('ACTIVITY'),
+          created_at: bookingDate,
+          updated_at: bookingDate,
+        });
+      });
+
+      (foodOrdersResult.data ?? []).forEach((order) => {
+        const createdAt = order.created_at ?? requestedWeekStart.toISOString();
+        const endAt = new Date(createdAt);
+        endAt.setMinutes(endAt.getMinutes() + 45);
+        scheduledItems.push({
+          id: order.id,
+          guest_id: selectedGuestId,
+          title: 'Food order',
+          item_type: 'ORDER',
+          source_module: 'food_orders',
+          source_record_id: order.id,
+          start_at: createdAt,
+          end_at: endAt.toISOString(),
+          status: (order.status as ScheduleRow['status']) ?? 'SCHEDULED',
+          notes: order.notes ?? null,
+          color: colorForType('ORDER'),
+          created_at: createdAt,
+          updated_at: createdAt,
+        });
+      });
+
+      (guestOrdersResult.data ?? []).forEach((order) => {
+        const createdAt = order.order_time ?? requestedWeekStart.toISOString();
+        const endAt = new Date(createdAt);
+        endAt.setMinutes(endAt.getMinutes() + 60);
+        scheduledItems.push({
+          id: order.id,
+          guest_id: selectedGuestId,
+          title: order.order_type ?? 'Guest order',
+          item_type: 'ORDER',
+          source_module: 'guest_orders',
+          source_record_id: order.id,
+          start_at: createdAt,
+          end_at: endAt.toISOString(),
+          status: (order.status as ScheduleRow['status']) ?? 'SCHEDULED',
+          notes: order.notes ?? null,
+          color: colorForType('ORDER'),
+          created_at: createdAt,
+          updated_at: createdAt,
+        });
+      });
+
+      (itineraryEventsResult.data ?? []).forEach((event) => {
+        const startAt = event.event_time ?? requestedWeekStart.toISOString();
+        const endAt = new Date(startAt);
+        endAt.setHours(endAt.getHours() + 1);
+        scheduledItems.push({
+          id: event.id,
+          guest_id: selectedGuestId,
+          title: event.title,
+          item_type: 'SERVICE',
+          source_module: 'itinerary_events',
+          source_record_id: event.id,
+          start_at: startAt,
+          end_at: endAt.toISOString(),
+          status: (event.status as ScheduleRow['status']) ?? 'CONFIRMED',
+          notes: event.description ?? null,
+          color: colorForType('SERVICE'),
+          created_at: startAt,
+          updated_at: startAt,
+        });
+      });
+
+      scheduledItems.sort((left, right) => new Date(left.start_at).getTime() - new Date(right.start_at).getTime());
+    }
+
+    const payloadItems = scheduledItems.filter((item) => overlapsWeek(item.start_at, item.end_at, requestedWeekStart, requestedWeekEnd));
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        guests: mappedGuests,
+        selectedGuest: selectedGuest ? {
+          id: selectedGuest.id,
+          guestId: selectedGuest.guest_id,
+          firstName: selectedGuest.first_name,
+          lastName: selectedGuest.last_name,
+          status: selectedGuest.status,
+          vip: selectedGuest.vip,
+          roomNumber: roomMap.get(selectedGuest.id) ?? null,
+          stay: stayMap.get(selectedGuest.id) ?? null,
+        } : null,
+        weekStart: requestedWeekStart.toISOString(),
+        weekEnd: requestedWeekEnd.toISOString(),
+        weekLabel: formatWeekLabel(requestedWeekStart),
+        items: payloadItems.map((item) => ({
+          id: item.id,
+          guestId: item.guest_id,
+          title: item.title,
+          itemType: item.item_type,
+          sourceModule: item.source_module ?? undefined,
+          sourceRecordId: item.source_record_id ?? undefined,
+          startAt: item.start_at,
+          endAt: item.end_at,
+          status: item.status,
+          notes: item.notes ?? undefined,
+          color: item.color ?? colorForType(item.item_type),
+          createdAt: item.created_at,
+          updatedAt: item.updated_at,
+        })),
+        totalActivities: payloadItems.length,
+      },
+    });
+  } catch {
+    return NextResponse.json({ success: false, error: 'Failed to fetch schedule data' }, { status: 500 });
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const guestId = String(body.guestId ?? '').trim();
+    const title = String(body.title ?? '').trim();
+    const itemType = String(body.itemType ?? 'CUSTOM') as ScheduleRow['item_type'];
+    const startAt = String(body.startAt ?? '').trim();
+    const endAt = String(body.endAt ?? '').trim();
+
+    if (!guestId || !title || !startAt || !endAt) {
+      return NextResponse.json({ success: false, error: 'Guest, title, start time, and end time are required' }, { status: 400 });
+    }
+
+    const { data, error } = await getSupabaseAdmin()
+      .from('guest_schedule_items')
+      .insert({
+        guest_id: guestId,
+        title,
+        item_type: itemType,
+        source_module: body.sourceModule ?? 'manual',
+        source_record_id: body.sourceRecordId ?? null,
+        start_at: startAt,
+        end_at: endAt,
+        status: body.status ?? 'SCHEDULED',
+        notes: body.notes ?? null,
+        color: body.color ?? null,
+      })
+      .select('id,guest_id,title,item_type,source_module,source_record_id,start_at,end_at,status,notes,color,created_at,updated_at')
+      .single();
+
+    if (error) throw error;
+
+    return NextResponse.json({ success: true, data }, { status: 201 });
+  } catch {
+    return NextResponse.json({ success: false, error: 'Failed to create schedule item' }, { status: 500 });
+  }
+}

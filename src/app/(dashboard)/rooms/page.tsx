@@ -1,14 +1,16 @@
 import ProtectedPage from '@/components/ProtectedPage';
-import DataTablePage from '@/components/DataTablePage';
+import CrudDataTablePage from '@/components/CrudDataTablePage';
 
 export default function RoomsPage() {
   return (
     <ProtectedPage>
-      <DataTablePage
+      <CrudDataTablePage
         title="Rooms"
         subtitle="Manage room inventory, status, and pricing."
         endpoint="/api/rooms"
         searchPlaceholder="Search rooms..."
+        addLabel="Add Room"
+        entityType="room"
         columns={[
           { key: 'roomNumber', label: 'Room' },
           { key: 'type', label: 'Type' },

@@ -25,6 +25,62 @@ export interface Guest {
   imagePath?: string;
   createdAt: string;
   updatedAt: string;
+  checkIn?: string;
+  checkOut?: string;
+  roomNumber?: string | null;
+  roomType?: string | null;
+}
+
+export interface GuestStay {
+  id: string;
+  reservationId: string;
+  roomId?: string;
+  checkIn: string;
+  checkOut: string;
+  adults: number;
+  children: number;
+  status: string;
+  totalAmount: number;
+  notes?: string | null;
+  roomNumber: string | null;
+  roomType: string | null;
+}
+
+export interface GuestProfileData {
+  guest: Guest;
+  currentStay: GuestStay | null;
+  reservations: GuestStay[];
+  activityBookings: Array<{
+    id: string;
+    activity: string | null;
+    date: string;
+    participants: number;
+    status: string;
+    notes?: string | null;
+  }>;
+  foodOrders: Array<{
+    id: string;
+    orderId: string;
+    total: number;
+    status: string;
+    notes?: string | null;
+    createdAt: string;
+  }>;
+  payments: Array<{
+    id: string;
+    paymentId: string;
+    amount: number;
+    method: string;
+    status: string;
+    reference?: string | null;
+    createdAt: string;
+  }>;
+  stats: {
+    totalStays: number;
+    activities: number;
+    foodOrders: number;
+    totalSpent: number;
+  };
 }
 
 export interface Room {
@@ -126,6 +182,24 @@ export interface FoodOrder {
   updatedAt: string;
 }
 
+export type ScheduleItemType = 'RESERVATION' | 'ACTIVITY' | 'BOOKING' | 'ORDER' | 'SERVICE' | 'CUSTOM';
+
+export interface GuestScheduleItem {
+  id: string;
+  guestId: string;
+  title: string;
+  itemType: ScheduleItemType;
+  sourceModule?: string;
+  sourceRecordId?: string;
+  startAt: string;
+  endAt: string;
+  status: 'SCHEDULED' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED';
+  notes?: string;
+  color?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface OrderItem {
   id: string;
   name: string;
@@ -175,7 +249,7 @@ export interface AuthContext {
   token: string;
 }
 
-export type Role = 'ADMIN' | 'MANAGER' | 'RECEPTION' | 'RESTAURANT' | 'TOUR_MANAGER' | 'STAFF';
+export type Role = 'RECEPTIONIST';
 
 export type GuestStatus = 'RESERVED' | 'CHECKED_IN' | 'CHECKED_OUT' | 'CANCELLED';
 
