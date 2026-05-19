@@ -13,6 +13,7 @@ import { RoomModal } from '@/components/modals/RoomModal';
 import { AddActivityModal } from '@/components/modals/AddActivityModal';
 import { MenuItemModal } from '@/components/modals/MenuItemModal';
 import { PaymentModal } from '@/components/modals/PaymentModal';
+import { LabeledTable } from '@/components/ui/LabeledTable';
 
 export type CrudColumn = {
   key: string;
@@ -32,6 +33,9 @@ type CrudDataTablePageProps = {
   entityType: CrudEntityType;
   addHref?: string;
   deleteEndpoint?: (id: string) => string;
+  tableCaption?: string;
+  entityName?: string;
+  emptyMessage?: string;
 };
 
 function getValue(row: Record<string, unknown>, key: string) {
@@ -82,6 +86,9 @@ export default function CrudDataTablePage({
   entityType,
   addHref,
   deleteEndpoint,
+  tableCaption,
+  entityName,
+  emptyMessage,
 }: CrudDataTablePageProps) {
   const [search, setSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -98,6 +105,9 @@ export default function CrudDataTablePage({
 
   const { data, isLoading, mutate } = useApi<Record<string, unknown>[]>(url);
   const rows = data ?? [];
+  const rowLabel = entityName ?? title.toLowerCase();
+  const caption = tableCaption ?? `${title} listing`;
+  const emptyText = emptyMessage ?? `No ${rowLabel} found.`;
 
   async function handleDelete() {
     if (!deleteRow?.id) return;
@@ -156,10 +166,14 @@ export default function CrudDataTablePage({
 
       <div className="overflow-hidden rounded-[24px] border border-sand-200 bg-white shadow-sm">
         <div className="border-b border-sand-200 p-4">
+          <label htmlFor={`${title}-search`} className="sr-only">
+            Search {rowLabel}
+          </label>
           <div className="relative w-full sm:w-96">
             <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" />
             <input
-              type="text"
+              id={`${title}-search`}
+              type="search"
               placeholder={searchPlaceholder}
               className="input-field pl-10"
               value={search}
@@ -169,22 +183,32 @@ export default function CrudDataTablePage({
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-left">
+          <LabeledTable
+            caption={caption}
+            summary={`${title} — ${columns.map((column) => column.label).join(', ')}`}
+            footer={
+              isLoading
+                ? `Loading ${rowLabel}...`
+                : `Showing ${rows.length} ${rows.length === 1 ? rowLabel.replace(/s$/, '') : rowLabel}`
+            }
+          >
             <thead>
               <tr className="border-b border-sand-200 bg-sand-50 text-xs uppercase tracking-wider text-ink-600">
                 {columns.map((column) => (
-                  <th key={column.key} className="px-6 py-4 font-medium">
+                  <th key={column.key} scope="col" className="px-6 py-4 font-medium">
                     {column.label}
                   </th>
                 ))}
-                <th className="px-6 py-4 font-medium text-right">Actions</th>
+                <th scope="col" className="px-6 py-4 text-right font-medium">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-sand-200">
               {!isLoading && rows.length === 0 && (
                 <tr>
                   <td colSpan={columns.length + 1} className="px-6 py-12 text-center text-sm text-ink-500">
-                    No records found.
+                    {emptyText}
                   </td>
                 </tr>
               )}
@@ -211,7 +235,7 @@ export default function CrudDataTablePage({
                           setEditRow(row);
                           setIsModalOpen(true);
                         }}
-                        aria-label="Edit"
+                        aria-label={`Edit ${rowLabel}`}
                       >
                         <Pencil className="h-4 w-4" />
                       </button>
@@ -219,7 +243,7 @@ export default function CrudDataTablePage({
                         type="button"
                         className="rounded-lg p-2 text-ink-500 hover:bg-danger/10 hover:text-danger"
                         onClick={() => setDeleteRow(row)}
-                        aria-label="Delete"
+                        aria-label={`Delete ${rowLabel}`}
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -228,11 +252,7 @@ export default function CrudDataTablePage({
                 </tr>
               ))}
             </tbody>
-          </table>
-        </div>
-
-        <div className="border-t border-sand-200 p-4 text-sm text-ink-600">
-          {isLoading ? 'Loading records...' : `${rows.length} records`}
+          </LabeledTable>
         </div>
       </div>
 

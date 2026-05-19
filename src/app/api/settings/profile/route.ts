@@ -5,7 +5,8 @@ import { getRouteHandlerSupabaseClient } from '@/lib/supabase-server';
 const profileSchema = z.object({
   fullName: z.string().min(1),
   email: z.string().email(),
-  phone: z.string().optional(),
+  phone: z.string().optional().nullable(),
+  avatarUrl: z.string().optional().nullable(),
 });
 
 export async function PUT(request: NextRequest) {
@@ -21,19 +22,26 @@ export async function PUT(request: NextRequest) {
 
     const { data, error } = await authClient
       .from('profiles')
-      .upsert({
-        auth_id: user.id,
-        full_name: validatedData.fullName,
-        email: validatedData.email,
-        role: 'RECEPTIONIST',
-        is_main: false,
-      }, {
-        onConflict: 'auth_id',
-      })
-      .select('auth_id, email, full_name, role, created_at, updated_at')
+      .upsert(
+        {
+          auth_id: user.id,
+          full_name: validatedData.fullName,
+          email: validatedData.email,
+          phone: validatedData.phone ?? null,
+          avatar_url: validatedData.avatarUrl ?? undefined,
+          role: 'RECEPTIONIST',
+          is_main: false,
+        },
+        { onConflict: 'auth_id' },
+      )
+      .select('auth_id, email, full_name, phone, avatar_url, role, created_at, updated_at')
       .single();
 
     if (error) throw error;
+
+    if (validatedData.email !== user.email) {
+      await authClient.auth.updateUser({ email: validatedData.email });
+    }
 
     return NextResponse.json({
       success: true,
@@ -42,7 +50,8 @@ export async function PUT(request: NextRequest) {
         email: data.email,
         name: data.full_name,
         role: data.role,
-        phone: null,
+        phone: data.phone,
+        avatarUrl: data.avatar_url,
         isActive: true,
         createdAt: data.created_at,
         updatedAt: data.updated_at,

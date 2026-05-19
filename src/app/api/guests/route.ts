@@ -117,7 +117,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const guests = guestRows.map((row) => {
+    let guests = guestRows.map((row) => {
       const stay = stayByGuest.get(row.id);
       return {
         ...toGuest(row),
@@ -127,6 +127,22 @@ export async function GET(request: NextRequest) {
         roomType: stay?.roomType,
       };
     });
+
+    if (search) {
+      const query = search.toLowerCase();
+      guests = guests.filter((guest) => {
+        const name = `${guest.firstName} ${guest.lastName}`.toLowerCase();
+        const room = guest.roomNumber?.toLowerCase() ?? '';
+        const guestCode = guest.guestId.toLowerCase();
+        return (
+          name.includes(query) ||
+          room.includes(query) ||
+          guestCode.includes(query) ||
+          guest.email?.toLowerCase().includes(query)
+        );
+      });
+    }
+
     const total = count ?? 0;
 
     return NextResponse.json({

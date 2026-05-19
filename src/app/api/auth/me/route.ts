@@ -3,13 +3,13 @@ import { z } from 'zod';
 import { getRouteHandlerSupabaseClient } from '@/lib/supabase-server';
 
 function normalizeRole(role?: string | null) {
-  return 'RECEPTIONIST';
+  return 'RECEPTIONIST' as const;
 }
 
 const profileSchema = z.object({
   fullName: z.string().min(1),
   email: z.string().email(),
-  phone: z.string().optional(),
+  phone: z.string().optional().nullable(),
 });
 
 export async function GET(request: NextRequest) {
@@ -21,12 +21,12 @@ export async function GET(request: NextRequest) {
 
   const { data: profileRow } = await authClient
     .from('profiles')
-    .select('auth_id, email, full_name, role, created_at, updated_at')
+    .select('auth_id, email, full_name, phone, avatar_url, role, created_at, updated_at')
     .eq('auth_id', user.id)
     .maybeSingle();
 
   const email = profileRow?.email || user.email || '';
-  const name = profileRow?.full_name || user.user_metadata?.full_name || '';
+  const name = profileRow?.full_name || (user.user_metadata?.full_name as string | undefined) || '';
   const role = normalizeRole(profileRow?.role || (user.user_metadata?.role as string | undefined));
 
   return NextResponse.json({
@@ -36,7 +36,8 @@ export async function GET(request: NextRequest) {
       email,
       name,
       role,
-      phone: null,
+      phone: profileRow?.phone ?? null,
+      avatarUrl: profileRow?.avatar_url ?? null,
       isActive: true,
       createdAt: profileRow?.created_at || user.created_at || '',
       updatedAt: profileRow?.updated_at || user.updated_at || '',
@@ -57,15 +58,17 @@ export async function PUT(request: NextRequest) {
 
     const { data, error } = await authClient
       .from('profiles')
-      .upsert({
-        auth_id: user.id,
-        full_name: validatedData.fullName,
-        email: validatedData.email,
-        role: 'RECEPTIONIST',
-      }, {
-        onConflict: 'auth_id',
-      })
-      .select('auth_id, email, full_name, role, created_at, updated_at')
+      .upsert(
+        {
+          auth_id: user.id,
+          full_name: validatedData.fullName,
+          email: validatedData.email,
+          phone: validatedData.phone ?? null,
+          role: 'RECEPTIONIST',
+        },
+        { onConflict: 'auth_id' },
+      )
+      .select('auth_id, email, full_name, phone, avatar_url, role, created_at, updated_at')
       .single();
 
     if (error) throw error;
@@ -77,7 +80,8 @@ export async function PUT(request: NextRequest) {
         email: data.email,
         name: data.full_name,
         role: data.role,
-        phone: null,
+        phone: data.phone,
+        avatarUrl: data.avatar_url,
         isActive: true,
         createdAt: data.created_at,
         updatedAt: data.updated_at,

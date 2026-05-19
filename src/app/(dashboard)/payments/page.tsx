@@ -11,12 +11,14 @@ export default function PaymentsPage() {
         searchPlaceholder="Search payments..."
         addLabel="Record Payment"
         entityType="payment"
+        entityName="payments"
+        tableCaption="Guest payments ledger"
         columns={[
           { key: 'paymentId', label: 'Payment ID' },
-          { key: 'guest', label: 'Guest' },
-          { key: 'amount', label: 'Amount', type: 'currency' },
-          { key: 'method', label: 'Method' },
-          { key: 'status', label: 'Status', type: 'status' },
+          { key: 'guest', label: 'Guest name' },
+          { key: 'amount', label: 'Amount (Rs)', type: 'currency' },
+          { key: 'method', label: 'Payment method' },
+          { key: 'status', label: 'Payment status', type: 'status' },
         ]}
       />
     </ProtectedPage>

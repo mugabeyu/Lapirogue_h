@@ -20,6 +20,7 @@ import { useApi } from '@/hooks/useApi';
 import { AddGuestModal } from '@/components/modals/AddGuestModal';
 import { AddActivityModal } from '@/components/modals/AddActivityModal';
 import { AddFoodOrderModal } from '@/components/modals/AddFoodOrderModal';
+import ReservationCalendarPage from '@/components/forms/ReservationCalendarPage';
 
 type DashboardData = {
   stats: {
@@ -434,6 +435,23 @@ export default function DashboardDataPage() {
             </section>
           </div>
         </div>
+      )}
+
+      {stats && (
+        <section className="overflow-hidden rounded-[32px] border border-sand-200 bg-white shadow-sm">
+          <div className="flex flex-col gap-3 border-b border-sand-200 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="font-display text-2xl text-ink-900">Reservation calendar</h2>
+              <p className="mt-1 text-sm text-ink-600">Monthly room occupancy and bookings</p>
+            </div>
+            <Link href="/reservations/calendar" className="text-sm font-medium text-primary hover:underline">
+              Open full calendar
+            </Link>
+          </div>
+          <div className="p-4">
+            <ReservationCalendarPage embedded />
+          </div>
+        </section>
       )}
 
       <AddGuestModal isOpen={isGuestModalOpen} onClose={() => setIsGuestModalOpen(false)} />

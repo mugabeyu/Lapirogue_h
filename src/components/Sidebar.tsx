@@ -13,9 +13,9 @@ import {
   CalendarDaysIcon,
   UtensilsIcon,
   CreditCardIcon,
-  BarChart3Icon,
+  LeafIcon,
   UserCogIcon,
-  BellIcon,
+  StarIcon,
   MessageSquareIcon,
   SettingsIcon,
   LogOutIcon,
@@ -74,14 +74,14 @@ const navItems: NavItem[] = [
   },
   { path: '/payments', label: 'Payments', icon: CreditCardIcon },
   { path: '/messages', label: 'Messages', icon: MessageSquareIcon },
-  { path: '/reports', label: 'Reports', icon: BarChart3Icon },
+  { path: '/sustainability', label: 'Sustainability', icon: LeafIcon },
   {
     path: '/staff',
     label: 'Staff Management',
     icon: UserCogIcon,
     children: [{ path: '/staff/roles', label: 'Roles & Permissions' }],
   },
-  { path: '/notifications', label: 'Notifications', icon: BellIcon },
+  { path: '/feedback', label: 'Guest Feedback', icon: StarIcon },
   { path: '/settings', label: 'Settings', icon: SettingsIcon },
 ];
 

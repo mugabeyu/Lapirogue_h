@@ -88,7 +88,11 @@ function bookingPosition(booking: CalendarBooking, days: string[]) {
   return { left, width: Math.max(width, 100 / days.length) };
 }
 
-export default function ReservationCalendarPage() {
+type ReservationCalendarPageProps = {
+  embedded?: boolean;
+};
+
+export default function ReservationCalendarPage({ embedded = false }: ReservationCalendarPageProps) {
   const [view, setView] = useState<CalendarView>('month');
   const [anchor, setAnchor] = useState(() => new Date().toISOString().slice(0, 10));
 
@@ -111,11 +115,18 @@ export default function ReservationCalendarPage() {
   const dayColMin = view === 'week' ? 72 : 44;
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
+    <div className={`space-y-6 ${embedded ? '' : 'animate-in fade-in duration-500'}`}>
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div>
-          <h1 className="font-display text-3xl text-ink-900">Reservation Calendar</h1>
-        </div>
+        {!embedded ? (
+          <div>
+            <h1 className="font-display text-3xl text-ink-900">Reservation Calendar</h1>
+          </div>
+        ) : (
+          <div>
+            <h2 className="font-display text-2xl text-ink-900">Monthly reservations</h2>
+            <p className="mt-1 text-sm text-ink-600">Room occupancy across the month</p>
+          </div>
+        )}
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex rounded-lg border border-sand-200 bg-white p-1 text-sm">
             <button
@@ -137,10 +148,12 @@ export default function ReservationCalendarPage() {
               Week
             </button>
           </div>
-          <Link href="/reservations/new" className="btn-primary inline-flex items-center gap-2">
-            <Plus className="h-4 w-4" />
-            New Reservation
-          </Link>
+          {!embedded ? (
+            <Link href="/reservations/new" className="btn-primary inline-flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              New Reservation
+            </Link>
+          ) : null}
         </div>
       </div>
 
@@ -293,3 +306,4 @@ function GroupRows({
     </>
   );
 }
+

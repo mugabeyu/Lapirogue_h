@@ -1,7 +1,9 @@
 'use client';
 
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { Modal } from '@/components/Modal';
+import { ImageUploadField } from '@/components/ui/ImageUploadField';
+import { uploadImage } from '@/lib/upload-image';
 import { toast } from 'sonner';
 import { Guest, GuestStay } from '@/types';
 
@@ -15,6 +17,12 @@ interface EditGuestModalProps {
 
 export function EditGuestModal({ isOpen, onClose, guest, currentStay, onSaved }: EditGuestModalProps) {
   const [isSaving, setIsSaving] = useState(false);
+  const [imagePath, setImagePath] = useState<string | null>(guest.imagePath ?? null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setImagePath(guest.imagePath ?? null);
+  }, [isOpen, guest.id, guest.imagePath]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -77,9 +85,22 @@ export function EditGuestModal({ isOpen, onClose, guest, currentStay, onSaved }:
     onClose();
   }
 
+  async function handlePhotoUpload(file: File) {
+    const url = await uploadImage({ file, bucket: 'guest-documents', id: guest.id, target: 'guest' });
+    if (!url) throw new Error('Upload failed');
+    setImagePath(url);
+    await fetch(`/api/guests/${guest.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imagePath: url }),
+    });
+    toast.success('Guest photo updated');
+  }
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Edit Profile" size="lg">
       <form key={guest.id} onSubmit={handleSubmit} className="space-y-4">
+        <ImageUploadField label="Guest photo" shape="circle" previewUrl={imagePath} onFileSelect={handlePhotoUpload} />
         <div className="grid grid-cols-2 gap-4">
           <Field label="First Name" name="firstName" defaultValue={guest.firstName} required />
           <Field label="Last Name" name="lastName" defaultValue={guest.lastName} required />

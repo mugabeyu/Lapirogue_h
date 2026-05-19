@@ -126,6 +126,8 @@ create table if not exists profiles (
   auth_id uuid primary key,
   full_name text,
   email text,
+  phone text,
+  avatar_url text,
   role user_role not null default 'RECEPTIONIST',
   is_main boolean not null default false,
   created_at timestamptz not null default now(),
@@ -445,6 +447,47 @@ create table if not exists notifications (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists guest_feedback (
+  id uuid primary key default gen_random_uuid(),
+  guest_id uuid not null references guests(id) on delete cascade,
+  rating integer not null check (rating >= 1 and rating <= 5),
+  category text not null,
+  comment text,
+  staff_response text,
+  responded_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists sustainability_activities (
+  id uuid primary key default gen_random_uuid(),
+  name text not null unique,
+  color text not null default '#10b981',
+  default_points integer not null default 0 check (default_points >= 0),
+  carbon_offset_kg numeric(10, 2) not null default 0 check (carbon_offset_kg >= 0),
+  is_active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists eco_tiers (
+  id uuid primary key default gen_random_uuid(),
+  name text not null unique,
+  min_points integer not null default 0 check (min_points >= 0),
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists guest_eco_point_events (
+  id uuid primary key default gen_random_uuid(),
+  guest_id uuid not null references guests(id) on delete cascade,
+  activity_id uuid not null references sustainability_activities(id) on delete restrict,
+  points integer not null check (points > 0),
+  carbon_offset_kg numeric(10, 2) not null default 0 check (carbon_offset_kg >= 0),
+  earned_at timestamptz not null default now(),
+  created_at timestamptz not null default now()
+);
+
 create table if not exists audit_logs (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references profiles(auth_id) on delete set null,
@@ -468,6 +511,12 @@ create index if not exists activities_category_idx on activities (category);
 create index if not exists menu_items_category_idx on menu_items (category);
 create index if not exists staff_department_idx on staff (department);
 create index if not exists notifications_created_at_idx on notifications (created_at);
+create index if not exists guest_feedback_guest_id_idx on guest_feedback (guest_id);
+create index if not exists guest_feedback_created_at_idx on guest_feedback (created_at desc);
+create index if not exists guest_feedback_rating_idx on guest_feedback (rating);
+create index if not exists guest_eco_point_events_guest_id_idx on guest_eco_point_events (guest_id);
+create index if not exists guest_eco_point_events_activity_id_idx on guest_eco_point_events (activity_id);
+create index if not exists guest_eco_point_events_earned_at_idx on guest_eco_point_events (earned_at desc);
 create index if not exists hotel_service_categories_display_order_idx on hotel_service_categories (display_order);
 create index if not exists hotel_services_category_id_idx on hotel_services (category_id);
 create index if not exists hotel_services_sort_order_idx on hotel_services (sort_order);
@@ -512,6 +561,12 @@ drop trigger if exists roles_set_updated_at on roles;
 create trigger roles_set_updated_at before update on roles for each row execute function set_updated_at();
 drop trigger if exists notifications_set_updated_at on notifications;
 create trigger notifications_set_updated_at before update on notifications for each row execute function set_updated_at();
+
+drop trigger if exists guest_feedback_set_updated_at on guest_feedback;
+create trigger guest_feedback_set_updated_at before update on guest_feedback for each row execute function set_updated_at();
+
+drop trigger if exists sustainability_activities_set_updated_at on sustainability_activities;
+create trigger sustainability_activities_set_updated_at before update on sustainability_activities for each row execute function set_updated_at();
 drop trigger if exists site_content_pages_set_updated_at on site_content_pages;
 create trigger site_content_pages_set_updated_at before update on site_content_pages for each row execute function set_updated_at();
 drop trigger if exists hotel_service_categories_set_updated_at on hotel_service_categories;
@@ -551,6 +606,10 @@ alter table menu_items enable row level security;
 alter table staff enable row level security;
 alter table roles enable row level security;
 alter table notifications enable row level security;
+alter table guest_feedback enable row level security;
+alter table sustainability_activities enable row level security;
+alter table eco_tiers enable row level security;
+alter table guest_eco_point_events enable row level security;
 alter table site_content_pages enable row level security;
 alter table hotel_service_categories enable row level security;
 alter table hotel_services enable row level security;
@@ -637,8 +696,24 @@ create policy "guest_schedule_items_modify_receptionist_insert" on guest_schedul
 create policy "guest_schedule_items_modify_receptionist_update" on guest_schedule_items for update using (exists (select 1 from profiles p where p.auth_id = auth.uid() and p.role = 'RECEPTIONIST')) with check (exists (select 1 from profiles p where p.auth_id = auth.uid() and p.role = 'RECEPTIONIST'));
 create policy "guest_schedule_items_delete_main_receptionist" on guest_schedule_items for delete using (exists (select 1 from profiles p where p.auth_id = auth.uid() and p.role = 'RECEPTIONIST' and p.is_main = true));
 
+create policy "guest_feedback_select_auth" on guest_feedback for select using (auth.uid() is not null);
+create policy "guest_feedback_modify_receptionist_insert" on guest_feedback for insert with check (exists (select 1 from profiles p where p.auth_id = auth.uid() and p.role = 'RECEPTIONIST'));
+create policy "guest_feedback_modify_receptionist_update" on guest_feedback for update using (exists (select 1 from profiles p where p.auth_id = auth.uid() and p.role = 'RECEPTIONIST')) with check (exists (select 1 from profiles p where p.auth_id = auth.uid() and p.role = 'RECEPTIONIST'));
+create policy "guest_feedback_delete_main_receptionist" on guest_feedback for delete using (exists (select 1 from profiles p where p.auth_id = auth.uid() and p.role = 'RECEPTIONIST' and p.is_main = true));
+
+create policy "sustainability_activities_select_auth" on sustainability_activities for select using (auth.uid() is not null);
+create policy "eco_tiers_select_auth" on eco_tiers for select using (auth.uid() is not null);
+create policy "guest_eco_point_events_select_auth" on guest_eco_point_events for select using (auth.uid() is not null);
+create policy "guest_eco_point_events_modify_receptionist_insert" on guest_eco_point_events for insert with check (exists (select 1 from profiles p where p.auth_id = auth.uid() and p.role = 'RECEPTIONIST'));
+create policy "guest_eco_point_events_modify_receptionist_update" on guest_eco_point_events for update using (exists (select 1 from profiles p where p.auth_id = auth.uid() and p.role = 'RECEPTIONIST')) with check (exists (select 1 from profiles p where p.auth_id = auth.uid() and p.role = 'RECEPTIONIST'));
+create policy "guest_eco_point_events_delete_main_receptionist" on guest_eco_point_events for delete using (exists (select 1 from profiles p where p.auth_id = auth.uid() and p.role = 'RECEPTIONIST' and p.is_main = true));
+
 -- Public content pages: allow public select
 create policy "site_content_public_select" on site_content_pages for select using (is_active = true);
+create policy "site_content_update_receptionist" on site_content_pages
+  for all
+  using (exists (select 1 from profiles p where p.auth_id = auth.uid() and p.role = 'RECEPTIONIST'))
+  with check (exists (select 1 from profiles p where p.auth_id = auth.uid() and p.role = 'RECEPTIONIST'));
 
 
 -- The Next.js backend uses SUPABASE_SERVICE_ROLE_KEY, which bypasses RLS.

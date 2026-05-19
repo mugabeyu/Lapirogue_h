@@ -11,6 +11,7 @@ const roomSchema = z.object({
   status: z.enum(['AVAILABLE', 'OCCUPIED', 'CLEANING', 'MAINTENANCE']).optional(),
   description: z.string().optional(),
   amenities: z.array(z.string()).optional(),
+  imagePath: z.string().optional().nullable(),
 });
 
 type RoomRow = {
@@ -23,6 +24,7 @@ type RoomRow = {
   status?: string | null;
   description?: string | null;
   amenities?: string[] | null;
+  image_path?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
 };
@@ -38,6 +40,7 @@ function toRoom(row: RoomRow) {
     status: row.status ?? 'AVAILABLE',
     description: row.description ?? undefined,
     amenities: row.amenities ?? [],
+    imagePath: row.image_path ?? undefined,
     createdAt: row.created_at ?? null,
     updatedAt: row.updated_at ?? null,
   };
@@ -146,6 +149,7 @@ export async function POST(request: NextRequest) {
         status: validatedData.status ?? 'AVAILABLE',
         description: validatedData.description,
         amenities: validatedData.amenities ?? [],
+        image_path: validatedData.imagePath ?? null,
       })
       .select('*')
       .single();
@@ -191,6 +195,7 @@ export async function PUT(request: NextRequest) {
         status: updateData.status,
         description: updateData.description,
         amenities: updateData.amenities,
+        image_path: updateData.imagePath ?? undefined,
       })
       .eq('id', id)
       .select('*')

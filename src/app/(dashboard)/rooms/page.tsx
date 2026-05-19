@@ -11,12 +11,14 @@ export default function RoomsPage() {
         searchPlaceholder="Search rooms..."
         addLabel="Add Room"
         entityType="room"
+        entityName="rooms"
+        tableCaption="Room inventory"
         columns={[
-          { key: 'roomNumber', label: 'Room' },
-          { key: 'type', label: 'Type' },
-          { key: 'capacity', label: 'Capacity', type: 'number' },
-          { key: 'price', label: 'Price', type: 'currency' },
-          { key: 'status', label: 'Status', type: 'status' },
+          { key: 'roomNumber', label: 'Room number' },
+          { key: 'type', label: 'Room type' },
+          { key: 'capacity', label: 'Guest capacity', type: 'number' },
+          { key: 'price', label: 'Nightly rate (Rs)', type: 'currency' },
+          { key: 'status', label: 'Availability', type: 'status' },
         ]}
       />
     </ProtectedPage>

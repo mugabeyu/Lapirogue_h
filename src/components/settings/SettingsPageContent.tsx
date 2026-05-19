@@ -1,0 +1,384 @@
+'use client';
+
+import { FormEvent, useEffect, useState } from 'react';
+import { toast } from 'sonner';
+import { useApi } from '@/hooks/useApi';
+import { ImageUploadField } from '@/components/ui/ImageUploadField';
+import { uploadImage } from '@/lib/upload-image';
+import { User } from '@/types';
+
+type SettingsTab = 'profile' | 'security' | 'hotel';
+
+type AboutContentForm = {
+  title: string;
+  subtitle: string;
+  body: string;
+  highlightsText: string;
+  metricsText: string;
+  imagePath: string;
+};
+
+const TABS: Array<{ id: SettingsTab; label: string }> = [
+  { id: 'profile', label: 'Profile' },
+  { id: 'security', label: 'Security' },
+  { id: 'hotel', label: 'Hotel Info' },
+];
+
+export default function SettingsPageContent() {
+  const { data: user, mutate } = useApi<User>('/api/auth/me');
+  const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
+  const [isSaving, setIsSaving] = useState(false);
+  const [profileForm, setProfileForm] = useState({
+    fullName: '',
+    email: '',
+    phone: '',
+  });
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+  const [aboutData, setAboutData] = useState<AboutContentForm>({
+    title: '',
+    subtitle: '',
+    body: '',
+    highlightsText: '',
+    metricsText: '',
+    imagePath: '',
+  });
+
+  useEffect(() => {
+    async function loadAboutContent() {
+      const response = await fetch('/api/content/about');
+      if (!response.ok) return;
+      const payload = await response.json();
+      const data = payload.data;
+      if (!data) return;
+
+      setAboutData({
+        title: data.title ?? '',
+        subtitle: data.subtitle ?? '',
+        body: data.body ?? '',
+        highlightsText: Array.isArray(data.highlights) ? data.highlights.join('\n') : '',
+        metricsText: Array.isArray(data.metrics)
+          ? data.metrics
+              .map((metric: { label?: string; value?: string }) => `${metric.label ?? ''}|${metric.value ?? ''}`)
+              .join('\n')
+          : '',
+        imagePath: data.image_path ?? '',
+      });
+    }
+
+    loadAboutContent();
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    setProfileForm({
+      fullName: user.name || '',
+      email: user.email || '',
+      phone: user.phone || '',
+    });
+  }, [user]);
+
+  async function handleProfileSave(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setIsSaving(true);
+
+    const response = await fetch('/api/settings/profile', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fullName: profileForm.fullName,
+        email: profileForm.email,
+        phone: profileForm.phone || null,
+        avatarUrl: user?.avatarUrl ?? null,
+      }),
+    });
+
+    setIsSaving(false);
+    toast[response.ok ? 'success' : 'error'](response.ok ? 'Profile saved' : 'Unable to update profile');
+    if (response.ok) mutate();
+  }
+
+  async function handlePasswordSave(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      toast.error('Passwords do not match');
+      return;
+    }
+
+    setIsSaving(true);
+    const response = await fetch('/api/settings/password', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword,
+      }),
+    });
+
+    setIsSaving(false);
+    toast[response.ok ? 'success' : 'error'](response.ok ? 'Password updated' : 'Unable to update password');
+    if (response.ok) {
+      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    }
+  }
+
+  async function handleAvatarUpload(file: File) {
+    if (!user?.id) return;
+    const url = await uploadImage({
+      file,
+      bucket: 'staff-avatars',
+      id: user.id,
+      target: 'profile',
+    });
+    if (!url) throw new Error('Upload failed');
+
+    const response = await fetch('/api/settings/profile', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fullName: profileForm.fullName || user.name,
+        email: profileForm.email || user.email,
+        phone: profileForm.phone || null,
+        avatarUrl: url,
+      }),
+    });
+
+    if (!response.ok) throw new Error('Unable to save avatar');
+    toast.success('Profile picture updated');
+    await mutate();
+  }
+
+  async function handleAboutImageUpload(file: File) {
+    const url = await uploadImage({
+      file,
+      bucket: 'content-images',
+      id: 'about',
+      target: 'about',
+    });
+    if (!url) throw new Error('Upload failed');
+    setAboutData((current) => ({ ...current, imagePath: url }));
+    toast.success('Hotel image uploaded');
+  }
+
+  async function handleHotelSave(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setIsSaving(true);
+
+    const highlights = aboutData.highlightsText
+      .split('\n')
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+    const metrics = aboutData.metricsText
+      .split('\n')
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .map((item) => {
+        const [label, value] = item.split('|').map((part) => part.trim());
+        return { label, value };
+      })
+      .filter((item) => item.label && item.value);
+
+    const response = await fetch('/api/content/about', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: aboutData.title,
+        subtitle: aboutData.subtitle,
+        body: aboutData.body,
+        highlights,
+        metrics,
+        imagePath: aboutData.imagePath || null,
+      }),
+    });
+
+    setIsSaving(false);
+    toast[response.ok ? 'success' : 'error'](response.ok ? 'Hotel info saved' : 'Unable to save hotel info');
+  }
+
+  const tabTitle =
+    activeTab === 'profile' ? 'Profile Settings' : activeTab === 'security' ? 'Security Settings' : 'Hotel Info';
+
+  return (
+    <div className="animate-in fade-in duration-500">
+      <h1 className="font-display text-4xl text-ink-900">Settings</h1>
+
+      <div className="mt-10 grid gap-10 lg:grid-cols-[220px_minmax(0,1fr)]">
+        <nav className="space-y-1 text-sm">
+          {TABS.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={`block w-full rounded-lg px-1 py-2 text-left transition-colors ${
+                activeTab === tab.id ? 'font-semibold text-ink-900' : 'text-ink-600 hover:text-ink-900'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </nav>
+
+        <section className="rounded-[28px] border border-sand-200 bg-white px-6 py-10 shadow-sm sm:px-10">
+          <h2 className="text-center font-display text-3xl text-ink-900">{tabTitle}</h2>
+
+          {activeTab === 'profile' && (
+            <form onSubmit={handleProfileSave} className="mx-auto mt-8 max-w-lg space-y-6">
+              <div className="flex justify-center">
+                <ImageUploadField
+                  label="Profile picture"
+                  shape="circle"
+                  previewUrl={user?.avatarUrl}
+                  onFileSelect={handleAvatarUpload}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-ink-700">Full name</label>
+                <input
+                  type="text"
+                  value={profileForm.fullName}
+                  onChange={(event) => setProfileForm({ ...profileForm, fullName: event.target.value })}
+                  className="input-field w-full"
+                  required
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-ink-700">Email</label>
+                <input
+                  type="email"
+                  value={profileForm.email}
+                  onChange={(event) => setProfileForm({ ...profileForm, email: event.target.value })}
+                  className="input-field w-full"
+                  required
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-ink-700">Phone</label>
+                <input
+                  type="tel"
+                  value={profileForm.phone}
+                  onChange={(event) => setProfileForm({ ...profileForm, phone: event.target.value })}
+                  className="input-field w-full"
+                />
+              </div>
+              <div className="flex justify-center pt-2">
+                <button type="submit" disabled={isSaving} className="btn-primary min-w-40 disabled:opacity-50">
+                  {isSaving ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          )}
+
+          {activeTab === 'security' && (
+            <form onSubmit={handlePasswordSave} className="mx-auto mt-8 max-w-lg space-y-6">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-ink-700">Current password</label>
+                <input
+                  type="password"
+                  value={passwordData.currentPassword}
+                  onChange={(event) => setPasswordData({ ...passwordData, currentPassword: event.target.value })}
+                  className="input-field w-full"
+                  required
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-ink-700">New password</label>
+                <input
+                  type="password"
+                  value={passwordData.newPassword}
+                  onChange={(event) => setPasswordData({ ...passwordData, newPassword: event.target.value })}
+                  className="input-field w-full"
+                  minLength={8}
+                  required
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-ink-700">Confirm new password</label>
+                <input
+                  type="password"
+                  value={passwordData.confirmPassword}
+                  onChange={(event) => setPasswordData({ ...passwordData, confirmPassword: event.target.value })}
+                  className="input-field w-full"
+                  minLength={8}
+                  required
+                />
+              </div>
+              <div className="flex justify-center pt-2">
+                <button type="submit" disabled={isSaving} className="btn-primary min-w-40 disabled:opacity-50">
+                  {isSaving ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          )}
+
+          {activeTab === 'hotel' && (
+            <form onSubmit={handleHotelSave} className="mx-auto mt-8 max-w-2xl space-y-6">
+              <ImageUploadField
+                label="Hotel hero image"
+                previewUrl={aboutData.imagePath}
+                onFileSelect={handleAboutImageUpload}
+                hint="Shown on the public about page"
+              />
+              <div>
+                <label className="mb-1 block text-sm font-medium text-ink-700">Title</label>
+                <input
+                  type="text"
+                  value={aboutData.title}
+                  onChange={(event) => setAboutData({ ...aboutData, title: event.target.value })}
+                  className="input-field w-full"
+                  required
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-ink-700">Subtitle</label>
+                <input
+                  type="text"
+                  value={aboutData.subtitle}
+                  onChange={(event) => setAboutData({ ...aboutData, subtitle: event.target.value })}
+                  className="input-field w-full"
+                  required
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-ink-700">About text</label>
+                <textarea
+                  value={aboutData.body}
+                  onChange={(event) => setAboutData({ ...aboutData, body: event.target.value })}
+                  className="input-field min-h-36 w-full"
+                  required
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-ink-700">Highlights</label>
+                <textarea
+                  value={aboutData.highlightsText}
+                  onChange={(event) => setAboutData({ ...aboutData, highlightsText: event.target.value })}
+                  className="input-field min-h-28 w-full"
+                  placeholder="One highlight per line"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-ink-700">Metrics</label>
+                <textarea
+                  value={aboutData.metricsText}
+                  onChange={(event) => setAboutData({ ...aboutData, metricsText: event.target.value })}
+                  className="input-field min-h-28 w-full"
+                  placeholder="Label|Value per line"
+                />
+              </div>
+              <div className="flex justify-center pt-2">
+                <button type="submit" disabled={isSaving} className="btn-primary min-w-40 disabled:opacity-50">
+                  {isSaving ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          )}
+        </section>
+      </div>
+    </div>
+  );
+}

@@ -2,6 +2,8 @@
 
 import { FormEvent, useEffect, useState } from 'react';
 import { Modal } from '@/components/Modal';
+import { ImageUploadField } from '@/components/ui/ImageUploadField';
+import { uploadImage } from '@/lib/upload-image';
 import { toast } from 'sonner';
 import { Room, RoomType } from '@/types';
 
@@ -16,12 +18,14 @@ const roomTypes: RoomType[] = ['STANDARD', 'DELUXE', 'SUITE', 'VILLA'];
 
 export function RoomModal({ isOpen, onClose, onSaved, editRow }: RoomModalProps) {
   const [isSaving, setIsSaving] = useState(false);
+  const [imagePath, setImagePath] = useState<string | null>(null);
   const room = editRow as Room | null;
   const isEdit = Boolean(room?.id);
 
   useEffect(() => {
     if (!isOpen) return;
-  }, [isOpen, room?.id]);
+    setImagePath(room?.imagePath ?? null);
+  }, [isOpen, room?.id, room?.imagePath]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -37,6 +41,7 @@ export function RoomModal({ isOpen, onClose, onSaved, editRow }: RoomModalProps)
       price: Number(formData.get('price')),
       status: formData.get('status') || 'AVAILABLE',
       description: formData.get('description') || undefined,
+      imagePath: imagePath ?? undefined,
     };
 
     const response = await fetch('/api/rooms', {
@@ -56,9 +61,27 @@ export function RoomModal({ isOpen, onClose, onSaved, editRow }: RoomModalProps)
     }
   }
 
+  async function handleImageUpload(file: File) {
+    if (isEdit && room?.id) {
+      const url = await uploadImage({ file, bucket: 'room-images', id: room.id });
+      if (!url) throw new Error('Upload failed');
+      setImagePath(url);
+      return;
+    }
+
+    setImagePath(URL.createObjectURL(file));
+    toast.message('Save the room first to store the photo in storage');
+  }
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={isEdit ? 'Edit Room' : 'Add Room'} size="lg">
       <form key={room?.id ?? 'new'} onSubmit={handleSubmit} className="space-y-4">
+        <ImageUploadField
+          label="Room photo"
+          previewUrl={imagePath}
+          onFileSelect={handleImageUpload}
+          disabled={isSaving}
+        />
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="mb-1 block text-sm font-medium text-ink-700">Room number</label>

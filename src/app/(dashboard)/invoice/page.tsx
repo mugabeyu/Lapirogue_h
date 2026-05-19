@@ -6,14 +6,17 @@ export default function InvoicePage() {
     <ProtectedPage>
       <DataTablePage
         title="Invoices"
-        subtitle="Payment records from the database."
+        subtitle="Issued invoices linked to guest payments."
         endpoint="/api/payments"
+        entityName="invoices"
+        tableCaption="Invoice register"
+        searchPlaceholder="Search invoices..."
         columns={[
-          { key: 'paymentId', label: 'Invoice Reference' },
-          { key: 'guest', label: 'Guest' },
-          { key: 'amount', label: 'Amount', type: 'currency' },
-          { key: 'status', label: 'Status', type: 'status' },
-          { key: 'createdAt', label: 'Created', type: 'date' },
+          { key: 'paymentId', label: 'Invoice reference' },
+          { key: 'guest', label: 'Guest name' },
+          { key: 'amount', label: 'Amount (Rs)', type: 'currency' },
+          { key: 'status', label: 'Invoice status', type: 'status' },
+          { key: 'createdAt', label: 'Issue date', type: 'date' },
         ]}
       />
     </ProtectedPage>

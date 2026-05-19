@@ -12,14 +12,16 @@ export default function ReservationsPage() {
         addLabel="Add Reservation"
         addHref="/reservations/new"
         entityType="reservation"
+        entityName="reservations"
+        tableCaption="Hotel reservations"
         columns={[
           { key: 'reservationId', label: 'Reservation ID' },
-          { key: 'guest', label: 'Guest' },
-          { key: 'room', label: 'Room' },
-          { key: 'checkIn', label: 'Check In', type: 'date' },
-          { key: 'checkOut', label: 'Check Out', type: 'date' },
-          { key: 'totalAmount', label: 'Total', type: 'currency' },
-          { key: 'status', label: 'Status', type: 'status' },
+          { key: 'guest', label: 'Guest name' },
+          { key: 'room', label: 'Room number' },
+          { key: 'checkIn', label: 'Check-in date', type: 'date' },
+          { key: 'checkOut', label: 'Check-out date', type: 'date' },
+          { key: 'totalAmount', label: 'Total (Rs)', type: 'currency' },
+          { key: 'status', label: 'Booking status', type: 'status' },
         ]}
       />
     </ProtectedPage>

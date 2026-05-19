@@ -6,11 +6,13 @@ export default function RolesPage() {
     <ProtectedPage>
       <DataTablePage
         title="Receptionist Access"
-        subtitle="The system now runs on a single Receptionist role with full access."
+        subtitle="Access roles configured for reception staff."
         endpoint="/api/roles"
+        entityName="roles"
+        tableCaption="System roles"
         columns={[
-          { key: 'name', label: 'Role' },
-          { key: 'description', label: 'Description' },
+          { key: 'name', label: 'Role name' },
+          { key: 'description', label: 'Role description' },
         ]}
       />
     </ProtectedPage>

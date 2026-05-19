@@ -14,6 +14,7 @@ const guestUpdateSchema = z.object({
   vip: z.boolean().optional(),
   status: z.enum(['RESERVED', 'CHECKED_IN', 'CHECKED_OUT', 'CANCELLED']).optional(),
   notes: z.string().optional(),
+  imagePath: z.string().optional().nullable(),
 });
 
 type GuestRow = {
@@ -99,6 +100,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     if (validatedData.vip !== undefined) updatePayload.vip = validatedData.vip;
     if (validatedData.status !== undefined) updatePayload.status = validatedData.status;
     if (validatedData.notes !== undefined) updatePayload.notes = validatedData.notes;
+    if (validatedData.imagePath !== undefined) updatePayload.image_path = validatedData.imagePath;
 
     const { data: guest, error } = await getSupabaseAdmin()
       .from('guests')

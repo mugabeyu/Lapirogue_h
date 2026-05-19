@@ -1,7 +1,9 @@
 'use client';
 
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { Modal } from '@/components/Modal';
+import { ImageUploadField } from '@/components/ui/ImageUploadField';
+import { uploadImage } from '@/lib/upload-image';
 import { toast } from 'sonner';
 import { Activity } from '@/types';
 
@@ -14,8 +16,14 @@ interface AddActivityModalProps {
 
 export function AddActivityModal({ isOpen, onClose, onSaved, editRow }: AddActivityModalProps) {
   const [isSaving, setIsSaving] = useState(false);
+  const [imagePath, setImagePath] = useState<string | null>(null);
   const activity = editRow as Activity | null;
   const isEdit = Boolean(activity?.id);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setImagePath(activity?.imagePath ?? null);
+  }, [isOpen, activity?.id, activity?.imagePath]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -36,8 +44,19 @@ export function AddActivityModal({ isOpen, onClose, onSaved, editRow }: AddActiv
     const response = await fetch('/api/activities', {
       method: isEdit ? 'PUT' : 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ ...payload, imagePath: imagePath ?? activity?.imagePath }),
     });
+
+    const result = await response.json();
+    const activityId = (result.data?.id as string | undefined) ?? activity?.id;
+
+    if (response.ok && activityId && imagePath?.startsWith('blob:') === false && imagePath) {
+      await fetch('/api/activities', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: activityId, imagePath }),
+      });
+    }
 
     setIsSaving(false);
     toast[response.ok ? 'success' : 'error'](
@@ -50,9 +69,21 @@ export function AddActivityModal({ isOpen, onClose, onSaved, editRow }: AddActiv
     }
   }
 
+  async function handleImageUpload(file: File) {
+    if (isEdit && activity?.id) {
+      const url = await uploadImage({ file, bucket: 'activity-images', id: activity.id });
+      if (!url) throw new Error('Upload failed');
+      setImagePath(url);
+      return;
+    }
+    setImagePath(URL.createObjectURL(file));
+    toast.message('Save the activity first to upload to storage');
+  }
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={isEdit ? 'Edit Activity' : 'Add Activity'} size="lg">
       <form key={activity?.id ?? 'new'} onSubmit={handleSubmit} className="space-y-5">
+        <ImageUploadField label="Activity photo" previewUrl={imagePath} onFileSelect={handleImageUpload} />
         <div className="grid gap-4 md:grid-cols-2">
           <div>
             <label className="mb-1 block text-sm font-medium text-ink-700">Activity name</label>
