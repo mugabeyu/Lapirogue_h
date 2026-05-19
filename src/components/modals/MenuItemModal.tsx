@@ -1,88 +1,269 @@
 'use client';
 
-import { FormEvent, useState } from 'react';
+import { ChangeEvent, FormEvent, useEffect, useState } from 'react';
+import { CloudUpload, Loader2, Trash2 } from 'lucide-react';
 import { Modal } from '@/components/Modal';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { MENU_CATEGORIES, MenuItemRecord } from '@/lib/menu';
 import { toast } from 'sonner';
-import { MenuItem } from '@/types';
 
 interface MenuItemModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSaved?: () => void | Promise<void>;
-  editRow?: Record<string, unknown> | null;
+  editItem?: MenuItemRecord | null;
 }
 
-export function MenuItemModal({ isOpen, onClose, onSaved, editRow }: MenuItemModalProps) {
+export function MenuItemModal({ isOpen, onClose, onSaved, editItem }: MenuItemModalProps) {
   const [isSaving, setIsSaving] = useState(false);
-  const item = editRow as MenuItem | null;
-  const isEdit = Boolean(item?.id);
-  const isAvailable = item ? item.isAvailable !== false : true;
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+
+  const [name, setName] = useState('');
+  const [category, setCategory] = useState<string>(MENU_CATEGORIES[0]);
+  const [description, setDescription] = useState('');
+  const [price, setPrice] = useState('');
+  const [preparationMinutes, setPreparationMinutes] = useState('');
+  const [isAvailable, setIsAvailable] = useState(true);
+
+  const isEdit = Boolean(editItem?.id);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setImageFile(null);
+    setName(editItem?.name ?? '');
+    setCategory(editItem?.category ?? MENU_CATEGORIES[0]);
+    setDescription(editItem?.description ?? '');
+    setPrice(editItem?.price !== undefined ? String(editItem.price) : '');
+    setPreparationMinutes(
+      editItem?.preparationMinutes !== undefined && editItem.preparationMinutes !== null
+        ? String(editItem.preparationMinutes)
+        : '',
+    );
+    setIsAvailable(editItem?.isAvailable !== false);
+    setImagePreview(editItem?.imagePath ?? null);
+  }, [isOpen, editItem]);
+
+  function handleImageChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be 5MB or smaller');
+      return;
+    }
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  }
+
+  async function uploadImage(itemId: string) {
+    if (!imageFile) return editItem?.imagePath;
+    const formData = new FormData();
+    formData.append('file', imageFile);
+    formData.append('bucket', 'menu-images');
+    formData.append('id', itemId);
+
+    const response = await fetch('/api/upload', { method: 'POST', body: formData });
+    if (!response.ok) return editItem?.imagePath;
+    const payload = await response.json();
+    return payload.data?.publicUrl as string | undefined;
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsSaving(true);
-    const formData = new FormData(event.currentTarget);
 
     const payload = {
-      id: item?.id,
-      name: formData.get('name'),
-      category: formData.get('category'),
-      description: formData.get('description'),
-      price: Number(formData.get('price')),
-      isAvailable: formData.get('isAvailable') === 'on',
+      name: name.trim(),
+      category,
+      description: description.trim() || null,
+      price: Number(price) || 0,
+      preparationMinutes: preparationMinutes.trim() ? Number(preparationMinutes) : null,
+      isAvailable,
     };
 
     const response = await fetch('/api/menu-items', {
       method: isEdit ? 'PUT' : 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(isEdit ? { id: editItem!.id, ...payload } : payload),
     });
 
-    setIsSaving(false);
-    toast[response.ok ? 'success' : 'error'](
-      response.ok ? (isEdit ? 'Menu item updated' : 'Menu item created') : 'Unable to save menu item',
-    );
-
-    if (response.ok) {
-      if (onSaved) await onSaved();
-      onClose();
+    const result = await response.json();
+    if (!response.ok) {
+      setIsSaving(false);
+      toast.error(result.error ?? 'Unable to save menu item');
+      return;
     }
+
+    const itemId = (isEdit ? editItem!.id : result.data?.id) as string;
+    if (imageFile && itemId) {
+      await uploadImage(itemId);
+    }
+
+    setIsSaving(false);
+    toast.success(isEdit ? 'Menu item updated' : 'Menu item added');
+    if (onSaved) await onSaved();
+    onClose();
+  }
+
+  async function handleDelete() {
+    if (!editItem?.id) return;
+    setIsDeleting(true);
+    const response = await fetch(`/api/menu-items?id=${editItem.id}`, { method: 'DELETE' });
+    setIsDeleting(false);
+    setConfirmDelete(false);
+
+    if (!response.ok) {
+      toast.error('Unable to delete menu item');
+      return;
+    }
+
+    toast.success('Menu item deleted');
+    if (onSaved) await onSaved();
+    onClose();
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={isEdit ? 'Edit Menu Item' : 'Add Menu Item'} size="lg">
-      <form key={item?.id ?? 'new'} onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="mb-1 block text-sm font-medium text-ink-700">Name</label>
-            <input name="name" required className="input-field w-full" defaultValue={item?.name} />
+    <>
+      <Modal
+        isOpen={isOpen}
+        onClose={onClose}
+        title={isEdit ? 'Edit menu item' : 'Add menu item'}
+        subtitle="Add a photo, prep time, and pricing for this dish."
+        size="lg"
+      >
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="grid gap-5 lg:grid-cols-[200px_1fr]">
+            <div className="space-y-2">
+              <span className="text-sm font-medium text-ink-700">Item photo</span>
+              <label className="flex aspect-square cursor-pointer flex-col items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-sand-300 bg-sand-50/60 text-center transition-colors hover:border-primary/40 hover:bg-sand-50">
+                {imagePreview ? (
+                  <img src={imagePreview} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <>
+                    <CloudUpload className="mb-2 h-7 w-7 text-ink-400" />
+                    <span className="px-3 text-xs font-medium text-ink-600">Upload photo</span>
+                    <span className="mt-1 px-3 text-[11px] text-ink-500">PNG, JPG up to 5MB</span>
+                  </>
+                )}
+                <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+              </label>
+            </div>
+
+            <div className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="block space-y-1.5 sm:col-span-2">
+                  <span className="text-sm font-medium text-ink-700">Name</span>
+                  <input
+                    value={name}
+                    onChange={(event) => setName(event.target.value)}
+                    required
+                    className="input-field w-full"
+                    placeholder="e.g. Rougaille Saucisses"
+                  />
+                </label>
+                <label className="block space-y-1.5">
+                  <span className="text-sm font-medium text-ink-700">Category</span>
+                  <select
+                    value={category}
+                    onChange={(event) => setCategory(event.target.value)}
+                    required
+                    className="input-field w-full"
+                  >
+                    {MENU_CATEGORIES.map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="block space-y-1.5">
+                  <span className="text-sm font-medium text-ink-700">Price (Rs)</span>
+                  <input
+                    type="number"
+                    min={0}
+                    step="1"
+                    value={price}
+                    onChange={(event) => setPrice(event.target.value)}
+                    required
+                    className="input-field w-full"
+                    placeholder="650"
+                  />
+                </label>
+                <label className="block space-y-1.5 sm:col-span-2">
+                  <span className="text-sm font-medium text-ink-700">Preparation time (minutes)</span>
+                  <input
+                    type="number"
+                    min={0}
+                    value={preparationMinutes}
+                    onChange={(event) => setPreparationMinutes(event.target.value)}
+                    className="input-field w-full max-w-xs"
+                    placeholder="e.g. 25"
+                  />
+                </label>
+                <label className="block space-y-1.5 sm:col-span-2">
+                  <span className="text-sm font-medium text-ink-700">Description</span>
+                  <textarea
+                    value={description}
+                    onChange={(event) => setDescription(event.target.value)}
+                    rows={3}
+                    className="input-field w-full resize-none"
+                    placeholder="Short description for the menu card..."
+                  />
+                </label>
+              </div>
+
+              <label className="flex items-center gap-3 rounded-lg border border-sand-200 bg-sand-50/50 px-3 py-2.5 text-sm text-ink-700">
+                <input
+                  type="checkbox"
+                  checked={isAvailable}
+                  onChange={(event) => setIsAvailable(event.target.checked)}
+                  className="h-4 w-4 rounded border-sand-300 text-primary focus:ring-primary"
+                />
+                Available on menu
+              </label>
+            </div>
           </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-ink-700">Category</label>
-            <input name="category" required className="input-field w-full" defaultValue={item?.category} />
+
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-sand-200 pt-4">
+            {isEdit ? (
+              <button
+                type="button"
+                onClick={() => setConfirmDelete(true)}
+                className="inline-flex items-center gap-2 text-sm font-medium text-danger hover:underline"
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete item
+              </button>
+            ) : (
+              <span />
+            )}
+            <div className="flex gap-3">
+              <button type="button" className="btn-secondary" onClick={onClose} disabled={isSaving}>
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSaving}
+                className="btn-primary inline-flex items-center gap-2 disabled:opacity-50"
+              >
+                {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
+                {isSaving ? 'Saving...' : isEdit ? 'Update item' : 'Add item'}
+              </button>
+            </div>
           </div>
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-ink-700">Description</label>
-          <textarea name="description" className="input-field w-full" rows={2} defaultValue={item?.description ?? ''} />
-        </div>
-        <div>
-          <label className="mb-1 block text-sm font-medium text-ink-700">Price</label>
-          <input name="price" type="number" min="0" required className="input-field w-full" defaultValue={item?.price ?? ''} />
-        </div>
-        <label className="flex items-center gap-2 text-sm text-ink-700">
-          <input type="checkbox" name="isAvailable" defaultChecked={isAvailable} className="rounded border-sand-300" />
-          Available on menu
-        </label>
-        <div className="flex justify-end gap-3 pt-2">
-          <button type="button" className="btn-secondary" onClick={onClose}>
-            Cancel
-          </button>
-          <button type="submit" disabled={isSaving} className="btn-primary disabled:opacity-50">
-            {isSaving ? 'Saving...' : isEdit ? 'Update Item' : 'Add Item'}
-          </button>
-        </div>
-      </form>
-    </Modal>
+        </form>
+      </Modal>
+
+      <ConfirmDialog
+        isOpen={confirmDelete}
+        onClose={() => setConfirmDelete(false)}
+        onConfirm={handleDelete}
+        title="Delete menu item"
+        message={`Remove "${editItem?.name}" from the menu? This cannot be undone.`}
+        isLoading={isDeleting}
+      />
+    </>
   );
 }

@@ -4,8 +4,9 @@ import { z } from 'zod';
 
 const paymentSchema = z.object({
   id: z.string().uuid().optional(),
-  reservationId: z.string().uuid(),
-  amount: z.number().min(0),
+  guestId: z.string().uuid(),
+  reservationId: z.string().uuid().optional(),
+  amount: z.number().min(0.01),
   method: z.enum(['CASH', 'CARD', 'BANK_TRANSFER', 'ONLINE']),
   status: z.enum(['PENDING', 'COMPLETED', 'FAILED', 'REFUNDED']).optional(),
   reference: z.string().optional(),
@@ -15,6 +16,7 @@ const paymentSchema = z.object({
 type PaymentRow = {
   id: string;
   payment_id?: string | null;
+  guest_id?: string | null;
   reservation_id?: string | null;
   amount?: number | string | null;
   method?: string | null;
@@ -22,18 +24,31 @@ type PaymentRow = {
   reference?: string | null;
   notes?: string | null;
   created_at?: string | null;
+  guests?: { first_name?: string | null; last_name?: string | null } | null;
   reservations?: {
     reservation_id?: string | null;
     guests?: { first_name?: string | null; last_name?: string | null } | null;
   } | null;
 };
 
+function guestName(row: PaymentRow) {
+  if (row.guests) {
+    return `${row.guests.first_name ?? ''} ${row.guests.last_name ?? ''}`.trim() || null;
+  }
+  if (row.reservations?.guests) {
+    return `${row.reservations.guests.first_name ?? ''} ${row.reservations.guests.last_name ?? ''}`.trim() || null;
+  }
+  return null;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const search = request.nextUrl.searchParams.get('search') ?? '';
     const { data, error } = await getSupabaseAdmin()
       .from('payments')
-      .select('id,payment_id,reservation_id,amount,method,status,reference,notes,created_at,reservations(reservation_id,guests(first_name,last_name))')
+      .select(
+        'id,payment_id,guest_id,reservation_id,amount,method,status,reference,notes,created_at,guests(first_name,last_name),reservations(reservation_id,guests(first_name,last_name))',
+      )
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -42,9 +57,10 @@ export async function GET(request: NextRequest) {
     const payments = rows.map((payment) => ({
       id: payment.id,
       paymentId: payment.payment_id ?? null,
+      guestId: payment.guest_id ?? null,
       reservationId: payment.reservation_id ?? null,
       reservation: payment.reservations?.reservation_id ?? null,
-      guest: payment.reservations?.guests ? `${payment.reservations.guests.first_name ?? ''} ${payment.reservations.guests.last_name ?? ''}`.trim() || null : null,
+      guest: guestName(payment),
       amount: payment.amount === undefined || payment.amount === null ? 0 : Number(payment.amount),
       method: payment.method ?? null,
       status: payment.status ?? null,
@@ -70,7 +86,8 @@ export async function POST(request: NextRequest) {
     const { data, error } = await getSupabaseAdmin()
       .from('payments')
       .insert({
-        reservation_id: body.reservationId,
+        guest_id: body.guestId,
+        reservation_id: body.reservationId ?? null,
         amount: body.amount,
         method: body.method,
         status: body.status ?? 'PENDING',
@@ -93,16 +110,17 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = paymentSchema.extend({ id: z.string().uuid() }).parse(await request.json());
-    const { id, ...updateData } = body;
+    const { id, guestId, reservationId, amount, method, status, reference, notes } = body;
     const { data, error } = await getSupabaseAdmin()
       .from('payments')
       .update({
-        reservation_id: updateData.reservationId,
-        amount: updateData.amount,
-        method: updateData.method,
-        status: updateData.status,
-        reference: updateData.reference,
-        notes: updateData.notes,
+        guest_id: guestId,
+        reservation_id: reservationId ?? null,
+        amount,
+        method,
+        status,
+        reference,
+        notes,
       })
       .eq('id', id)
       .select('*')

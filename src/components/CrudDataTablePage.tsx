@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { Pencil, Plus, SearchIcon, Trash2 } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
@@ -29,6 +30,7 @@ type CrudDataTablePageProps = {
   searchPlaceholder?: string;
   addLabel: string;
   entityType: CrudEntityType;
+  addHref?: string;
   deleteEndpoint?: (id: string) => string;
 };
 
@@ -78,6 +80,7 @@ export default function CrudDataTablePage({
   searchPlaceholder = 'Search...',
   addLabel,
   entityType,
+  addHref,
   deleteEndpoint,
 }: CrudDataTablePageProps) {
   const [search, setSearch] = useState('');
@@ -130,17 +133,24 @@ export default function CrudDataTablePage({
         title={title}
         subtitle={subtitle}
         action={
-          <button
-            type="button"
-            className="btn-primary inline-flex items-center gap-2"
-            onClick={() => {
-              setEditRow(null);
-              setIsModalOpen(true);
-            }}
-          >
-            <Plus className="h-4 w-4" />
-            {addLabel}
-          </button>
+          addHref ? (
+            <Link href={addHref} className="btn-primary inline-flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              {addLabel}
+            </Link>
+          ) : (
+            <button
+              type="button"
+              className="btn-primary inline-flex items-center gap-2"
+              onClick={() => {
+                setEditRow(null);
+                setIsModalOpen(true);
+              }}
+            >
+              <Plus className="h-4 w-4" />
+              {addLabel}
+            </button>
+          )
         }
       />
 

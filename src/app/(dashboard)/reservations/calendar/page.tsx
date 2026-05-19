@@ -1,22 +1,13 @@
+import { Suspense } from 'react';
 import ProtectedPage from '@/components/ProtectedPage';
-import DataTablePage from '@/components/DataTablePage';
+import ReservationCalendarPage from '@/components/forms/ReservationCalendarPage';
 
-export default function ReservationCalendarPage() {
+export default function ReservationCalendarRoute() {
   return (
     <ProtectedPage>
-      <DataTablePage
-        title="Reservation Calendar"
-        subtitle="Reservation dates from the database."
-        endpoint="/api/reservations"
-        columns={[
-          { key: 'reservationId', label: 'Reservation ID' },
-          { key: 'guest', label: 'Guest' },
-          { key: 'room', label: 'Room' },
-          { key: 'checkIn', label: 'Check In', type: 'date' },
-          { key: 'checkOut', label: 'Check Out', type: 'date' },
-          { key: 'status', label: 'Status', type: 'status' },
-        ]}
-      />
+      <Suspense fallback={<div className="p-8 text-ink-600">Loading calendar...</div>}>
+        <ReservationCalendarPage />
+      </Suspense>
     </ProtectedPage>
   );
 }

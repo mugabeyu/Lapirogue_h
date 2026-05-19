@@ -18,7 +18,6 @@ import { PageHeader } from '@/components/PageHeader';
 import { StatCard } from '@/components/StatCard';
 import { useApi } from '@/hooks/useApi';
 import { AddGuestModal } from '@/components/modals/AddGuestModal';
-import { AddReservationModal } from '@/components/modals/AddReservationModal';
 import { AddActivityModal } from '@/components/modals/AddActivityModal';
 import { AddFoodOrderModal } from '@/components/modals/AddFoodOrderModal';
 
@@ -76,7 +75,6 @@ function formatShortDate(value?: string | null) {
 
 export default function DashboardDataPage() {
   const [isGuestModalOpen, setIsGuestModalOpen] = useState(false);
-  const [isReservationModalOpen, setIsReservationModalOpen] = useState(false);
   const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
   const [isFoodOrderModalOpen, setIsFoodOrderModalOpen] = useState(false);
   const { data, isLoading } = useApi<DashboardData>('/api/dashboard');
@@ -108,9 +106,8 @@ export default function DashboardDataPage() {
       {stats && (
         <div className="space-y-6">
           <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-            <button
-              type="button"
-              onClick={() => setIsReservationModalOpen(true)}
+            <Link
+              href="/reservations/new"
               className="group rounded-[24px] border border-sand-200 bg-white p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg"
             >
               <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-white">
@@ -119,7 +116,7 @@ export default function DashboardDataPage() {
               <div className="mt-8 text-center">
                 <div className="font-display text-lg text-ink-900">Add Reservation</div>
               </div>
-            </button>
+            </Link>
 
             <button
               type="button"
@@ -440,7 +437,6 @@ export default function DashboardDataPage() {
       )}
 
       <AddGuestModal isOpen={isGuestModalOpen} onClose={() => setIsGuestModalOpen(false)} />
-      <AddReservationModal isOpen={isReservationModalOpen} onClose={() => setIsReservationModalOpen(false)} />
       <AddActivityModal isOpen={isActivityModalOpen} onClose={() => setIsActivityModalOpen(false)} />
       <AddFoodOrderModal isOpen={isFoodOrderModalOpen} onClose={() => setIsFoodOrderModalOpen(false)} />
     </div>

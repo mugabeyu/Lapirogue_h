@@ -10,6 +10,7 @@ export default function ReservationsPage() {
         endpoint="/api/reservations"
         searchPlaceholder="Search reservations..."
         addLabel="Add Reservation"
+        addHref="/reservations/new"
         entityType="reservation"
         columns={[
           { key: 'reservationId', label: 'Reservation ID' },

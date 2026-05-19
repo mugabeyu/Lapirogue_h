@@ -16,6 +16,15 @@ export default function LoginPage() {
   const [errorMessage, setErrorMessage] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
+  function getRedirectPath() {
+    if (typeof window === 'undefined') return '/dashboard';
+    const next = new URLSearchParams(window.location.search).get('next');
+    if (next && next.startsWith('/') && !next.startsWith('/login')) {
+      return next;
+    }
+    return '/dashboard';
+  }
+
   useEffect(() => {
     const rememberedEmail = window.localStorage.getItem(REMEMBER_EMAIL_KEY);
 
@@ -23,7 +32,21 @@ export default function LoginPage() {
       setEmail(rememberedEmail);
       setRememberMe(true);
     }
-  }, []);
+
+    let cancelled = false;
+    fetch('/api/auth/me')
+      .then((response) => (response.ok ? response.json() : null))
+      .then((result) => {
+        if (!cancelled && result?.success) {
+          router.replace(getRedirectPath());
+        }
+      })
+      .catch(() => undefined);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,7 +80,8 @@ export default function LoginPage() {
         window.localStorage.removeItem(REMEMBER_EMAIL_KEY);
       }
 
-      router.push('/dashboard');
+      router.push(getRedirectPath());
+      router.refresh();
     } catch (err) {
       console.error(err);
       setErrorMessage('An error occurred');

@@ -104,8 +104,10 @@ export interface MenuItem {
   category: string;
   description?: string;
   price: number;
+  preparationMinutes?: number | null;
   isAvailable: boolean;
   imagePath?: string;
+  status?: string;
   createdAt: string;
   updatedAt: string;
 }

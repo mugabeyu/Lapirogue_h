@@ -1,10 +1,10 @@
 'use client';
 
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { Modal } from '@/components/Modal';
 import { toast } from 'sonner';
-import { useApi } from '@/hooks/useApi';
-import { PaymentMethod, PaymentStatus } from '@/types';
+import { GuestSearchPicker } from '@/components/pickers/GuestSearchPicker';
+import { Guest, PaymentMethod, PaymentStatus } from '@/types';
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -13,29 +13,52 @@ interface PaymentModalProps {
   editRow?: Record<string, unknown> | null;
 }
 
-type ReservationOption = {
-  id: string;
-  reservationId: string | null;
-  guest: string | null;
-  room: string | null;
-};
-
 const paymentMethods: PaymentMethod[] = ['CASH', 'CARD', 'BANK_TRANSFER', 'ONLINE'];
 const paymentStatuses: PaymentStatus[] = ['PENDING', 'COMPLETED', 'FAILED', 'REFUNDED'];
 
 export function PaymentModal({ isOpen, onClose, onSaved, editRow }: PaymentModalProps) {
   const [isSaving, setIsSaving] = useState(false);
+  const [guest, setGuest] = useState<Guest | null>(null);
   const isEdit = Boolean(editRow?.id);
-  const { data: reservations } = useApi<ReservationOption[]>('/api/reservations');
+
+  useEffect(() => {
+    if (!isOpen) {
+      if (!isEdit) setGuest(null);
+      return;
+    }
+    if (!editRow?.guestId) {
+      if (!isEdit) setGuest(null);
+      return;
+    }
+
+    let cancelled = false;
+    fetch(`/api/guests/${editRow.guestId}`)
+      .then((response) => response.json())
+      .then((result) => {
+        if (!cancelled && result.success && result.data) {
+          setGuest(result.data as Guest);
+        }
+      })
+      .catch(() => undefined);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, isEdit, editRow?.guestId]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!guest) {
+      toast.error('Please select a guest');
+      return;
+    }
+
     setIsSaving(true);
     const formData = new FormData(event.currentTarget);
 
     const payload = {
       id: editRow?.id,
-      reservationId: formData.get('reservationId'),
+      guestId: guest.id,
       amount: Number(formData.get('amount')),
       method: formData.get('method'),
       status: formData.get('status'),
@@ -62,27 +85,13 @@ export function PaymentModal({ isOpen, onClose, onSaved, editRow }: PaymentModal
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={isEdit ? 'Edit Payment' : 'Record Payment'} size="lg">
-      <form key={String(editRow?.id ?? 'new')} onSubmit={handleSubmit} className="space-y-4">
+      <form key={String(editRow?.id ?? 'new')} onSubmit={handleSubmit} className="space-y-5">
         <div>
-          <label className="mb-1 block text-sm font-medium text-ink-700">Reservation</label>
-          <select
-            name="reservationId"
-            required
-            className="input-field w-full"
-            defaultValue={String(editRow?.reservationId ?? '')}
-          >
-            <option value="">Select reservation</option>
-            {(reservations ?? []).map((reservation) => (
-              <option key={reservation.id} value={reservation.id}>
-                {reservation.reservationId ?? reservation.id}
-                {reservation.guest ? ` — ${reservation.guest}` : ''}
-                {reservation.room ? ` (Room ${reservation.room})` : ''}
-              </option>
-            ))}
-          </select>
+          <h3 className="mb-3 font-display text-lg text-ink-900">Select Guest</h3>
+          <GuestSearchPicker selectedId={guest?.id ?? ''} onSelect={setGuest} />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-4 border-t border-sand-200 pt-4">
           <div>
             <label className="mb-1 block text-sm font-medium text-ink-700">Amount</label>
             <input
@@ -130,7 +139,7 @@ export function PaymentModal({ isOpen, onClose, onSaved, editRow }: PaymentModal
           <button type="button" className="btn-secondary" onClick={onClose}>
             Cancel
           </button>
-          <button type="submit" disabled={isSaving} className="btn-primary disabled:opacity-50">
+          <button type="submit" disabled={isSaving || !guest} className="btn-primary disabled:opacity-50">
             {isSaving ? 'Saving...' : isEdit ? 'Update Payment' : 'Save Payment'}
           </button>
         </div>

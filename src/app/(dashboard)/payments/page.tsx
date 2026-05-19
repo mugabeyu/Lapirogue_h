@@ -13,7 +13,6 @@ export default function PaymentsPage() {
         entityType="payment"
         columns={[
           { key: 'paymentId', label: 'Payment ID' },
-          { key: 'reservation', label: 'Reservation' },
           { key: 'guest', label: 'Guest' },
           { key: 'amount', label: 'Amount', type: 'currency' },
           { key: 'method', label: 'Method' },

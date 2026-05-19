@@ -18,10 +18,25 @@ const bookingSchema = z.object({
   activityId: z.string().uuid(),
   guestId: z.string().uuid(),
   date: z.string().min(1),
+  timeSlot: z.string().optional(),
   participants: z.number().int().positive(),
+  pickupPoint: z.string().optional(),
   status: z.enum(['CONFIRMED', 'COMPLETED', 'CANCELLED']).optional(),
   notes: z.string().optional(),
 });
+
+function parseTimeSlot(value?: string) {
+  if (!value) return null;
+  const trimmed = value.trim();
+  const match12 = trimmed.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (match12) {
+    let hour = Number(match12[1]) % 12;
+    if (match12[3].toUpperCase() === 'PM') hour += 12;
+    return `${String(hour).padStart(2, '0')}:${match12[2]}:00`;
+  }
+  if (/^\d{2}:\d{2}$/.test(trimmed)) return `${trimmed}:00`;
+  return null;
+}
 
 export async function GET() {
   try {
@@ -60,7 +75,9 @@ export async function POST(request: NextRequest) {
         activity_id: body.activityId,
         guest_id: body.guestId,
         booking_date: body.date,
+        booking_time: parseTimeSlot(body.timeSlot),
         participants: body.participants,
+        pickup_point: body.pickupPoint,
         status: body.status ?? 'CONFIRMED',
         notes: body.notes,
       })
@@ -87,7 +104,9 @@ export async function PUT(request: NextRequest) {
         activity_id: updateData.activityId,
         guest_id: updateData.guestId,
         booking_date: updateData.date,
+        booking_time: parseTimeSlot(updateData.timeSlot),
         participants: updateData.participants,
+        pickup_point: updateData.pickupPoint,
         status: updateData.status,
         notes: updateData.notes,
       })

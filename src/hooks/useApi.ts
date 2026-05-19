@@ -7,7 +7,7 @@ const fetcher = async (url: string) => {
   return data;
 };
 
-export function useApi<T>(url: string) {
+export function useApi<T>(url: string | null) {
   const { data, error, isLoading, mutate } = useSWR<ApiResponse<T>>(
     url,
     fetcher

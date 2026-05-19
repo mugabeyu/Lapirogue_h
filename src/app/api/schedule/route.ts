@@ -353,20 +353,141 @@ export async function GET(request: NextRequest) {
   }
 }
 
+function parseTimeSlot(value?: string) {
+  if (!value) return null;
+  const trimmed = String(value).trim();
+  const match12 = trimmed.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)?$/i);
+  if (match12?.[4]) {
+    let hour = Number(match12[1]) % 12;
+    if (match12[4].toUpperCase() === 'PM') hour += 12;
+    return `${String(hour).padStart(2, '0')}:${match12[2]}:00`;
+  }
+  if (/^\d{2}:\d{2}$/.test(trimmed)) return `${trimmed}:00`;
+  return null;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const guestId = String(body.guestId ?? '').trim();
     const title = String(body.title ?? '').trim();
     const itemType = String(body.itemType ?? 'CUSTOM') as ScheduleRow['item_type'];
+    const sourceId = String(body.sourceId ?? '').trim();
     const startAt = String(body.startAt ?? '').trim();
     const endAt = String(body.endAt ?? '').trim();
+    const notes = body.notes ? String(body.notes) : null;
+    const supabase = getSupabaseAdmin();
 
-    if (!guestId || !title || !startAt || !endAt) {
-      return NextResponse.json({ success: false, error: 'Guest, title, start time, and end time are required' }, { status: 400 });
+    if (!guestId || !startAt || !endAt) {
+      return NextResponse.json({ success: false, error: 'Guest, start time, and end time are required' }, { status: 400 });
     }
 
-    const { data, error } = await getSupabaseAdmin()
+    if ((itemType === 'ACTIVITY' || itemType === 'BOOKING' || itemType === 'ORDER') && !sourceId) {
+      return NextResponse.json({ success: false, error: 'Please select an item from the list' }, { status: 400 });
+    }
+
+    if ((itemType === 'CUSTOM' || itemType === 'SERVICE' || itemType === 'RESERVATION') && !title) {
+      return NextResponse.json({ success: false, error: 'Title is required for custom entries' }, { status: 400 });
+    }
+
+    const bookingDate = startAt.slice(0, 10);
+    const timeSlot = startAt.slice(11, 16);
+
+    if (itemType === 'ACTIVITY' || itemType === 'BOOKING') {
+      const { data: activity, error: activityError } = await supabase
+        .from('activities')
+        .select('id,name,duration')
+        .eq('id', sourceId)
+        .single();
+
+      if (activityError || !activity) {
+        return NextResponse.json({ success: false, error: 'Activity not found' }, { status: 404 });
+      }
+
+      const participants = Math.max(1, Number(body.participants) || 1);
+
+      const { data: booking, error: bookingError } = await supabase
+        .from('activity_bookings')
+        .insert({
+          activity_id: sourceId,
+          guest_id: guestId,
+          booking_date: bookingDate,
+          booking_time: parseTimeSlot(timeSlot),
+          participants,
+          status: 'CONFIRMED',
+          notes,
+        })
+        .select('id')
+        .single();
+
+      if (bookingError) throw bookingError;
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          id: booking.id,
+          sourceModule: 'activity_bookings',
+          title: activity.name,
+          itemType,
+        },
+      }, { status: 201 });
+    }
+
+    if (itemType === 'ORDER') {
+      const { data: menuItem, error: menuError } = await supabase
+        .from('menu_items')
+        .select('id,name,price,category')
+        .eq('id', sourceId)
+        .single();
+
+      if (menuError || !menuItem) {
+        return NextResponse.json({ success: false, error: 'Menu item not found' }, { status: 404 });
+      }
+
+      const price = Number(menuItem.price);
+      const { data: reservation } = await supabase
+        .from('reservations')
+        .select('room_id')
+        .eq('guest_id', guestId)
+        .neq('status', 'CANCELLED')
+        .order('check_in', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const { data: order, error: orderError } = await supabase
+        .from('food_orders')
+        .insert({
+          guest_id: guestId,
+          room_id: reservation?.room_id ?? null,
+          items: [
+            {
+              id: menuItem.id,
+              name: menuItem.name,
+              quantity: 1,
+              price,
+            },
+          ],
+          total: price,
+          status: 'PENDING',
+          notes: notes ?? `Scheduled for ${startAt}`,
+        })
+        .select('id')
+        .single();
+
+      if (orderError) throw orderError;
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          id: order.id,
+          sourceModule: 'food_orders',
+          title: menuItem.name,
+          itemType,
+        },
+      }, { status: 201 });
+    }
+
+    const { data, error } = await supabase
       .from('guest_schedule_items')
       .insert({
         guest_id: guestId,
@@ -377,8 +498,8 @@ export async function POST(request: NextRequest) {
         start_at: startAt,
         end_at: endAt,
         status: body.status ?? 'SCHEDULED',
-        notes: body.notes ?? null,
-        color: body.color ?? null,
+        notes,
+        color: body.color ?? colorForType(itemType),
       })
       .select('id,guest_id,title,item_type,source_module,source_record_id,start_at,end_at,status,notes,color,created_at,updated_at')
       .single();
