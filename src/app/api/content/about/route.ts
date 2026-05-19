@@ -13,8 +13,7 @@ const contentSchema = z.object({
 });
 
 async function requireAuth(request: NextRequest) {
-  const res = NextResponse.next();
-  const authClient = getRouteHandlerSupabaseClient(request, res);
+  const authClient = getRouteHandlerSupabaseClient(request);
   const { data: { user } } = await authClient.auth.getUser();
   return user ?? null;
 }
@@ -39,7 +38,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
-  const decoded = requireAuth(request);
+  const decoded = await requireAuth(request);
   if (!decoded) {
     return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 });
   }
@@ -57,7 +56,7 @@ export async function PUT(request: NextRequest) {
         highlights: body.highlights,
         metrics: body.metrics,
         image_path: body.imagePath ?? null,
-          updated_by: decoded.id,
+        updated_by: decoded.id,
         is_active: true,
       }, { onConflict: 'slug' })
       .select('*')

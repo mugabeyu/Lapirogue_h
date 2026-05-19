@@ -69,4 +69,12 @@ npm run type-check
 - SQL setup lives in `supabase/schema.sql`.
 - Source/config files avoid `.js` and `.jsx`; app code uses `.ts` and `.tsx`.
 
+- Important: this app relies on Row-Level Security (RLS). Because the
+      client uses the public ANON key, RLS is enforced for every request. In
+      practice this means a guest (role = `guest`) will only be able to read
+      their own bookings, reservations, messages, activities, and related rows
+      as defined by your DB policies, while managers/admins with broader RLS
+      policies will see more records. Define and test your RLS policies in
+      `supabase/schema.sql` before deploying.
+
 # lapirogue_website

@@ -1,59 +1,47 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient } from '@supabase/ssr';
+import { NextResponse, type NextRequest } from 'next/server';
 
-export async function proxy(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-  const publicRoutes = ['/login', '/forgot-password', '/reset-password'];
+const supabaseUrl = 'https://afilatpihmbicqadwslm.supabase.co';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFmaWxhdHBpaG1iaWNxYWR3c2xtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxMjkyOTMsImV4cCI6MjA5NDcwNTI5M30.YRojYa3ewoh4L81haeBHbeGrU9t6nXSplxYzFO-RfkQ';
 
-  if (pathname.startsWith('/api/auth')) return NextResponse.next();
+async function proxy(request: NextRequest) {
+  let response = NextResponse.next({
+    request: {
+      headers: request.headers,
+    },
+  });
 
-  if (pathname.startsWith('/api')) {
-    const res = NextResponse.next();
-    const supabase = createMiddlewareClient({ req: request, res });
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll();
+      },
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value, options }) => {
+          response.cookies.set(name, value, options);
+        });
+      },
+    },
+  });
 
-    if (!user) {
-      return NextResponse.json({ success: false, error: 'Authentication required' }, { status: 401 });
-    }
-
-    const role = user.user_metadata?.role ?? 'RECEPTION';
-
-    if ((request.method === 'DELETE' || pathname.includes('/delete')) && role !== 'ADMIN') {
-      return NextResponse.json({ success: false, error: 'Admin access required' }, { status: 403 });
-    }
-
-    if (pathname.includes('/staff') && request.method === 'POST' && role !== 'ADMIN') {
-      return NextResponse.json({ success: false, error: 'Admin access required for adding staff' }, { status: 403 });
-    }
-
-    const requestHeaders = new Headers(request.headers);
-    requestHeaders.set('x-user-id', user.id);
-    requestHeaders.set('x-user-role', role as string);
-
-    return NextResponse.next({ request: { headers: requestHeaders } });
+  // Try to get the user and refresh the session
+  // This will also sync any cookies that were set by the Supabase client
+  try {
+    const { data } = await supabase.auth.getUser();
+    
+    // If no user but we're on a protected route, just continue
+    // The layout component will handle the redirect
+  } catch (error) {
+    // Silently handle any auth errors during middleware
   }
 
-  if (publicRoutes.some((route) => pathname === route || pathname.startsWith(`${route}/`))) {
-    return NextResponse.next();
-  }
-
-  const res = NextResponse.next();
-  const supabase = createMiddlewareClient({ req: request, res });
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    const loginUrl = new URL('/login', request.url);
-    loginUrl.searchParams.set('callbackUrl', request.url);
-    return NextResponse.redirect(loginUrl);
-  }
-
-  return NextResponse.next();
+  return response;
 }
 
 export const config = {
-  matcher: ['/((?!api/auth|_next/static|_next/image|favicon.ico|.*\\..*).*)'],
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico).*)',
+  ],
 };
+
+export default proxy;

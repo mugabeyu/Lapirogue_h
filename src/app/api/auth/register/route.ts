@@ -1,31 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { hashPassword } from '@/services/auth';
-import { getRouteHandlerSupabaseClient } from '@/lib/supabase-server';
+import { attachSupabaseCookies, createRouteHandlerSupabaseContext } from '@/lib/supabase-server';
 import { z } from 'zod';
 
 const registerSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
   name: z.string().min(1),
-  role: z.enum(['ADMIN', 'MANAGER', 'RECEPTION', 'RESTAURANT', 'TOUR_MANAGER', 'STAFF']).optional(),
 });
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const validatedData = registerSchema.parse(body);
-    const supabase = getSupabaseAdmin();
+    const adminClient = getSupabaseAdmin();
 
-    // Create the user in Supabase Auth (so Supabase issues the session/token)
-    const res = NextResponse.next();
-    const authClient = getRouteHandlerSupabaseClient(request, res);
+    // Create the auth user first.
+    const { supabase: authClient, response } = createRouteHandlerSupabaseContext(request);
 
     const { data: signUpData, error: signUpError } = await authClient.auth.signUp({
       email: validatedData.email,
       password: validatedData.password,
-    }, {
-      data: { full_name: validatedData.name, role: validatedData.role || 'STAFF' },
+      options: {
+        data: { full_name: validatedData.name, role: 'RECEPTIONIST' },
+      },
     });
 
     if (signUpError) {
@@ -35,31 +33,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Keep a mirrored record in the application `users` table for legacy flows
-    const { data: existingUser } = await supabase
-      .from('users')
-      .select('id')
+    const { data: existingProfile } = await adminClient
+      .from('profiles')
+      .select('auth_id')
       .eq('email', validatedData.email)
       .maybeSingle();
 
-    if (existingUser) {
+    if (existingProfile) {
       return NextResponse.json(
         { success: false, error: 'Email already registered' },
         { status: 409 }
       );
     }
 
-    const hashedPassword = await hashPassword(validatedData.password);
-
-    const { data: user, error } = await supabase
-      .from('users')
+    const { data: user, error } = await adminClient
+      .from('profiles')
       .insert({
+        auth_id: signUpData.user?.id ?? '',
         email: validatedData.email,
-        password_hash: hashedPassword,
         full_name: validatedData.name,
-        role: validatedData.role || 'STAFF',
+        role: 'RECEPTIONIST',
+        is_main: false,
       })
-      .select('id,email,full_name,role,is_active,created_at,updated_at')
+      .select('auth_id,email,full_name,role,is_main,created_at,updated_at')
       .single();
 
     if (error || !user) {
@@ -69,17 +65,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({
+    return attachSupabaseCookies(NextResponse.json({
       success: true,
       data: {
         user: {
-          id: user.id,
+          id: user.auth_id,
           email: user.email,
           name: user.full_name,
           role: user.role,
         },
       },
-    });
+    }), response);
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(

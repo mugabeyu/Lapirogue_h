@@ -1,5 +1,4 @@
 import { redirect } from 'next/navigation';
-import Layout from '@/components/Layout';
 import { getServerSession } from '@/lib/auth-server';
 
 type ProtectedPageProps = {
@@ -13,5 +12,5 @@ export default async function ProtectedPage({ children }: ProtectedPageProps) {
     redirect('/login');
   }
 
-  return <Layout>{children}</Layout>;
+  return <>{children}</>;
 }

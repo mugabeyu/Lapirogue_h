@@ -17,15 +17,14 @@ type MessageRow = {
 
 const messageSchema = z.object({
   guestId: z.string().uuid(),
-  messageType: z.enum(['guest', 'admin']).default('admin'),
+  messageType: z.enum(['guest', 'receptionist']).default('receptionist'),
   subject: z.string().optional().nullable(),
   content: z.string().min(1),
   attachmentUrl: z.string().optional().nullable(),
 });
 
 async function requireAuth(request: NextRequest) {
-  const res = NextResponse.next();
-  const authClient = getRouteHandlerSupabaseClient(request, res);
+  const authClient = getRouteHandlerSupabaseClient(request);
   const { data: { user } } = await authClient.auth.getUser();
   return user ?? null;
 }
@@ -126,7 +125,7 @@ export async function PATCH(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  const decoded = requireAuth(request);
+  const decoded = await requireAuth(request);
   if (!decoded) {
     return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 });
   }

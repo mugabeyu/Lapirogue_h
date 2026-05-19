@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboardIcon,
@@ -58,16 +59,10 @@ const navItems: NavItem[] = [
     children: [{ path: '/activities/calendar', label: 'Activity Calendar' }],
   },
   {
-    path: '/hotel-services',
-    label: 'Guest Services',
-    icon: UserCogIcon,
-    children: [
-      { path: '/hotel-services', label: 'Services' },
-      { path: '/hotel-services/categories', label: 'Service Categories' },
-      { path: '/emergency-contacts', label: 'Emergency Contacts' },
-    ],
+    path: '/schedule',
+    label: 'Daily Schedules',
+    icon: CalendarDaysIcon,
   },
-  { path: '/schedule', label: 'Daily Schedules', icon: CalendarDaysIcon },
   {
     path: '/food-beverage',
     label: 'Food & Beverage',
@@ -89,6 +84,8 @@ const navItems: NavItem[] = [
 
 export default function Sidebar() {
   const pathname = usePathname() ?? '/';
+  const router = useRouter();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const isSectionActive = (item: NavItem) => {
     if (pathname === item.path) return true;
@@ -97,15 +94,34 @@ export default function Sidebar() {
     return false;
   };
 
+  const handleLogout = async () => {
+    if (isLoggingOut) return;
+
+    setIsLoggingOut(true);
+
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } finally {
+      router.replace('/login');
+      router.refresh();
+      setIsLoggingOut(false);
+    }
+  };
+
   return (
     <aside className="fixed inset-y-0 left-0 w-[260px] bg-primary text-sand-50 flex flex-col z-20">
       <div className="p-6 border-b border-primary-hover">
-        <h1 className="font-display text-2xl font-medium tracking-wide">
-          La Pirogue
-        </h1>
-        <p className="text-sand-200/70 text-sm mt-1 uppercase tracking-widest">
-          Hotel Operations
-        </p>
+        <div className="flex items-center gap-3">
+          <img src="/lapiroguelogo.jpg" alt="La Pirogue Logo" className="h-8 w-auto" />
+          <div>
+            <h1 className="font-display text-2xl font-medium tracking-wide font-italic">
+              La Pirogue
+            </h1>
+            <p className="text-sand-200/70 text-sm mt-1 uppercase tracking-widest">
+              Hotel Operations
+            </p>
+          </div>
+        </div>
       </div>
 
       <nav className="flex-1 overflow-y-auto py-4 custom-scrollbar">
@@ -129,37 +145,32 @@ export default function Sidebar() {
                   {item.label}
                 </Link>
 
-                <AnimatePresence initial={false}>
-                  {item.children && sectionActive && (
-                    <motion.ul
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className="overflow-hidden mt-1 space-y-0.5"
-                    >
-                      {item.children.map((child) => (
-                        <li key={child.path}>
-                          <Link
-                            href={child.path}
-                            className={`flex items-center gap-3 pl-11 pr-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 ${
-                              pathname === child.path
-                                ? 'text-white'
-                                : 'text-sand-100/60 hover:text-white'
-                            }`}
-                          >
-                            <span
-                              className={`w-1.5 h-1.5 rounded-full transition-colors ${
-                                pathname === child.path ? 'bg-accent' : 'bg-sand-100/30'
-                              }`}
-                            />
-                            {child.label}
-                          </Link>
-                        </li>
-                      ))}
-                    </motion.ul>
-                  )}
-                </AnimatePresence>
+                 <AnimatePresence initial={false}>
+                   {item.children && sectionActive && (
+                     <motion.ul
+                       initial={{ height: 0, opacity: 0 }}
+                       animate={{ height: 'auto', opacity: 1 }}
+                       exit={{ height: 0, opacity: 0 }}
+                       transition={{ duration: 0.2 }}
+                       className="overflow-hidden mt-1 space-y-0.5"
+                     >
+                       {item.children.map((child) => (
+                         <li key={child.path}>
+                           <Link
+                             href={child.path}
+                             className={`flex items-center gap-3 pl-11 pr-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 ${
+                               pathname === child.path
+                                 ? 'text-white'
+                                 : 'text-sand-100/60 hover:text-white'
+                             }`}
+                           >
+                             {child.label}
+                           </Link>
+                         </li>
+                       ))}
+                     </motion.ul>
+                   )}
+                 </AnimatePresence>
               </li>
             );
           })}
@@ -167,13 +178,15 @@ export default function Sidebar() {
       </nav>
 
       <div className="p-4 border-t border-primary-hover">
-        <Link
-          href="/login"
+        <button
+          type="button"
+          onClick={handleLogout}
+          disabled={isLoggingOut}
           className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-sand-100/80 hover:bg-primary-hover/50 hover:text-white transition-colors"
         >
           <LogOutIcon className="w-5 h-5" strokeWidth={1.5} />
-          Logout
-        </Link>
+          {isLoggingOut ? 'Logging out...' : 'Logout'}
+        </button>
       </div>
     </aside>
   );

@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { z } from 'zod';
 
+const allowedRoleNames = ['RECEPTIONIST'] as const;
+
 const roleSchema = z.object({
   id: z.string().uuid().optional(),
-  name: z.string().min(1),
+  name: z.enum(allowedRoleNames),
   description: z.string().optional(),
   permissions: z.record(z.unknown()).optional(),
 });
@@ -14,6 +16,7 @@ export async function GET() {
     const { data, error } = await getSupabaseAdmin()
       .from('roles')
       .select('*')
+      .in('name', allowedRoleNames)
       .order('name', { ascending: true });
 
     if (error) throw error;
@@ -26,6 +29,9 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = roleSchema.parse(await request.json());
+    if (body.name !== 'RECEPTIONIST') {
+      return NextResponse.json({ success: false, error: 'Only the Receptionist role is supported' }, { status: 400 });
+    }
     const { data, error } = await getSupabaseAdmin()
       .from('roles')
       .insert({
@@ -49,6 +55,9 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = roleSchema.parse(await request.json());
+    if (body.name !== 'RECEPTIONIST') {
+      return NextResponse.json({ success: false, error: 'Only the Receptionist role is supported' }, { status: 400 });
+    }
     const { id, ...updateData } = body;
     const { data, error } = await getSupabaseAdmin()
       .from('roles')

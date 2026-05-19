@@ -42,8 +42,14 @@ const config: Config = {
         },
       },
       fontFamily: {
-        sans: ['var(--font-inter)', 'sans-serif'],
-        display: ['var(--font-display)', 'serif'],
+        sans: ['var(--font-dm-sans)', 'system-ui', 'sans-serif'],
+        display: ['var(--font-fraunces)', 'serif'],
+      },
+      spacing: {
+        page: '32px',
+        section: '24px',
+        card: '16px',
+        inline: '8px',
       },
       animation: {
         'fade-in': 'fadeIn 0.3s ease-out',

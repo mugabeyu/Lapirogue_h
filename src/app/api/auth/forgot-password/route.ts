@@ -11,18 +11,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = forgotPasswordSchema.parse(body);
 
-    // Find user by email
-    const { data: user, error } = await getSupabaseAdmin()
-      .from('users')
-      .select('id, email, full_name')
-      .eq('email', validatedData.email)
-      .single();
-
-    if (error || !user) {
-      // Don't reveal if email exists or not for security
-      return NextResponse.json({ success: true, message: 'If the email exists, a reset link has been sent' });
-    }
-
     const { error: resetError } = await getSupabaseAdmin().auth.resetPasswordForEmail(validatedData.email, {
       redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/reset-password`,
     });

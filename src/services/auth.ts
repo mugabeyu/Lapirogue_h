@@ -8,6 +8,6 @@ export function comparePassword(password: string, hashedPassword: string): Promi
 	return bcrypt.compare(password, hashedPassword);
 }
 
-// Note: JWT creation/verification has been removed. Use Supabase Auth sessions.
+
 
 

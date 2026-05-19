@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseAdmin } from '@/lib/supabase';
 import { z } from 'zod';
 import { getRouteHandlerSupabaseClient } from '@/lib/supabase-server';
+
+function normalizeRole(role?: string | null) {
+  return 'RECEPTIONIST';
+}
 
 const profileSchema = z.object({
   fullName: z.string().min(1),
@@ -10,41 +13,39 @@ const profileSchema = z.object({
 });
 
 export async function GET(request: NextRequest) {
-  const res = NextResponse.next();
-  const authClient = getRouteHandlerSupabaseClient(request, res);
+  const authClient = getRouteHandlerSupabaseClient(request);
   const { data: { user }, error: userError } = await authClient.auth.getUser();
   if (!user || userError) {
     return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 });
   }
 
-  const { data: userRow, error } = await getSupabaseAdmin()
-    .from('users')
-    .select('id, email, full_name, role, phone, is_active, created_at, updated_at')
-    .eq('id', user.id)
-    .single();
+  const { data: profileRow } = await authClient
+    .from('profiles')
+    .select('auth_id, email, full_name, role, created_at, updated_at')
+    .eq('auth_id', user.id)
+    .maybeSingle();
 
-  if (error || !user) {
-    return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
-  }
+  const email = profileRow?.email || user.email || '';
+  const name = profileRow?.full_name || user.user_metadata?.full_name || '';
+  const role = normalizeRole(profileRow?.role || (user.user_metadata?.role as string | undefined));
 
   return NextResponse.json({
     success: true,
     data: {
-      id: userRow.id,
-      email: userRow.email,
-      name: userRow.full_name,
-      role: userRow.role,
-      phone: userRow.phone,
-      isActive: userRow.is_active,
-      createdAt: userRow.created_at,
-      updatedAt: userRow.updated_at,
+      id: profileRow?.auth_id || user.id,
+      email,
+      name,
+      role,
+      phone: null,
+      isActive: true,
+      createdAt: profileRow?.created_at || user.created_at || '',
+      updatedAt: profileRow?.updated_at || user.updated_at || '',
     },
   });
 }
 
 export async function PUT(request: NextRequest) {
-  const res = NextResponse.next();
-  const authClient = getRouteHandlerSupabaseClient(request, res);
+  const authClient = getRouteHandlerSupabaseClient(request);
   const { data: { user }, error: userError } = await authClient.auth.getUser();
   if (!user || userError) {
     return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 });
@@ -54,20 +55,34 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
     const validatedData = profileSchema.parse(body);
 
-    const { data, error } = await getSupabaseAdmin()
-      .from('users')
-      .update({
+    const { data, error } = await authClient
+      .from('profiles')
+      .upsert({
+        auth_id: user.id,
         full_name: validatedData.fullName,
         email: validatedData.email,
-        phone: validatedData.phone,
+        role: 'RECEPTIONIST',
+      }, {
+        onConflict: 'auth_id',
       })
-      .eq('id', user.id)
-      .select('id, email, full_name, role, phone, is_active, created_at, updated_at')
+      .select('auth_id, email, full_name, role, created_at, updated_at')
       .single();
 
     if (error) throw error;
 
-    return NextResponse.json({ success: true, data });
+    return NextResponse.json({
+      success: true,
+      data: {
+        id: data.auth_id,
+        email: data.email,
+        name: data.full_name,
+        role: data.role,
+        phone: null,
+        isActive: true,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at,
+      },
+    });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ success: false, error: 'Validation error', details: error.errors }, { status: 400 });

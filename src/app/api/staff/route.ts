@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { z } from 'zod';
-import { hashPassword } from '@/services/auth';
-import { randomBytes } from 'node:crypto';
 
 const staffSchema = z.object({
   id: z.string().uuid().optional(),
@@ -14,16 +12,6 @@ const staffSchema = z.object({
   phone: z.string().optional(),
   status: z.enum(['ACTIVE', 'INACTIVE']).optional(),
 });
-
-function generateSecurePassword() {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
-  let password = '';
-  const bytes = randomBytes(12);
-  for (let i = 0; i < 12; i++) {
-    password += chars[bytes[i] % chars.length];
-  }
-  return password;
-}
 
 function generateEmployeeCode() {
   const timestamp = Date.now().toString().slice(-6);
@@ -80,20 +68,16 @@ export async function POST(request: NextRequest) {
     const body = staffSchema.parse(await request.json());
     const supabase = getSupabaseAdmin();
     
-    // Check if email already exists in users
-    const { data: existingUser } = await supabase
-      .from('users')
-      .select('id')
+    const { data: existingProfile } = await supabase
+      .from('profiles')
+      .select('auth_id')
       .eq('email', body.email)
       .maybeSingle();
 
-    if (existingUser) {
+    if (existingProfile) {
       return NextResponse.json({ success: false, error: 'Email already registered' }, { status: 409 });
     }
 
-    // Generate secure password
-    const autoPassword = generateSecurePassword();
-    const passwordHash = await hashPassword(autoPassword);
     const employeeCode = body.employeeCode || generateEmployeeCode();
 
     // Create staff record
@@ -117,8 +101,7 @@ export async function POST(request: NextRequest) {
     const { data: inviteData, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(body.email, {
       data: {
         full_name: body.name,
-        role: 'STAFF',
-        temp_password: autoPassword,
+        role: 'RECEPTIONIST',
         login_url: new URL('/login', request.url).toString(),
       },
     });
@@ -129,14 +112,14 @@ export async function POST(request: NextRequest) {
     }
 
     const { data: user, error: userError } = await supabase
-      .from('users')
+      .from('profiles')
       .insert({
+        auth_id: inviteData.user.id,
         email: body.email,
-        password_hash: passwordHash,
         full_name: body.name,
-        role: 'STAFF',
+        role: 'RECEPTIONIST',
       })
-      .select('id, email, full_name, role')
+      .select('auth_id, email, full_name, role')
       .single();
 
     if (userError) {

@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseAdmin } from '@/lib/supabase';
 import { z } from 'zod';
 import { getRouteHandlerSupabaseClient } from '@/lib/supabase-server';
 
@@ -10,8 +9,7 @@ const profileSchema = z.object({
 });
 
 export async function PUT(request: NextRequest) {
-  const res = NextResponse.next();
-  const authClient = getRouteHandlerSupabaseClient(request, res);
+  const authClient = getRouteHandlerSupabaseClient(request);
   const { data: { user }, error: userError } = await authClient.auth.getUser();
   if (!user || userError) {
     return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 });
@@ -21,24 +19,39 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
     const validatedData = profileSchema.parse(body);
 
-    const { data, error } = await getSupabaseAdmin()
-      .from('users')
-      .update({
+    const { data, error } = await authClient
+      .from('profiles')
+      .upsert({
+        auth_id: user.id,
         full_name: validatedData.fullName,
         email: validatedData.email,
-        phone: validatedData.phone,
+        role: 'RECEPTIONIST',
+        is_main: false,
+      }, {
+        onConflict: 'auth_id',
       })
-      .eq('id', user.id)
-      .select('id, email, full_name, role, phone, is_active, created_at, updated_at')
+      .select('auth_id, email, full_name, role, created_at, updated_at')
       .single();
 
     if (error) throw error;
 
-    return NextResponse.json({ success: true, data });
+    return NextResponse.json({
+      success: true,
+      data: {
+        id: data.auth_id,
+        email: data.email,
+        name: data.full_name,
+        role: data.role,
+        phone: null,
+        isActive: true,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at,
+      },
+    });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ success: false, error: 'Validation error', details: error.errors }, { status: 400 });
     }
-    return NextResponse.json({ success: false, error: 'Failed to update profile' }, { status: 500 });
+    return NextResponse.json({ success: false, error: String(error) || 'Failed to update profile' }, { status: 500 });
   }
 }

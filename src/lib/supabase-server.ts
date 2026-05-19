@@ -1,19 +1,40 @@
-import { createServerComponentClient, createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
-import type { NextRequest } from 'next/server';
+import { createServerClient } from '@supabase/ssr';
+import { NextRequest, NextResponse } from 'next/server';
 
-export function getServerComponentSupabaseClient() {
-  return createServerComponentClient({ cookies });
+const resolvedSupabaseUrl = 'https://afilatpihmbicqadwslm.supabase.co';
+const resolvedSupabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFmaWxhdHBpaG1iaWNxYWR3c2xtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxMjkyOTMsImV4cCI6MjA5NDcwNTI5M30.YRojYa3ewoh4L81haeBHbeGrU9t6nXSplxYzFO-RfkQ';
+
+export function createRouteHandlerSupabaseContext(request: NextRequest) {
+  let response = NextResponse.next({
+    request: {
+      headers: request.headers,
+    },
+  });
+
+  const supabase = createServerClient(resolvedSupabaseUrl, resolvedSupabaseAnonKey, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll();
+      },
+      setAll(cookiesToSet: Array<{ name: string; value: string; options: any }>) {
+        cookiesToSet.forEach(({ name, value, options }) => {
+          response.cookies.set(name, value, options);
+        });
+      },
+    },
+  });
+
+  return { supabase, response };
 }
 
-export function getRouteHandlerSupabaseClient(req: NextRequest, res: any) {
-  // For route handlers we need to create a response object to pass to the helper.
-  // Callers should pass a NextResponse instance when available.
-  return createRouteHandlerClient({ req, res });
+export function getRouteHandlerSupabaseClient(request: NextRequest) {
+  return createRouteHandlerSupabaseContext(request).supabase;
 }
 
-export async function getServerUser() {
-  const supabase = getServerComponentSupabaseClient();
-  const { data } = await supabase.auth.getUser();
-  return data?.user ?? null;
+export function attachSupabaseCookies(response: NextResponse, source: NextResponse) {
+  source.cookies.getAll().forEach((cookie) => {
+    response.cookies.set(cookie);
+  });
+
+  return response;
 }

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { hashPassword } from '@/services/auth';
 import { z } from 'zod';
 
 const syncPasswordSchema = z.object({
@@ -24,11 +23,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Invalid session' }, { status: 401 });
     }
 
-    const passwordHash = await hashPassword(body.newPassword);
     const { error } = await supabase
-      .from('users')
-      .update({ password_hash: passwordHash })
-      .eq('email', userData.user.email);
+      .from('profiles')
+      .update({ updated_at: new Date().toISOString() })
+      .eq('auth_id', userData.user.id);
 
     if (error) throw error;
 
