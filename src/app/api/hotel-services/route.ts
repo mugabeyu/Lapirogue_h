@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { getAuditActor, recordAuditLog } from '@/lib/audit';
 import { z } from 'zod';
 
 const schema = z.object({
@@ -50,6 +51,8 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = schema.parse(await request.json());
+    const actor = await getAuditActor(request);
+    const actorId = actor?.id ?? null;
     const { data, error } = await getSupabaseAdmin().from('hotel_services').insert({
       category_id: body.categoryId,
       name: body.name,
@@ -62,6 +65,8 @@ export async function POST(request: NextRequest) {
       image_url: body.imageUrl,
       sort_order: body.sortOrder,
       is_available: body.isAvailable,
+      created_by: actorId,
+      updated_by: actorId,
     }).select('*').single();
     if (error) throw error;
     return NextResponse.json({ success: true, data }, { status: 201 });
@@ -78,6 +83,8 @@ export async function PUT(request: NextRequest) {
     const body = schema.parse(await request.json());
     const { id, ...updateData } = body;
     if (!id) return NextResponse.json({ success: false, error: 'ID required' }, { status: 400 });
+    const actor = await getAuditActor(request);
+    const actorId = actor?.id ?? null;
     const { data, error } = await getSupabaseAdmin().from('hotel_services').update({
       category_id: updateData.categoryId,
       name: updateData.name,
@@ -90,6 +97,7 @@ export async function PUT(request: NextRequest) {
       image_url: updateData.imageUrl,
       sort_order: updateData.sortOrder,
       is_available: updateData.isAvailable,
+      updated_by: actorId,
     }).eq('id', id).select('*').single();
     if (error) throw error;
     return NextResponse.json({ success: true, data });
@@ -104,7 +112,22 @@ export async function PUT(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   const id = request.nextUrl.searchParams.get('id');
   if (!id) return NextResponse.json({ success: false, error: 'ID required' }, { status: 400 });
-  const { error } = await getSupabaseAdmin().from('hotel_services').delete().eq('id', id);
+  const supabase = getSupabaseAdmin();
+  const actor = await getAuditActor(request);
+  const actorId = actor?.id ?? null;
+  const { data: service } = await supabase.from('hotel_services').select('*').eq('id', id).maybeSingle();
+
+  if (service) {
+    await recordAuditLog({
+      tableName: 'hotel_services',
+      recordId: id,
+      action: 'DELETE',
+      actorId,
+      before: service as Record<string, unknown>,
+    });
+  }
+
+  const { error } = await supabase.from('hotel_services').delete().eq('id', id);
   if (error) return NextResponse.json({ success: false, error: 'Failed to delete service' }, { status: 500 });
   return NextResponse.json({ success: true });
 }

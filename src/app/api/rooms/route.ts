@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { getAuditActor, recordAuditLog } from '@/lib/audit';
 import { z } from 'zod';
 
 const roomSchema = z.object({
@@ -12,6 +13,7 @@ const roomSchema = z.object({
   description: z.string().optional(),
   amenities: z.array(z.string()).optional(),
   imagePath: z.string().optional().nullable(),
+  imagePaths: z.array(z.string()).optional(),
 });
 
 type RoomRow = {
@@ -25,6 +27,7 @@ type RoomRow = {
   description?: string | null;
   amenities?: string[] | null;
   image_path?: string | null;
+  image_paths?: string[] | null;
   created_at?: string | null;
   updated_at?: string | null;
 };
@@ -41,6 +44,7 @@ function toRoom(row: RoomRow) {
     description: row.description ?? undefined,
     amenities: row.amenities ?? [],
     imagePath: row.image_path ?? undefined,
+    imagePaths: row.image_paths ?? [],
     createdAt: row.created_at ?? null,
     updatedAt: row.updated_at ?? null,
   };
@@ -137,6 +141,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = roomSchema.parse(body);
     const supabase = getSupabaseAdmin();
+    const actor = await getAuditActor(request);
+    const actorId = actor?.id ?? null;
 
     const { data, error } = await supabase
       .from('rooms')
@@ -150,6 +156,9 @@ export async function POST(request: NextRequest) {
         description: validatedData.description,
         amenities: validatedData.amenities ?? [],
         image_path: validatedData.imagePath ?? null,
+        image_paths: validatedData.imagePaths ?? [],
+        created_by: actorId,
+        updated_by: actorId,
       })
       .select('*')
       .single();
@@ -183,6 +192,8 @@ export async function PUT(request: NextRequest) {
     const validatedData = roomSchema.extend({ id: z.string().uuid() }).parse(body);
     const { id, ...updateData } = validatedData;
     const supabase = getSupabaseAdmin();
+    const actor = await getAuditActor(request);
+    const actorId = actor?.id ?? null;
 
     const { data, error } = await supabase
       .from('rooms')
@@ -196,6 +207,8 @@ export async function PUT(request: NextRequest) {
         description: updateData.description,
         amenities: updateData.amenities,
         image_path: updateData.imagePath ?? undefined,
+        image_paths: updateData.imagePaths,
+        updated_by: actorId,
       })
       .eq('id', id)
       .select('*')
@@ -230,7 +243,22 @@ export async function DELETE(request: NextRequest) {
     if (!id) {
       return NextResponse.json({ success: false, error: 'ID required' }, { status: 400 });
     }
-    const { error } = await getSupabaseAdmin().from('rooms').delete().eq('id', id);
+    const supabase = getSupabaseAdmin();
+    const actor = await getAuditActor(request);
+    const actorId = actor?.id ?? null;
+    const { data: room } = await supabase.from('rooms').select('*').eq('id', id).maybeSingle();
+
+    if (room) {
+      await recordAuditLog({
+        tableName: 'rooms',
+        recordId: id,
+        action: 'DELETE',
+        actorId,
+        before: room as Record<string, unknown>,
+      });
+    }
+
+    const { error } = await supabase.from('rooms').delete().eq('id', id);
     if (error) throw error;
     return NextResponse.json({ success: true, message: 'Room deleted' });
   } catch {

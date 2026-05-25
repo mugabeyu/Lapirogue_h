@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Pencil, Plus, SearchIcon, Trash2 } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { StatusBadge } from '@/components/StatusBadge';
@@ -13,15 +14,17 @@ import { RoomModal } from '@/components/modals/RoomModal';
 import { AddActivityModal } from '@/components/modals/AddActivityModal';
 import { MenuItemModal } from '@/components/modals/MenuItemModal';
 import { PaymentModal } from '@/components/modals/PaymentModal';
+import { StaffModal } from '@/components/modals/StaffModal';
 import { LabeledTable } from '@/components/ui/LabeledTable';
+import { formatTableValue, getTableValue, type TableColumnType } from '@/lib/table';
 
 export type CrudColumn = {
   key: string;
   label: string;
-  type?: 'text' | 'currency' | 'date' | 'status' | 'number';
+  type?: TableColumnType;
 };
 
-export type CrudEntityType = 'reservation' | 'room' | 'activity' | 'menu-item' | 'payment';
+export type CrudEntityType = 'reservation' | 'room' | 'activity' | 'menu-item' | 'payment' | 'staff';
 
 type CrudDataTablePageProps = {
   title: string;
@@ -33,24 +36,13 @@ type CrudDataTablePageProps = {
   entityType: CrudEntityType;
   addHref?: string;
   deleteEndpoint?: (id: string) => string;
+  rowHrefBase?: string;
+  disableEdit?: boolean;
+  disableDelete?: boolean;
   tableCaption?: string;
   entityName?: string;
   emptyMessage?: string;
 };
-
-function getValue(row: Record<string, unknown>, key: string) {
-  return key.split('.').reduce<unknown>((value, part) => {
-    if (!value || typeof value !== 'object') return undefined;
-    return (value as Record<string, unknown>)[part];
-  }, row);
-}
-
-function formatValue(value: unknown, type: CrudColumn['type']) {
-  if (value === null || value === undefined || value === '') return '-';
-  if (type === 'currency') return `Rs ${Number(value).toLocaleString()}`;
-  if (type === 'date') return new Date(String(value)).toLocaleDateString();
-  return String(value);
-}
 
 type EntityModalProps = {
   isOpen: boolean;
@@ -71,6 +63,8 @@ function EntityModal({ entityType, ...props }: EntityModalProps & { entityType: 
       return <MenuItemModal {...props} />;
     case 'payment':
       return <PaymentModal {...props} />;
+    case 'staff':
+      return <StaffModal {...props} />;
     default:
       return null;
   }
@@ -86,6 +80,9 @@ export default function CrudDataTablePage({
   entityType,
   addHref,
   deleteEndpoint,
+  rowHrefBase,
+  disableEdit = false,
+  disableDelete = false,
   tableCaption,
   entityName,
   emptyMessage,
@@ -95,6 +92,7 @@ export default function CrudDataTablePage({
   const [editRow, setEditRow] = useState<Record<string, unknown> | null>(null);
   const [deleteRow, setDeleteRow] = useState<Record<string, unknown> | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const router = useRouter();
 
   const url = useMemo(() => {
     const [path, query = ''] = endpoint.split('?');
@@ -199,56 +197,72 @@ export default function CrudDataTablePage({
                     {column.label}
                   </th>
                 ))}
-                <th scope="col" className="px-6 py-4 text-right font-medium">
-                  Actions
-                </th>
+                {!disableEdit || !disableDelete ? (
+                  <th scope="col" className="px-6 py-4 text-right font-medium">
+                    Actions
+                  </th>
+                ) : null}
               </tr>
             </thead>
             <tbody className="divide-y divide-sand-200">
               {!isLoading && rows.length === 0 && (
                 <tr>
-                  <td colSpan={columns.length + 1} className="px-6 py-12 text-center text-sm text-ink-500">
+                  <td colSpan={columns.length + (disableEdit && disableDelete ? 0 : 1)} className="px-6 py-12 text-center text-sm text-ink-500">
                     {emptyText}
                   </td>
                 </tr>
               )}
               {rows.map((row, index) => (
-                <tr key={String(row.id ?? index)} className="hover:bg-sand-50/50">
+                <tr
+                  key={String(row.id ?? index)}
+                  className={`hover:bg-sand-50/50 ${rowHrefBase ? 'cursor-pointer' : ''}`}
+                  onClick={rowHrefBase && row.id != null ? () => router.push(`${rowHrefBase}/${String(row.id)}`) : undefined}
+                >
                   {columns.map((column) => {
-                    const value = getValue(row, column.key);
+                    const value = getTableValue(row, column.key);
                     return (
                       <td key={column.key} className="px-6 py-4 text-sm text-ink-700">
                         {column.type === 'status' ? (
                           <StatusBadge status={String(value ?? '')} />
                         ) : (
-                          formatValue(value, column.type)
+                          formatTableValue(value, column.type)
                         )}
                       </td>
                     );
                   })}
-                  <td className="px-6 py-4 text-right">
-                    <div className="inline-flex gap-2">
-                      <button
-                        type="button"
-                        className="rounded-lg p-2 text-ink-500 hover:bg-sand-100 hover:text-primary"
-                        onClick={() => {
-                          setEditRow(row);
-                          setIsModalOpen(true);
-                        }}
-                        aria-label={`Edit ${rowLabel}`}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </button>
-                      <button
-                        type="button"
-                        className="rounded-lg p-2 text-ink-500 hover:bg-danger/10 hover:text-danger"
-                        onClick={() => setDeleteRow(row)}
-                        aria-label={`Delete ${rowLabel}`}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </td>
+                  {!disableEdit || !disableDelete ? (
+                    <td className="px-6 py-4 text-right">
+                      <div className="inline-flex gap-2">
+                        {!disableEdit && (
+                          <button
+                            type="button"
+                            className="rounded-lg p-2 text-ink-500 hover:bg-sand-100 hover:text-primary"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setEditRow(row);
+                              setIsModalOpen(true);
+                            }}
+                            aria-label={`Edit ${rowLabel}`}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </button>
+                        )}
+                        {!disableDelete && entityType !== 'payment' && (
+                        <button
+                          type="button"
+                          className="rounded-lg p-2 text-ink-500 hover:bg-danger/10 hover:text-danger"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setDeleteRow(row);
+                          }}
+                          aria-label={`Delete ${rowLabel}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                        )}
+                      </div>
+                    </td>
+                  ) : null}
                 </tr>
               ))}
             </tbody>
@@ -264,14 +278,16 @@ export default function CrudDataTablePage({
         editRow={editRow}
       />
 
-      <ConfirmDialog
-        isOpen={Boolean(deleteRow)}
-        onClose={() => setDeleteRow(null)}
-        onConfirm={handleDelete}
-        title="Delete Record"
-        message="Are you sure you want to delete this record? This action cannot be undone."
-        isLoading={isDeleting}
-      />
+      {!disableDelete && entityType !== 'payment' && (
+        <ConfirmDialog
+          isOpen={Boolean(deleteRow)}
+          onClose={() => setDeleteRow(null)}
+          onConfirm={handleDelete}
+          title="Delete Record"
+          message="Are you sure you want to delete this record? This action cannot be undone."
+          isLoading={isDeleting}
+        />
+      )}
     </div>
   );
 }

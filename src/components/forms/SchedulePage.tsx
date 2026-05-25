@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { CalendarDays, ChevronLeft, ChevronRight, Download, Plus, Search, Clock3 } from 'lucide-react';
+import { CalendarDays, ChevronLeft, ChevronRight, Download, Plus, Search } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { CreateScheduleItemModal } from '@/components/modals/CreateScheduleItemModal';
 import { useApi } from '@/hooks/useApi';
@@ -74,10 +74,6 @@ function addDays(date: Date, days: number) {
 
 function toDateInput(date: Date) {
   return date.toISOString().slice(0, 10);
-}
-
-function toTimeInput(date: Date) {
-  return date.toTimeString().slice(0, 5);
 }
 
 function formatWeekLabel(start: Date) {

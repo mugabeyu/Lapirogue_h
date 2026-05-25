@@ -5,6 +5,7 @@ import { CloudUpload, Loader2, Trash2 } from 'lucide-react';
 import { Modal } from '@/components/Modal';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { MENU_CATEGORIES, MenuItemRecord } from '@/lib/menu';
+import { uploadImage as uploadStoredImage } from '@/lib/upload-image';
 import { toast } from 'sonner';
 
 interface MenuItemModalProps {
@@ -57,17 +58,9 @@ export function MenuItemModal({ isOpen, onClose, onSaved, editItem }: MenuItemMo
     setImagePreview(URL.createObjectURL(file));
   }
 
-  async function uploadImage(itemId: string) {
+  async function uploadMenuImage(itemId: string) {
     if (!imageFile) return editItem?.imagePath;
-    const formData = new FormData();
-    formData.append('file', imageFile);
-    formData.append('bucket', 'menu-images');
-    formData.append('id', itemId);
-
-    const response = await fetch('/api/upload', { method: 'POST', body: formData });
-    if (!response.ok) return editItem?.imagePath;
-    const payload = await response.json();
-    return payload.data?.publicUrl as string | undefined;
+    return uploadStoredImage({ file: imageFile, bucket: 'menu-images', id: itemId, target: 'menu-item' });
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -98,7 +91,21 @@ export function MenuItemModal({ isOpen, onClose, onSaved, editItem }: MenuItemMo
 
     const itemId = (isEdit ? editItem!.id : result.data?.id) as string;
     if (imageFile && itemId) {
-      await uploadImage(itemId);
+      try {
+        const url = await uploadMenuImage(itemId);
+        if (url) {
+          // Persist image path on the menu item record
+          await fetch('/api/menu-items', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: itemId, imagePath: url }),
+          });
+        }
+      } catch {
+        setIsSaving(false);
+        toast.error('Menu item saved, but the image upload failed');
+        return;
+      }
     }
 
     setIsSaving(false);
@@ -147,7 +154,7 @@ export function MenuItemModal({ isOpen, onClose, onSaved, editItem }: MenuItemMo
                     <span className="mt-1 px-3 text-[11px] text-ink-500">PNG, JPG up to 5MB</span>
                   </>
                 )}
-                <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+                <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleImageChange} />
               </label>
             </div>
 

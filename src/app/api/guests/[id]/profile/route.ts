@@ -1,47 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { buildBillingSummary } from '@/lib/billing';
+import { toGuest, type GuestRow } from '@/lib/guests';
 
-type GuestRow = {
-  id: string;
-  guest_id: string;
-  first_name: string;
-  last_name: string;
-  email: string | null;
-  phone: string | null;
-  nationality: string | null;
-  passport: string | null;
-  date_of_birth: string | null;
-  vip: boolean;
-  status: string;
-  notes: string | null;
-  image_path: string | null;
-  created_at: string;
-  updated_at: string;
-};
-
-function toGuest(row: GuestRow) {
-  return {
-    id: row.id,
-    guestId: row.guest_id,
-    firstName: row.first_name,
-    lastName: row.last_name,
-    email: row.email ?? undefined,
-    phone: row.phone ?? undefined,
-    nationality: row.nationality ?? undefined,
-    passport: row.passport ?? undefined,
-    dateOfBirth: row.date_of_birth ?? undefined,
-    vip: row.vip,
-    status: row.status,
-    notes: row.notes ?? undefined,
-    imagePath: row.image_path ?? undefined,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  };
-}
-
-export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(_request: NextRequest, context: { params: Promise<unknown> }) {
   try {
-    const { id } = await params;
+    const { id } = (await context.params) as { id: string };
     const supabase = getSupabaseAdmin();
 
     const { data: guest, error: guestError } = await supabase
@@ -65,13 +29,13 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     const [activityBookingsResult, foodOrdersResult, paymentsByGuest, paymentsByReservation] =
       await Promise.all([
         supabase
-          .from('activity_bookings')
-          .select('id,booking_date,participants,status,notes,activities(name,price)')
+            .from('activity_bookings')
+            .select('id,booking_date,participants,status,notes,activities(name,price)')
           .eq('guest_id', id)
           .order('booking_date', { ascending: false }),
         supabase
-          .from('food_orders')
-          .select('id,order_id,total,status,notes,created_at')
+            .from('food_orders')
+            .select('id,order_id,subtotal,service_charge,tax_amount,total,status,notes,created_at')
           .eq('guest_id', id)
           .order('created_at', { ascending: false }),
         supabase
@@ -87,6 +51,12 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
               .order('created_at', { ascending: false })
           : Promise.resolve({ data: [] }),
       ]);
+
+    const { data: extraItemsRaw } = await supabase
+      .from('payment_extra_items')
+      .select('id,category,label,amount,created_at')
+      .eq('guest_id', id)
+      .order('created_at', { ascending: false });
 
     const reservations = (reservationsRaw ?? []).map((r) => {
       const room = r.rooms as { room_number?: string; type?: string } | null;
@@ -114,6 +84,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     const activityBookings = (activityBookingsResult.data ?? []).map((b) => ({
       id: b.id,
       activity: (b.activities as { name?: string } | null)?.name ?? null,
+      amount: Number(((b.activities as { price?: number | string } | null)?.price ?? 0)) * Number(b.participants ?? 0),
       date: b.booking_date,
       participants: b.participants,
       status: b.status,
@@ -123,6 +94,9 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     const foodOrders = (foodOrdersResult.data ?? []).map((o) => ({
       id: o.id,
       orderId: o.order_id,
+      subtotal: Number(o.subtotal ?? 0),
+      serviceCharge: Number(o.service_charge ?? 0),
+      taxAmount: Number(o.tax_amount ?? 0),
       total: Number(o.total ?? 0),
       status: o.status,
       notes: o.notes,
@@ -152,9 +126,44 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       createdAt: p.created_at,
     }));
 
-    const totalSpent =
-      reservations.reduce((sum, r) => sum + r.totalAmount, 0) +
-      foodOrders.reduce((sum, o) => sum + o.total, 0);
+    const extraCharges = (extraItemsRaw ?? []).map((item) => ({
+      category: item.category as 'Transport services' | 'Laundry/services' | 'Additional hotel purchases',
+      amount: Number(item.amount ?? 0),
+      label: item.label,
+      sourceId: item.id,
+      createdAt: item.created_at,
+    }));
+
+    const billingSummary = buildBillingSummary({
+      roomCharges: reservations.map((reservation) => ({
+        amount: reservation.totalAmount,
+        label: `Reservation ${reservation.reservationId}`,
+        sourceId: reservation.id,
+        createdAt: reservation.checkIn,
+      })),
+      activityCharges: activityBookings
+        .filter((booking) => Boolean(booking.amount))
+        .map((booking) => ({
+          amount: booking.amount ?? 0,
+          label: booking.activity ?? 'Activity booking',
+          sourceId: booking.id,
+          createdAt: booking.date,
+        })),
+      foodOrders: foodOrders.map((order) => ({
+        id: order.id,
+        orderId: order.orderId,
+        subtotal: order.subtotal,
+        serviceCharge: order.serviceCharge,
+        taxAmount: order.taxAmount,
+        total: order.total,
+        createdAt: order.createdAt,
+      })),
+      extraCharges,
+      payments: payments.map((payment) => ({
+        amount: payment.amount,
+        status: payment.status,
+      })),
+    });
 
     return NextResponse.json({
       success: true,
@@ -169,8 +178,10 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
           totalStays: reservations.length,
           activities: activityBookings.length,
           foodOrders: foodOrders.length,
-          totalSpent,
+          totalSpent: billingSummary.totalCharges,
+          balanceDue: billingSummary.balanceDue,
         },
+        billingSummary,
       },
     });
   } catch {

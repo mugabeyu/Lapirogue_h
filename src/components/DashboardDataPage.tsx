@@ -7,10 +7,7 @@ import {
   BedDouble,
   CalendarCheck2,
   CalendarPlus2,
-  CircleDollarSign,
-  Clock3,
   DoorOpen,
-  Sparkles,
   UserPlus,
   UtensilsCrossed,
 } from 'lucide-react';
@@ -19,7 +16,6 @@ import { StatCard } from '@/components/StatCard';
 import { useApi } from '@/hooks/useApi';
 import { AddGuestModal } from '@/components/modals/AddGuestModal';
 import { AddActivityModal } from '@/components/modals/AddActivityModal';
-import { AddFoodOrderModal } from '@/components/modals/AddFoodOrderModal';
 import ReservationCalendarPage from '@/components/forms/ReservationCalendarPage';
 
 type DashboardData = {
@@ -50,22 +46,6 @@ function formatCurrency(value: number) {
   return `Rs ${value.toLocaleString()}`;
 }
 
-function formatTodayLabel(date: Date) {
-  const parts = new Intl.DateTimeFormat('en-GB', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  }).formatToParts(date);
-
-  const weekday = parts.find((part) => part.type === 'weekday')?.value ?? '';
-  const day = parts.find((part) => part.type === 'day')?.value ?? '';
-  const month = parts.find((part) => part.type === 'month')?.value ?? '';
-  const year = parts.find((part) => part.type === 'year')?.value ?? '';
-
-  return `${weekday}, ${day} ${month} ${year}`;
-}
-
 function formatShortDate(value?: string | null) {
   if (!value) return '-';
   return new Date(value).toLocaleDateString('en-GB', {
@@ -77,11 +57,9 @@ function formatShortDate(value?: string | null) {
 export default function DashboardDataPage() {
   const [isGuestModalOpen, setIsGuestModalOpen] = useState(false);
   const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
-  const [isFoodOrderModalOpen, setIsFoodOrderModalOpen] = useState(false);
   const { data, isLoading } = useApi<DashboardData>('/api/dashboard');
   const stats = data?.stats;
   const todaysArrivals = data?.todaysArrivals ?? [];
-  const todayLabel = formatTodayLabel(new Date());
 
   const occupiedPercent = stats?.roomOccupancy.total
     ? Math.round(((stats.roomOccupancy.total - stats.roomOccupancy.available) / stats.roomOccupancy.total) * 100)
@@ -92,15 +70,7 @@ export default function DashboardDataPage() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 page-padding">
-      <PageHeader
-        title="Dashboard"
-        subtitle="Live operational summary from Supabase."
-        action={
-          <div className="rounded-full border border-sand-200 bg-white px-4 py-2 text-sm text-ink-600 shadow-sm">
-            {todayLabel}
-          </div>
-        }
-      />
+      <PageHeader title="Dashboard" subtitle="Live operational summary from Supabase." />
 
       {isLoading && <div className="card p-6 text-ink-600">Loading dashboard...</div>}
 
@@ -157,9 +127,8 @@ export default function DashboardDataPage() {
               </div>
             </button>
 
-            <button
-              type="button"
-              onClick={() => setIsFoodOrderModalOpen(true)}
+            <Link
+              href="/food-beverage/orders/new"
               className="group rounded-[24px] border border-sand-200 bg-white p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg"
             >
               <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-white">
@@ -168,84 +137,7 @@ export default function DashboardDataPage() {
               <div className="mt-8 text-center">
                 <div className="font-display text-lg text-ink-900">Record F&B Order</div>
               </div>
-            </button>
-          </section>
-
-          <section className="relative overflow-hidden rounded-[32px] border border-white/70 bg-[linear-gradient(135deg,rgba(34,69,62,0.98)_0%,rgba(21,43,40,0.98)_55%,rgba(12,26,24,0.98)_100%)] p-6 text-white shadow-[0_30px_80px_rgba(16,24,16,0.22)]">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.16),transparent_30%),radial-gradient(circle_at_bottom_left,rgba(194,159,91,0.18),transparent_35%)]" />
-            <div className="relative grid gap-6 lg:grid-cols-[1.35fr_0.9fr]">
-              <div>
-                <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs uppercase tracking-[0.28em] text-white/75">
-                  <Sparkles className="h-3.5 w-3.5" />
-                  Operations live
-                </div>
-                <h2 className="mt-4 max-w-2xl font-display text-4xl leading-tight text-white sm:text-5xl">
-                  The hotel is ready for the day. Every key metric is syncing from Supabase.
-                </h2>
-                <p className="mt-4 max-w-2xl text-sm leading-6 text-white/72 sm:text-base">
-                  Track occupancy, revenue, arrivals, and pending work without hardcoded dashboard values.
-                </p>
-
-                <div className="mt-6 flex flex-wrap gap-3 text-sm">
-                  <div className="rounded-2xl border border-white/15 bg-white/8 px-4 py-3">
-                    <div className="text-white/55">Guests</div>
-                    <div className="mt-1 font-display text-2xl text-white">{stats.totalGuests}</div>
-                  </div>
-                  <div className="rounded-2xl border border-white/15 bg-white/8 px-4 py-3">
-                    <div className="text-white/55">Reservations</div>
-                    <div className="mt-1 font-display text-2xl text-white">{stats.activeReservations}</div>
-                  </div>
-                  <div className="rounded-2xl border border-white/15 bg-white/8 px-4 py-3">
-                    <div className="text-white/55">Arrivals today</div>
-                    <div className="mt-1 font-display text-2xl text-white">{stats.todaysArrivals}</div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid gap-4 rounded-[28px] border border-white/12 bg-white/10 p-4 backdrop-blur-sm">
-                <div className="flex items-center justify-between rounded-2xl bg-white/8 px-4 py-3">
-                  <div>
-                    <div className="text-xs uppercase tracking-[0.25em] text-white/50">Room availability</div>
-                    <div className="mt-1 text-sm text-white/80">
-                      {stats.roomOccupancy.available} of {stats.roomOccupancy.total} rooms available
-                    </div>
-                  </div>
-                  <div className="font-display text-3xl text-white">
-                    {stats.roomOccupancy.total ? Math.round((stats.roomOccupancy.available / stats.roomOccupancy.total) * 100) : 0}%
-                  </div>
-                </div>
-
-                <div>
-                  <div className="mb-2 flex items-center justify-between text-sm text-white/65">
-                    <span>Occupancy</span>
-                    <span>{occupiedPercent}% occupied</span>
-                  </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-white/12">
-                    <div className="h-full rounded-full bg-accent" style={{ width: `${occupiedPercent}%` }} />
-                  </div>
-                </div>
-
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-2xl bg-black/15 p-4">
-                    <div className="flex items-center gap-2 text-xs uppercase tracking-[0.25em] text-white/45">
-                      <CircleDollarSign className="h-4 w-4" />
-                      Today revenue
-                    </div>
-                    <div className="mt-3 font-display text-2xl text-white">{formatCurrency(stats.todayRevenue)}</div>
-                  </div>
-                  <div className="rounded-2xl bg-black/15 p-4">
-                    <div className="flex items-center gap-2 text-xs uppercase tracking-[0.25em] text-white/45">
-                      <Clock3 className="h-4 w-4" />
-                      Pending work
-                    </div>
-                    <div className="mt-3 font-display text-2xl text-white">
-                      {stats.pendingFoodOrders + stats.pendingPayments}
-                    </div>
-                    <div className="text-xs text-white/55">food orders and payments</div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            </Link>
           </section>
 
           <div className="grid grid-cols-1 gap-6 xl:grid-cols-4 section-gap">
@@ -456,7 +348,6 @@ export default function DashboardDataPage() {
 
       <AddGuestModal isOpen={isGuestModalOpen} onClose={() => setIsGuestModalOpen(false)} />
       <AddActivityModal isOpen={isActivityModalOpen} onClose={() => setIsActivityModalOpen(false)} />
-      <AddFoodOrderModal isOpen={isFoodOrderModalOpen} onClose={() => setIsFoodOrderModalOpen(false)} />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { z } from 'zod';
+import { awardEcoPoints, removeEcoPointsBySource } from '@/lib/eco-points';
 
 type ActivityBookingRow = {
   id: string;
@@ -9,7 +10,7 @@ type ActivityBookingRow = {
   status: string | null;
   notes: string | null;
   created_at: string | null;
-  activities?: { name?: string; price?: number } | null;
+  activities?: { name?: string; category?: string; price?: number } | null;
   guests?: { first_name?: string; last_name?: string } | null;
 };
 
@@ -69,7 +70,8 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = bookingSchema.parse(await request.json());
-    const { data, error } = await getSupabaseAdmin()
+    const admin = getSupabaseAdmin();
+    const { data, error } = await admin
       .from('activity_bookings')
       .insert({
         activity_id: body.activityId,
@@ -85,6 +87,31 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) throw error;
+
+    if ((body.status ?? 'CONFIRMED') === 'COMPLETED') {
+      const { data: activity } = await admin
+        .from('activities')
+        .select('name, category')
+        .eq('id', body.activityId)
+        .maybeSingle();
+
+      if (activity) {
+        await awardEcoPoints({
+          sourceType: 'ACTIVITY_BOOKING',
+          sourceRecordId: data.id,
+          guestId: body.guestId,
+          activityName: activity.name,
+          activityCategory: activity.category,
+          label: activity.name,
+          metadata: {
+            bookingDate: body.date,
+            participants: body.participants,
+            pickupPoint: body.pickupPoint ?? null,
+          },
+        }).catch((awardError) => console.error('Failed to award eco points for booking', awardError));
+      }
+    }
+
     return NextResponse.json({ success: true, data }, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -98,7 +125,14 @@ export async function PUT(request: NextRequest) {
   try {
     const body = bookingSchema.parse(await request.json());
     const { id, ...updateData } = body as typeof body & { id?: string };
-    const { data, error } = await getSupabaseAdmin()
+    const admin = getSupabaseAdmin();
+    const { data: existingBooking } = await admin
+      .from('activity_bookings')
+      .select('id,status,guest_id,activity_id')
+      .eq('id', id)
+      .maybeSingle();
+
+    const { data, error } = await admin
       .from('activity_bookings')
       .update({
         activity_id: updateData.activityId,
@@ -115,6 +149,36 @@ export async function PUT(request: NextRequest) {
       .single();
 
     if (error) throw error;
+
+    const resultingStatus = updateData.status ?? existingBooking?.status ?? 'CONFIRMED';
+    if (resultingStatus === 'COMPLETED') {
+      const { data: activity } = await admin
+        .from('activities')
+        .select('name, category')
+        .eq('id', updateData.activityId)
+        .maybeSingle();
+
+      if (activity) {
+        await awardEcoPoints({
+          sourceType: 'ACTIVITY_BOOKING',
+          sourceRecordId: data.id,
+          guestId: updateData.guestId,
+          activityName: activity.name,
+          activityCategory: activity.category,
+          label: activity.name,
+          metadata: {
+            bookingDate: updateData.date,
+            participants: updateData.participants,
+            pickupPoint: updateData.pickupPoint ?? null,
+          },
+        }).catch((awardError) => console.error('Failed to award eco points for booking', awardError));
+      }
+    } else if (existingBooking?.status === 'COMPLETED' && resultingStatus !== 'COMPLETED') {
+      await removeEcoPointsBySource('ACTIVITY_BOOKING', data.id).catch((removeError) =>
+        console.error('Failed to remove eco points for booking', removeError),
+      );
+    }
+
     return NextResponse.json({ success: true, data });
   } catch (error) {
     if (error instanceof z.ZodError) {

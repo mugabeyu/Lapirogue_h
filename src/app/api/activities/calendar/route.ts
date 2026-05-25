@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { addDays, parseDateKey, startOfWeek, toDateKey } from '@/lib/date-utils';
 
 const CATEGORY_COLORS: Record<string, string> = {
   'Water Sports': 'water',
@@ -10,30 +11,6 @@ const CATEGORY_COLORS: Record<string, string> = {
   Adventure: 'adventure',
   General: 'tours',
 };
-
-function toDateKey(date: Date) {
-  return date.toISOString().slice(0, 10);
-}
-
-function parseDateKey(value: string) {
-  const [y, m, d] = value.split('-').map(Number);
-  return new Date(y, m - 1, d);
-}
-
-function addDays(date: Date, days: number) {
-  const next = new Date(date);
-  next.setDate(next.getDate() + days);
-  return next;
-}
-
-function startOfWeek(date: Date) {
-  const start = new Date(date);
-  const day = start.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  start.setDate(start.getDate() + diff);
-  start.setHours(0, 0, 0, 0);
-  return start;
-}
 
 function buildWeek(anchor: string) {
   const start = startOfWeek(parseDateKey(anchor));

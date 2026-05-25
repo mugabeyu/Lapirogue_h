@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { getAuditActor, recordAuditLog } from '@/lib/audit';
 import { z } from 'zod';
+import { validationErrorResponse } from '@/lib/api-response';
+import { toGuest, type GuestRow } from '@/lib/guests';
 
 const guestSchema = z.object({
   id: z.string().uuid().optional(),
@@ -16,48 +19,10 @@ const guestSchema = z.object({
   notes: z.string().optional(),
 });
 
-type GuestRow = {
-  id: string;
-  guest_id: string;
-  first_name: string;
-  last_name: string;
-  email: string | null;
-  phone: string | null;
-  nationality: string | null;
-  passport: string | null;
-  date_of_birth: string | null;
-  vip: boolean;
-  status: string;
-  notes: string | null;
-  image_path: string | null;
-  created_at: string;
-  updated_at: string;
-};
-
 async function generateGuestId() {
   const timestamp = Date.now().toString().slice(-6);
   const suffix = Math.floor(Math.random() * 90 + 10);
   return `G-${timestamp}${suffix}`;
-}
-
-function toGuest(row: GuestRow) {
-  return {
-    id: row.id,
-    guestId: row.guest_id,
-    firstName: row.first_name,
-    lastName: row.last_name,
-    email: row.email ?? undefined,
-    phone: row.phone ?? undefined,
-    nationality: row.nationality ?? undefined,
-    passport: row.passport ?? undefined,
-    dateOfBirth: row.date_of_birth ?? undefined,
-    vip: row.vip,
-    status: row.status,
-    notes: row.notes ?? undefined,
-    imagePath: row.image_path ?? undefined,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  };
 }
 
 export async function GET(request: NextRequest) {
@@ -94,7 +59,7 @@ export async function GET(request: NextRequest) {
     const guestRows = (data ?? []) as GuestRow[];
     const guestIds = guestRows.map((row) => row.id);
 
-    let stayByGuest = new Map<string, { checkIn: string; checkOut: string; roomNumber: string | null; roomType: string | null }>();
+    const stayByGuest = new Map<string, { checkIn: string; checkOut: string; roomNumber: string | null; roomType: string | null }>();
 
     if (guestIds.length > 0) {
       const { data: stays } = await supabase
@@ -168,6 +133,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = guestSchema.parse(body);
     const supabase = getSupabaseAdmin();
+    const actor = await getAuditActor(request);
+    const actorId = actor?.id ?? null;
     const guestId = await generateGuestId();
 
     const { data, error } = await supabase
@@ -184,6 +151,8 @@ export async function POST(request: NextRequest) {
         vip: validatedData.vip ?? false,
         status: validatedData.status ?? 'RESERVED',
         notes: validatedData.notes,
+        created_by: actorId,
+        updated_by: actorId,
       })
       .select('*')
       .single();
@@ -198,12 +167,8 @@ export async function POST(request: NextRequest) {
     }, { status: 201 });
   } catch (error) {
     console.error('Guest create failed:', error);
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { success: false, error: 'Validation error', details: error.errors },
-        { status: 400 }
-      );
-    }
+    const validationResponse = validationErrorResponse(error);
+    if (validationResponse) return validationResponse;
 
     return NextResponse.json(
       {
@@ -221,6 +186,8 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
     const { id, ...updateData } = guestSchema.parse(body);
     const supabase = getSupabaseAdmin();
+    const actor = await getAuditActor(request);
+    const actorId = actor?.id ?? null;
 
     const { data, error } = await supabase
       .from('guests')
@@ -235,6 +202,7 @@ export async function PUT(request: NextRequest) {
         vip: updateData.vip,
         status: updateData.status,
         notes: updateData.notes,
+        updated_by: actorId,
       })
       .eq('id', id)
       .select('*')
@@ -249,12 +217,8 @@ export async function PUT(request: NextRequest) {
       data: toGuest(data as GuestRow),
     });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { success: false, error: 'Validation error', details: error.errors },
-        { status: 400 }
-      );
-    }
+    const validationResponse = validationErrorResponse(error);
+    if (validationResponse) return validationResponse;
     return NextResponse.json(
       { success: false, error: 'Failed to update guest' },
       { status: 500 }
@@ -269,7 +233,22 @@ export async function DELETE(request: NextRequest) {
     if (!id) {
       return NextResponse.json({ success: false, error: 'ID required' }, { status: 400 });
     }
-    const { error } = await getSupabaseAdmin().from('guests').delete().eq('id', id);
+    const supabase = getSupabaseAdmin();
+    const actor = await getAuditActor(request);
+    const actorId = actor?.id ?? null;
+    const { data: guest } = await supabase.from('guests').select('*').eq('id', id).maybeSingle();
+
+    if (guest) {
+      await recordAuditLog({
+        tableName: 'guests',
+        recordId: id,
+        action: 'DELETE',
+        actorId,
+        before: guest as Record<string, unknown>,
+      });
+    }
+
+    const { error } = await supabase.from('guests').delete().eq('id', id);
     if (error) throw error;
     return NextResponse.json({ success: true, message: 'Guest deleted' });
   } catch {

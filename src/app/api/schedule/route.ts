@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { addDays, startOfWeek, toDateKey } from '@/lib/date-utils';
 
 type GuestRow = {
   id: string;
@@ -33,37 +34,10 @@ function parseDate(value: string | null, fallback: Date) {
   return Number.isNaN(parsed.getTime()) ? new Date(fallback) : parsed;
 }
 
-function startOfWeek(date: Date) {
-  const result = new Date(date);
-  const day = result.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  result.setDate(result.getDate() + diff);
-  result.setHours(0, 0, 0, 0);
-  return result;
-}
-
-function addDays(date: Date, days: number) {
-  const result = new Date(date);
-  result.setDate(result.getDate() + days);
-  return result;
-}
-
-function toDateKey(date: Date) {
-  return date.toISOString().slice(0, 10);
-}
-
 function formatWeekLabel(start: Date) {
   const end = addDays(start, 6);
   const formatter = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
   return `${formatter.format(start)} - ${formatter.format(end)}`;
-}
-
-function buildGuestName(firstName?: string | null, lastName?: string | null) {
-  return `${firstName ?? ''} ${lastName ?? ''}`.trim();
-}
-
-function minuteOffset(value: string) {
-  return new Date(value).getHours() * 60 + new Date(value).getMinutes();
 }
 
 function overlapsWeek(startAt: string, endAt: string, weekStart: Date, weekEnd: Date) {
@@ -136,7 +110,6 @@ export async function GET(request: NextRequest) {
     });
 
     const selectedGuest = guests.find((guest) => guest.id === selectedGuestId) ?? null;
-    const selectedGuestLabel = selectedGuest ? buildGuestName(selectedGuest.first_name, selectedGuest.last_name) : null;
 
     const mappedGuests = guests.map((guest) => ({
       id: guest.id,

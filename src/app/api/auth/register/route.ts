@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { attachSupabaseCookies, createRouteHandlerSupabaseContext } from '@/lib/supabase-server';
+import { getAuditActor } from '@/lib/audit';
 import { z } from 'zod';
 
 const registerSchema = z.object({
@@ -14,6 +15,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = registerSchema.parse(body);
     const adminClient = getSupabaseAdmin();
+    const actor = await getAuditActor(request);
+    const actorId = actor?.id ?? null;
 
     // Create the auth user first.
     const { supabase: authClient, response } = createRouteHandlerSupabaseContext(request);
@@ -54,6 +57,9 @@ export async function POST(request: NextRequest) {
         full_name: validatedData.name,
         role: 'RECEPTIONIST',
         is_main: false,
+        is_active: true,
+        created_by: actorId,
+        updated_by: actorId,
       })
       .select('auth_id,email,full_name,role,is_main,created_at,updated_at')
       .single();

@@ -20,7 +20,7 @@ export function ImageUploadField({
   previewUrl,
   onFileSelect,
   shape = 'rectangle',
-  accept = 'image/*',
+  accept = 'image/jpeg,image/png,image/webp',
   disabled = false,
 }: ImageUploadFieldProps) {
   const [preview, setPreview] = useState<string | null>(previewUrl ?? null);
@@ -35,19 +35,25 @@ export function ImageUploadField({
 
     if (file.size > 5 * 1024 * 1024) {
       toast.error('Image must be 5MB or smaller');
+      event.target.value = '';
       return;
     }
 
-    setPreview(URL.createObjectURL(file));
+    const localPreview = URL.createObjectURL(file);
+    setPreview(localPreview);
 
     try {
       await onFileSelect(file);
-    } catch {
-      toast.error('Unable to upload image');
+    } catch (error) {
+      setPreview(previewUrl ?? null);
+      URL.revokeObjectURL(localPreview);
+      toast.error(error instanceof Error ? error.message : 'Unable to upload image');
+    } finally {
+      event.target.value = '';
     }
   }
 
-  const frameClass = shape === 'circle' ? 'h-24 w-24 rounded-full' : 'h-40 w-full rounded-xl';
+  const frameClass = shape === 'circle' ? 'h-28 w-28 rounded-full' : 'h-40 w-full rounded-xl';
 
   return (
     <div>

@@ -1,12 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
-const supabaseUrl =
-  process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://afilatpihmbicqadwslm.supabase.co';
-const supabaseAnonKey =
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFmaWxhdHBpaG1iaWNxYWR3c2xtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxMjkyOTMsImV4cCI6MjA5NDcwNTI5M30.YRojYa3ewoh4L81haeBHbeGrU9t6nXSplxYzFO-RfkQ';
-
 const AUTH_ROUTES = ['/login', '/forgot-password', '/reset-password'];
 
 const PUBLIC_API_PREFIXES = [
@@ -26,11 +20,18 @@ function isPublicApi(pathname: string) {
 }
 
 export async function proxy(request: NextRequest) {
-  let response = NextResponse.next({
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  const response = NextResponse.next({
     request: {
       headers: request.headers,
     },
   });
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY environment variables');
+  }
 
   const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {

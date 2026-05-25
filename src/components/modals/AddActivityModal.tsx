@@ -17,13 +17,23 @@ interface AddActivityModalProps {
 export function AddActivityModal({ isOpen, onClose, onSaved, editRow }: AddActivityModalProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [imagePath, setImagePath] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [pendingPreviewUrl, setPendingPreviewUrl] = useState<string | null>(null);
   const activity = editRow as Activity | null;
   const isEdit = Boolean(activity?.id);
 
   useEffect(() => {
     if (!isOpen) return;
     setImagePath(activity?.imagePath ?? null);
+    setImageFile(null);
+    setPendingPreviewUrl(null);
   }, [isOpen, activity?.id, activity?.imagePath]);
+
+  useEffect(() => {
+    return () => {
+      if (pendingPreviewUrl) URL.revokeObjectURL(pendingPreviewUrl);
+    };
+  }, [pendingPreviewUrl]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -40,22 +50,36 @@ export function AddActivityModal({ isOpen, onClose, onSaved, editRow }: AddActiv
       capacity: Number(formData.get('capacity')),
       status: formData.get('status') || 'ACTIVE',
     };
+    const savedImagePath = imagePath?.startsWith('blob:') ? activity?.imagePath : imagePath ?? activity?.imagePath;
 
     const response = await fetch('/api/activities', {
       method: isEdit ? 'PUT' : 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...payload, imagePath: imagePath ?? activity?.imagePath }),
+      body: JSON.stringify({ ...payload, imagePath: savedImagePath }),
     });
 
     const result = await response.json();
     const activityId = (result.data?.id as string | undefined) ?? activity?.id;
 
-    if (response.ok && activityId && imagePath?.startsWith('blob:') === false && imagePath) {
-      await fetch('/api/activities', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: activityId, imagePath }),
-      });
+    if (response.ok && activityId && imageFile) {
+      try {
+        const uploadedUrl = await uploadImage({ file: imageFile, bucket: 'activity-images', id: activityId, target: 'activity' });
+        if (uploadedUrl) {
+          // Persist image to activity record
+          await fetch('/api/activities', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: activityId, imagePath: uploadedUrl }),
+          });
+          setImagePath(uploadedUrl);
+          setImageFile(null);
+          setPendingPreviewUrl(null);
+        }
+      } catch {
+        setIsSaving(false);
+        toast.error('Activity saved, but the image upload failed');
+        return;
+      }
     }
 
     setIsSaving(false);
@@ -71,13 +95,17 @@ export function AddActivityModal({ isOpen, onClose, onSaved, editRow }: AddActiv
 
   async function handleImageUpload(file: File) {
     if (isEdit && activity?.id) {
-      const url = await uploadImage({ file, bucket: 'activity-images', id: activity.id });
+      const url = await uploadImage({ file, bucket: 'activity-images', id: activity.id, target: 'activity' });
       if (!url) throw new Error('Upload failed');
       setImagePath(url);
+      setImageFile(null);
+      setPendingPreviewUrl(null);
       return;
     }
-    setImagePath(URL.createObjectURL(file));
-    toast.message('Save the activity first to upload to storage');
+    const previewUrl = URL.createObjectURL(file);
+    setImageFile(file);
+    setPendingPreviewUrl(previewUrl);
+    setImagePath(previewUrl);
   }
 
   return (

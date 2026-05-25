@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { getAuditActor, recordAuditLog } from '@/lib/audit';
 import { z } from 'zod';
 
 const menuItemSchema = z.object({
@@ -93,10 +94,16 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = createMenuItemSchema.parse(await request.json());
+    const actor = await getAuditActor(request);
+    const actorId = actor?.id ?? null;
 
     const { data, error } = await getSupabaseAdmin()
       .from('menu_items')
-      .insert(buildInsertPayload(body))
+      .insert({
+        ...buildInsertPayload(body),
+        created_by: actorId,
+        updated_by: actorId,
+      })
       .select('*')
       .single();
 
@@ -114,6 +121,8 @@ export async function PUT(request: NextRequest) {
   try {
     const body = menuItemSchema.extend({ id: z.string().uuid() }).parse(await request.json());
     const { id, ...rest } = body;
+    const actor = await getAuditActor(request);
+    const actorId = actor?.id ?? null;
 
     const { data: existing, error: existingError } = await getSupabaseAdmin()
       .from('menu_items')
@@ -139,7 +148,10 @@ export async function PUT(request: NextRequest) {
 
     const { data, error } = await getSupabaseAdmin()
       .from('menu_items')
-      .update(merged)
+      .update({
+        ...merged,
+        updated_by: actorId,
+      })
       .eq('id', id)
       .select('*')
       .single();
@@ -160,7 +172,22 @@ export async function DELETE(request: NextRequest) {
     if (!id) {
       return NextResponse.json({ success: false, error: 'ID required' }, { status: 400 });
     }
-    const { error } = await getSupabaseAdmin().from('menu_items').delete().eq('id', id);
+    const supabase = getSupabaseAdmin();
+    const actor = await getAuditActor(request);
+    const actorId = actor?.id ?? null;
+    const { data: menuItem } = await supabase.from('menu_items').select('*').eq('id', id).maybeSingle();
+
+    if (menuItem) {
+      await recordAuditLog({
+        tableName: 'menu_items',
+        recordId: id,
+        action: 'DELETE',
+        actorId,
+        before: menuItem as Record<string, unknown>,
+      });
+    }
+
+    const { error } = await supabase.from('menu_items').delete().eq('id', id);
     if (error) throw error;
     return NextResponse.json({ success: true, message: 'Menu item deleted' });
   } catch {

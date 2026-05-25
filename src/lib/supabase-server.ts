@@ -1,22 +1,24 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextRequest, NextResponse } from 'next/server';
+import { getSupabaseConfig } from './supabase-config';
 
-const resolvedSupabaseUrl = 'https://afilatpihmbicqadwslm.supabase.co';
-const resolvedSupabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFmaWxhdHBpaG1iaWNxYWR3c2xtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxMjkyOTMsImV4cCI6MjA5NDcwNTI5M30.YRojYa3ewoh4L81haeBHbeGrU9t6nXSplxYzFO-RfkQ';
+type ResponseCookieOptions = NonNullable<Parameters<NextResponse['cookies']['set']>[2]>;
 
 export function createRouteHandlerSupabaseContext(request: NextRequest) {
-  let response = NextResponse.next({
+  const { url, anonKey } = getSupabaseConfig();
+
+  const response = NextResponse.next({
     request: {
       headers: request.headers,
     },
   });
 
-  const supabase = createServerClient(resolvedSupabaseUrl, resolvedSupabaseAnonKey, {
+  const supabase = createServerClient(url, anonKey, {
     cookies: {
       getAll() {
         return request.cookies.getAll();
       },
-      setAll(cookiesToSet: Array<{ name: string; value: string; options: any }>) {
+      setAll(cookiesToSet: Array<{ name: string; value: string; options: ResponseCookieOptions }>) {
         cookiesToSet.forEach(({ name, value, options }) => {
           response.cookies.set(name, value, options);
         });

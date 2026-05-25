@@ -2,11 +2,17 @@
   "name": "la-pirogue-enterprise",
   "version": "1.0.0",
   "private": true,
+  "postcss": {
+    "plugins": {
+      "tailwindcss": {},
+      "autoprefixer": {}
+    }
+  },
   "scripts": {
-    "dev": "next dev",
+    "dev": "node scripts/dev.mjs",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
@@ -22,6 +28,7 @@
     "framer-motion": "^11.5.4",
     "jose": "^6.2.3",
     "jsonwebtoken": "^9.0.2",
+    "jspdf": "^4.2.1",
     "lucide-react": "^0.522.0",
     "next": "^16.2.6",
     "react": "^18.3.1",
@@ -41,11 +48,13 @@
     "@typescript-eslint/eslint-plugin": "^8.59.3",
     "@typescript-eslint/parser": "^8.59.3",
     "autoprefixer": "^10.5.0",
+    "es-abstract": "^1.23.3",
     "eslint": "^9.26.0",
     "eslint-config-next": "^15.3.2",
     "eslint-plugin-react-refresh": "^0.5.2",
+    "jiti": "^2.7.0",
     "postcss": "^8.5.14",
     "tailwindcss": "^3.4.19",
-    "typescript": "5.8.2"
+    "typescript": "^5.8.2"
   }
 }

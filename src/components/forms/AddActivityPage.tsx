@@ -6,6 +6,7 @@ import { ChangeEvent, useState } from 'react';
 import { CloudUpload } from 'lucide-react';
 import { toast } from 'sonner';
 import { ACTIVITY_CATEGORIES } from '@/lib/activities';
+import { uploadImage } from '@/lib/upload-image';
 
 function parseCapacityLabel(value: string) {
   const lower = value.toLowerCase();
@@ -76,15 +77,8 @@ export default function AddActivityPage() {
     let imagePath = payload.data?.imagePath as string | undefined;
 
     if (imageFile && activityId) {
-      const formData = new FormData();
-      formData.append('file', imageFile);
-      formData.append('bucket', 'activity-images');
-      formData.append('id', activityId);
-
-      const uploadResponse = await fetch('/api/upload', { method: 'POST', body: formData });
-      if (uploadResponse.ok) {
-        const uploadPayload = await uploadResponse.json();
-        imagePath = uploadPayload.data?.publicUrl;
+      try {
+        imagePath = await uploadImage({ file: imageFile, bucket: 'activity-images', id: activityId, target: 'activity' });
         await fetch('/api/activities', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -103,6 +97,10 @@ export default function AddActivityPage() {
             imagePath,
           }),
         });
+      } catch {
+        setIsSaving(false);
+        toast.error('Activity saved, but the image upload failed');
+        return;
       }
     }
 
@@ -244,8 +242,8 @@ export default function AddActivityPage() {
             <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-sand-300 bg-sand-50/50 px-4 py-10 text-center transition-colors hover:border-primary/40 hover:bg-sand-50">
               <CloudUpload className="mb-3 h-8 w-8 text-ink-400" />
               <span className="text-sm font-semibold text-ink-800">Click to upload or drag and drop</span>
-              <span className="mt-1 text-xs text-ink-500">SVG, PNG, JPG or GIF (max. 5MB)</span>
-              <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+              <span className="mt-1 text-xs text-ink-500">JPG, PNG, or WEBP (max. 5MB)</span>
+              <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleImageChange} />
             </label>
             {imageFile && (
               <p className="mt-3 text-center text-xs text-ink-500">{imageFile.name}</p>

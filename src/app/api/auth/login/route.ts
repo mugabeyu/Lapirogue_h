@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseAdmin } from '@/lib/supabase';
 import { attachSupabaseCookies, createRouteHandlerSupabaseContext } from '@/lib/supabase-server';
 import { z } from 'zod';
 
@@ -9,6 +8,25 @@ const loginSchema = z.object({
   rememberMe: z.boolean().optional().default(false),
 });
 
+function isNetworkLikeSupabaseError(error: unknown) {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  const message = error.message.toLowerCase();
+  const cause = error.cause;
+
+  return (
+    message.includes('fetch failed') ||
+    message.includes('network') ||
+    message.includes('enotfound') ||
+    message.includes('econnrefused') ||
+    message.includes('supabase url') ||
+    message.includes('placeholder') ||
+    (cause instanceof Error && /enotfound|econnrefused|fetch failed/i.test(cause.message))
+  );
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -16,35 +34,63 @@ export async function POST(request: NextRequest) {
     // Sign in through Supabase Auth.
     const { supabase: authClient, response } = createRouteHandlerSupabaseContext(request);
 
-    // Log the environment variables to debug the URL issue
-    console.log('NEXT_PUBLIC_SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
-    console.log('SUPABASE_URL:', process.env.SUPABASE_URL);
+    let signInData: Awaited<ReturnType<typeof authClient.auth.signInWithPassword>>['data'];
+    let signInError: Awaited<ReturnType<typeof authClient.auth.signInWithPassword>>['error'];
 
-    const { data: signInData, error: signInError } = await authClient.auth.signInWithPassword({
-      email: validatedData.email,
-      password: validatedData.password,
-    });
+    try {
+      const signInResult = await authClient.auth.signInWithPassword({
+        email: validatedData.email,
+        password: validatedData.password,
+      });
+      signInData = signInResult.data;
+      signInError = signInResult.error;
+    } catch {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Authentication service is unreachable. Verify Supabase URL/key configuration.',
+        },
+        { status: 503 },
+      );
+    }
+
+    if (isNetworkLikeSupabaseError(signInError)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Supabase authentication is not reachable. Check the project URL and public key in your environment.',
+        },
+        { status: 503 },
+      );
+    }
 
     if (signInError) {
-      console.error('Sign in error:', signInError);
       return NextResponse.json({ success: false, error: signInError.message }, { status: 401 });
     }
 
-    console.log('Signed in user:', signInData.user);
-
-    const adminClient = getSupabaseAdmin();
     const metadata = signInData.user?.user_metadata ?? {};
-    void adminClient
+    const { data: profileRow } = await authClient
+      .from('profiles')
+      .select('auth_id, is_active')
+      .eq('auth_id', signInData.user?.id ?? '')
+      .maybeSingle();
+
+    if (profileRow?.is_active === false) {
+      await authClient.auth.signOut();
+      return NextResponse.json({ success: false, error: 'This staff account is blocked' }, { status: 403 });
+    }
+
+    // user's email into `full_name` automatically.
+    void authClient
       .from('profiles')
       .upsert({
         auth_id: signInData.user?.id ?? '',
         email: signInData.user?.email ?? '',
-        full_name: metadata.full_name ?? metadata.name ?? signInData.user?.email ?? '',
-        role: 'RECEPTIONIST',
+        full_name: metadata.full_name ?? metadata.name ?? undefined,
+        is_active: true,
       }, { onConflict: 'auth_id' });
 
     const result = attachSupabaseCookies(NextResponse.json({ success: true, data: { user: signInData.user ?? null } }), response);
-    console.log('Set cookies and returning response');
     return result;
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -54,7 +100,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.error('Internal server error:', error);
+    if (error instanceof Error && /Supabase URL|configuration|placeholder/i.test(error.message)) {
+      return NextResponse.json({ success: false, error: error.message }, { status: 503 });
+    }
+
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }

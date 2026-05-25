@@ -163,7 +163,7 @@ export default function Sidebar() {
                     collapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2.5'
                   } ${
                     exactActive
-                      ? 'relative bg-primary-hover text-white before:absolute before:left-0 before:top-1/2 before:h-5 before:w-1 before:-translate-y-1/2 before:rounded-r-full before:bg-accent'
+                      ? 'bg-primary-hover text-white'
                       : sectionActive
                         ? 'text-white hover:bg-primary-hover/50'
                         : 'text-sand-100/80 hover:bg-primary-hover/50 hover:text-white'
@@ -213,7 +213,7 @@ export default function Sidebar() {
           onClick={handleLogout}
           disabled={isLoggingOut}
           title={collapsed ? 'Logout' : undefined}
-          className={`flex w-full items-center rounded-lg text-sm font-medium text-sand-100/80 transition-colors hover:bg-primary-hover/50 hover:text-white ${
+          className={`flex w-full items-center align-content-center rounded-lg text-lg font-bold   bg-primary-hover text-red-500 ${
             collapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2.5'
           }`}
         >
