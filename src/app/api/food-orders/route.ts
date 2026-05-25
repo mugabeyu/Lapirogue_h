@@ -15,6 +15,9 @@ const foodOrderSchema = z.object({
   total: z.number().min(0),
   status: z.enum(['PENDING', 'PREPARING', 'SERVED', 'CANCELLED']).optional(),
   notes: z.string().optional(),
+  subtotal: z.number().min(0).optional(),
+  serviceCharge: z.number().min(0).optional(),
+  taxAmount: z.number().min(0).optional(),
 });
 
 type FoodOrderRow = {
@@ -22,6 +25,9 @@ type FoodOrderRow = {
   order_id?: string | null;
   guest_id?: string | null;
   items?: Array<{ name?: string; quantity?: number }> | null;
+  subtotal?: number | string | null;
+  service_charge?: number | string | null;
+  tax_amount?: number | string | null;
   total?: number | string | null;
   status?: string | null;
   notes?: string | null;
@@ -50,7 +56,7 @@ export async function GET(request: NextRequest) {
 
     let query = getSupabaseAdmin()
       .from('food_orders')
-      .select('id,order_id,guest_id,items,total,status,notes,created_at,guests(first_name,last_name),rooms(room_number)')
+      .select('id,order_id,guest_id,items,subtotal,service_charge,tax_amount,total,status,notes,created_at,guests(first_name,last_name),rooms(room_number)')
       .order('created_at', { ascending: false });
 
     if (statusFilter) {
@@ -68,6 +74,9 @@ export async function GET(request: NextRequest) {
       guest: order.guests ? `${order.guests.first_name ?? ''} ${order.guests.last_name ?? ''}`.trim() || null : null,
       room: order.rooms?.room_number ?? null,
       itemsSummary: itemsSummary(order.items),
+      subtotal: order.subtotal === undefined || order.subtotal === null ? 0 : Number(order.subtotal),
+      serviceCharge: order.service_charge === undefined || order.service_charge === null ? 0 : Number(order.service_charge),
+      taxAmount: order.tax_amount === undefined || order.tax_amount === null ? 0 : Number(order.tax_amount),
       total: order.total === undefined || order.total === null ? 0 : Number(order.total),
       status: order.status ?? null,
       time: formatOrderTime(order.created_at),
@@ -129,6 +138,9 @@ export async function POST(request: NextRequest) {
         guest_id: body.guestId ?? null,
         room_id: roomId,
         items: body.items,
+        subtotal: body.subtotal ?? body.total,
+        service_charge: body.serviceCharge ?? 0,
+        tax_amount: body.taxAmount ?? 0,
         total: body.total,
         status: body.status ?? 'PENDING',
         notes: body.notes,
@@ -149,10 +161,13 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = foodOrderSchema.partial().extend({ id: z.string().uuid() }).parse(await request.json());
-    const { id, guestId, roomId, items, total, status, notes } = body;
+    const { id, guestId, roomId, items, subtotal, serviceCharge, taxAmount, total, status, notes } = body;
 
     const updatePayload: Record<string, unknown> = {};
     if (items !== undefined) updatePayload.items = items;
+    if (subtotal !== undefined) updatePayload.subtotal = subtotal;
+    if (serviceCharge !== undefined) updatePayload.service_charge = serviceCharge;
+    if (taxAmount !== undefined) updatePayload.tax_amount = taxAmount;
     if (total !== undefined) updatePayload.total = total;
     if (status !== undefined) updatePayload.status = status;
     if (notes !== undefined) updatePayload.notes = notes;

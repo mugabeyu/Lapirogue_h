@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { getAuditActor, recordAuditLog } from '@/lib/audit';
 import { z } from 'zod';
 
 const notificationSchema = z.object({
@@ -36,12 +37,16 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = notificationSchema.parse(await request.json());
+    const actor = await getAuditActor(request);
+    const actorId = actor?.id ?? null;
     const { data, error } = await getSupabaseAdmin()
       .from('notifications')
       .insert({
         title: body.title,
         message: body.message,
         category: body.category ?? 'General',
+        created_by: actorId,
+        updated_by: actorId,
       })
       .select('*')
       .single();
@@ -61,17 +66,19 @@ export async function PATCH(request: NextRequest) {
     const { searchParams } = request.nextUrl;
     const id = searchParams.get('id');
     const all = searchParams.get('all') === 'true';
+    const actor = await getAuditActor(request);
+    const actorId = actor?.id ?? null;
 
     if (all) {
       const { error } = await getSupabaseAdmin()
         .from('notifications')
-        .update({ is_read: true })
+        .update({ is_read: true, updated_by: actorId })
         .eq('is_read', false);
       if (error) throw error;
     } else if (id) {
       const { error } = await getSupabaseAdmin()
         .from('notifications')
-        .update({ is_read: true })
+        .update({ is_read: true, updated_by: actorId })
         .eq('id', id);
       if (error) throw error;
     }
@@ -89,7 +96,22 @@ export async function DELETE(request: NextRequest) {
     if (!id) {
       return NextResponse.json({ success: false, error: 'ID required' }, { status: 400 });
     }
-    const { error } = await getSupabaseAdmin().from('notifications').delete().eq('id', id);
+    const supabase = getSupabaseAdmin();
+    const actor = await getAuditActor(request);
+    const actorId = actor?.id ?? null;
+    const { data: notification } = await supabase.from('notifications').select('*').eq('id', id).maybeSingle();
+
+    if (notification) {
+      await recordAuditLog({
+        tableName: 'notifications',
+        recordId: id,
+        action: 'DELETE',
+        actorId,
+        before: notification as Record<string, unknown>,
+      });
+    }
+
+    const { error } = await supabase.from('notifications').delete().eq('id', id);
     if (error) throw error;
     return NextResponse.json({ success: true, message: 'Notification deleted' });
   } catch {

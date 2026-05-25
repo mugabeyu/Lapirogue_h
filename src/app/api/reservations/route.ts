@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { getAuditActor, recordAuditLog } from '@/lib/audit';
 import { z } from 'zod';
 
 const reservationSchema = z.object({
@@ -75,6 +76,8 @@ export async function POST(request: NextRequest) {
   try {
     const body = reservationSchema.parse(await request.json());
     const supabase = getSupabaseAdmin();
+    const actor = await getAuditActor(request);
+    const actorId = actor?.id ?? null;
 
     const { data: conflicting, error: conflictError } = await supabase
       .from('reservations')
@@ -102,6 +105,8 @@ export async function POST(request: NextRequest) {
         adults: body.adults,
         children: body.children,
         total_amount: body.totalAmount,
+        created_by: actorId,
+        updated_by: actorId,
       })
       .select('*')
       .single();
@@ -122,6 +127,8 @@ export async function PUT(request: NextRequest) {
     const parsed = reservationSchema.extend({ id: z.string().uuid() }).parse(body);
     const { id, guestId, roomId, checkIn, checkOut, adults, children, totalAmount, status } = parsed;
     const supabase = getSupabaseAdmin();
+    const actor = await getAuditActor(request);
+    const actorId = actor?.id ?? null;
 
     const { data: conflicting, error: conflictError } = await supabase
       .from('reservations')
@@ -151,6 +158,7 @@ export async function PUT(request: NextRequest) {
         children,
         total_amount: totalAmount,
         status,
+        updated_by: actorId,
       })
       .eq('id', id)
       .select('*')
@@ -173,7 +181,22 @@ export async function DELETE(request: NextRequest) {
     if (!id) {
       return NextResponse.json({ success: false, error: 'ID required' }, { status: 400 });
     }
-    const { error } = await getSupabaseAdmin().from('reservations').delete().eq('id', id);
+    const supabase = getSupabaseAdmin();
+    const actor = await getAuditActor(request);
+    const actorId = actor?.id ?? null;
+    const { data: reservation } = await supabase.from('reservations').select('*').eq('id', id).maybeSingle();
+
+    if (reservation) {
+      await recordAuditLog({
+        tableName: 'reservations',
+        recordId: id,
+        action: 'DELETE',
+        actorId,
+        before: reservation as Record<string, unknown>,
+      });
+    }
+
+    const { error } = await supabase.from('reservations').delete().eq('id', id);
     if (error) throw error;
     return NextResponse.json({ success: true, message: 'Reservation deleted' });
   } catch {

@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Authentication required' }, { status: 401 });
     }
 
-    const body = syncPasswordSchema.parse(await request.json());
+    void syncPasswordSchema.parse(await request.json());
     const supabase = getSupabaseAdmin();
     const { data: userData, error: userError } = await supabase.auth.getUser(token);
 

@@ -30,7 +30,7 @@ export default function MessagesPage() {
     content: '',
   });
 
-  const rows = data ?? [];
+  const rows = useMemo(() => data ?? [], [data]);
   const unreadCount = rows.filter((row) => !row.isRead).length;
 
   const conversations = useMemo(() => {

@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { z } from 'zod';
-import { getRouteHandlerSupabaseClient } from '@/lib/supabase-server';
+import { getAuditActor, recordAuditLog } from '@/lib/audit';
+import { requireAuth } from '@/lib/api-auth';
+import { validationErrorResponse } from '@/lib/api-response';
 
 type MessageRow = {
   id: string;
@@ -22,12 +24,6 @@ const messageSchema = z.object({
   content: z.string().min(1),
   attachmentUrl: z.string().optional().nullable(),
 });
-
-async function requireAuth(request: NextRequest) {
-  const authClient = getRouteHandlerSupabaseClient(request);
-  const { data: { user } } = await authClient.auth.getUser();
-  return user ?? null;
-}
 
 export async function GET(request: NextRequest) {
   const decoded = await requireAuth(request);
@@ -76,6 +72,8 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = messageSchema.parse(await request.json());
+    const actor = await getAuditActor(request);
+    const actorId = actor?.id ?? null;
     const { data, error } = await getSupabaseAdmin()
       .from('messages')
       .insert({
@@ -85,6 +83,8 @@ export async function POST(request: NextRequest) {
         content: body.content,
         attachment_url: body.attachmentUrl ?? null,
         is_read: false,
+        created_by: actorId,
+        updated_by: actorId,
       })
       .select('id, guest_id, message_type, subject, content, is_read, attachment_url, created_at')
       .single();
@@ -92,9 +92,8 @@ export async function POST(request: NextRequest) {
     if (error) throw error;
     return NextResponse.json({ success: true, data }, { status: 201 });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ success: false, error: 'Validation error', details: error.errors }, { status: 400 });
-    }
+    const validationResponse = validationErrorResponse(error);
+    if (validationResponse) return validationResponse;
     return NextResponse.json({ success: false, error: 'Failed to create message' }, { status: 500 });
   }
 }
@@ -109,12 +108,14 @@ export async function PATCH(request: NextRequest) {
     const { searchParams } = request.nextUrl;
     const id = searchParams.get('id');
     const all = searchParams.get('all') === 'true';
+    const actor = await getAuditActor(request);
+    const actorId = actor?.id ?? null;
 
     if (all) {
-      const { error } = await getSupabaseAdmin().from('messages').update({ is_read: true }).eq('is_read', false);
+      const { error } = await getSupabaseAdmin().from('messages').update({ is_read: true, updated_by: actorId }).eq('is_read', false);
       if (error) throw error;
     } else if (id) {
-      const { error } = await getSupabaseAdmin().from('messages').update({ is_read: true }).eq('id', id);
+      const { error } = await getSupabaseAdmin().from('messages').update({ is_read: true, updated_by: actorId }).eq('id', id);
       if (error) throw error;
     }
 
@@ -136,8 +137,22 @@ export async function DELETE(request: NextRequest) {
     if (!id) {
       return NextResponse.json({ success: false, error: 'ID required' }, { status: 400 });
     }
+    const supabase = getSupabaseAdmin();
+    const actor = await getAuditActor(request);
+    const actorId = actor?.id ?? null;
+    const { data: message } = await supabase.from('messages').select('*').eq('id', id).maybeSingle();
 
-    const { error } = await getSupabaseAdmin().from('messages').delete().eq('id', id);
+    if (message) {
+      await recordAuditLog({
+        tableName: 'messages',
+        recordId: id,
+        action: 'DELETE',
+        actorId,
+        before: message as Record<string, unknown>,
+      });
+    }
+
+    const { error } = await supabase.from('messages').delete().eq('id', id);
     if (error) throw error;
     return NextResponse.json({ success: true, message: 'Message deleted' });
   } catch {

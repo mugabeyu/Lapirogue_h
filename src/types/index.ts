@@ -55,6 +55,7 @@ export interface GuestProfileData {
   activityBookings: Array<{
     id: string;
     activity: string | null;
+    amount?: number;
     date: string;
     participants: number;
     status: string;
@@ -63,6 +64,9 @@ export interface GuestProfileData {
   foodOrders: Array<{
     id: string;
     orderId: string;
+    subtotal?: number;
+    serviceCharge?: number;
+    taxAmount?: number;
     total: number;
     status: string;
     notes?: string | null;
@@ -82,6 +86,21 @@ export interface GuestProfileData {
     activities: number;
     foodOrders: number;
     totalSpent: number;
+    balanceDue: number;
+  };
+  billingSummary?: {
+    totalCharges: number;
+    totalPaid: number;
+    balanceDue: number;
+    status: 'PENDING' | 'PARTIALLY_PAID' | 'PAID' | 'REFUNDED';
+    totals: Record<string, number>;
+    items: Array<{
+      category: string;
+      label: string;
+      amount: number;
+      sourceId?: string;
+      createdAt?: string | null;
+    }>;
   };
 }
 
@@ -96,6 +115,7 @@ export interface Room {
   description?: string;
   amenities: string[];
   imagePath?: string;
+  imagePaths?: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -123,6 +143,9 @@ export interface Staff {
   email?: string;
   phone?: string;
   status: string;
+  role?: Role;
+  roleLabel?: string;
+  isMain?: boolean;
   imagePath?: string;
   createdAt: string;
   updatedAt: string;
@@ -179,6 +202,9 @@ export interface FoodOrder {
   roomId?: string;
   guestId?: string;
   items: OrderItem[];
+  subtotal?: number;
+  serviceCharge?: number;
+  taxAmount?: number;
   total: number;
   status: OrderStatus;
   notes?: string;
@@ -253,7 +279,7 @@ export interface AuthContext {
   token: string;
 }
 
-export type Role = 'RECEPTIONIST';
+export type Role = 'MAIN_RECEPTIONIST' | 'RECEPTIONIST';
 
 export type GuestStatus = 'RESERVED' | 'CHECKED_IN' | 'CHECKED_OUT' | 'CANCELLED';
 
@@ -265,7 +291,7 @@ export type ReservationStatus = 'CONFIRMED' | 'CHECKED_IN' | 'CHECKED_OUT' | 'CA
 
 export type PaymentMethod = 'CASH' | 'CARD' | 'BANK_TRANSFER' | 'ONLINE';
 
-export type PaymentStatus = 'PENDING' | 'COMPLETED' | 'FAILED' | 'REFUNDED';
+export type PaymentStatus = 'PENDING' | 'PARTIALLY_PAID' | 'PAID' | 'REFUNDED';
 
 export type ActivityStatus = 'ACTIVE' | 'INACTIVE' | 'FULL';
 

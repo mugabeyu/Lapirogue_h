@@ -1,46 +1,32 @@
-import { createClient } from '@supabase/supabase-js';
+import { createBrowserClient } from '@supabase/ssr';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 export function getSupabaseBrowserClient() {
-  // Use hardcoded values for lapirogue project
-  // Env vars were not being picked up by Turbopack at compile time
-  const supabaseUrl = 'https://afilatpihmbicqadwslm.supabase.co';
-  const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFmaWxhdHBpaG1iaWNxYWR3c2xtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxMjkyOTMsImV4cCI6MjA5NDcwNTI5M30.YRojYa3ewoh4L81haeBHbeGrU9t6nXSplxYzFO-RfkQ';
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseAnonKey) {
+    // Return null so callers can handle missing client configuration in dev/test
+    // Avoid printing secret values.
+    console.error('Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY');
     return null;
   }
-  // Debug: surface whether the public URL was inlined into the client bundle
-  // Avoid logging the full anon key to keep secrets out of console logs.
+
   try {
-    // eslint-disable-next-line no-console
-    console.debug('Supabase client config:', {
-      url: supabaseUrl,
-      anonKeyPresent: !!supabaseAnonKey,
-    });
-  } catch (_) {}
-  
-    // Reuse a single client instance in the browser to avoid multiple GoTrue
-    // instances warning and undefined behaviour during HMR or concurrent use.
-    const globalKey = '__supabase_browser_client';
-    const anyGlobal: any = globalThis as any;
-  
-    if (!anyGlobal[globalKey]) {
-      // Debug: surface whether the public URL was inlined into the client bundle
-      try {
-        // eslint-disable-next-line no-console
-        console.debug('Supabase client config:', {
-          url: supabaseUrl,
-          anonKeyPresent: !!supabaseAnonKey,
-        });
-      } catch (_) {}
-  
-      anyGlobal[globalKey] = createClient(supabaseUrl, supabaseAnonKey, {
-        auth: {
-          autoRefreshToken: true,
-          persistSession: true,
-        },
-      });
-    }
-  
-    return anyGlobal[globalKey];
+    new URL(supabaseUrl);
+  } catch {
+    console.error('NEXT_PUBLIC_SUPABASE_URL is invalid');
+    return null;
+  }
+
+  const globalKey = '__supabase_browser_client';
+  const browserGlobal = globalThis as typeof globalThis & {
+    __supabase_browser_client?: SupabaseClient;
+  };
+
+  if (!browserGlobal[globalKey]) {
+    browserGlobal[globalKey] = createBrowserClient(supabaseUrl, supabaseAnonKey);
+  }
+
+  return browserGlobal[globalKey];
 }

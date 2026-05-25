@@ -26,12 +26,12 @@ export async function GET() {
       supabase
         .from('rooms')
         .select('id', { count: 'exact', head: true })
-        .eq('status', 'AVAILABLE'),
+        .neq('status', 'OCCUPIED'),
       supabase.from('rooms').select('id', { count: 'exact', head: true }),
       supabase
         .from('payments')
         .select('amount')
-        .eq('status', 'COMPLETED')
+        .in('status', ['PAID', 'PARTIALLY_PAID'])
         .gte('created_at', today.toISOString()),
       supabase
         .from('reservations')

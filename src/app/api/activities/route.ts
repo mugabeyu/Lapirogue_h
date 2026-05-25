@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { getAuditActor, recordAuditLog } from '@/lib/audit';
 import { z } from 'zod';
 
 const activitySchema = z.object({
@@ -30,13 +31,7 @@ function parseDurationMinutes(label: string, fallback = 60) {
   return fallback;
 }
 
-function parseCapacity(value: string | number, label?: string) {
-  if (typeof value === 'number' && value > 0) return value;
-  const text = String(label ?? value).toLowerCase();
-  if (text.includes('unlimited')) return 99;
-  const match = text.match(/(\d+)/);
-  return match ? Number(match[1]) : 10;
-}
+// parseCapacity was removed — unused helper kept out to reduce bundle size
 
 function formatDuration(minutes: number, label?: string | null) {
   if (label?.trim()) return label.trim();
@@ -183,9 +178,15 @@ function buildInsertPayload(body: z.infer<typeof activitySchema>) {
 export async function POST(request: NextRequest) {
   try {
     const body = activitySchema.parse(await request.json());
+    const actor = await getAuditActor(request);
+    const actorId = actor?.id ?? null;
     const { data, error } = await getSupabaseAdmin()
       .from('activities')
-      .insert(buildInsertPayload(body))
+      .insert({
+        ...buildInsertPayload(body),
+        created_by: actorId,
+        updated_by: actorId,
+      })
       .select('*')
       .single();
 
@@ -208,6 +209,8 @@ export async function PUT(request: NextRequest) {
   try {
     const parsed = activitySchema.partial().extend({ id: z.string().uuid() }).parse(await request.json());
     const { id, imagePath, ...rest } = parsed;
+    const actor = await getAuditActor(request);
+    const actorId = actor?.id ?? null;
 
     const { data: existing, error: existingError } = await getSupabaseAdmin()
       .from('activities')
@@ -237,7 +240,10 @@ export async function PUT(request: NextRequest) {
 
     const { data, error } = await getSupabaseAdmin()
       .from('activities')
-      .update(buildUpdatePayload(merged))
+      .update({
+        ...buildUpdatePayload(merged),
+        updated_by: actorId,
+      })
       .eq('id', id)
       .select('*')
       .single();
@@ -258,7 +264,22 @@ export async function DELETE(request: NextRequest) {
     if (!id) {
       return NextResponse.json({ success: false, error: 'ID required' }, { status: 400 });
     }
-    const { error } = await getSupabaseAdmin().from('activities').delete().eq('id', id);
+    const supabase = getSupabaseAdmin();
+    const actor = await getAuditActor(request);
+    const actorId = actor?.id ?? null;
+    const { data: activity } = await supabase.from('activities').select('*').eq('id', id).maybeSingle();
+
+    if (activity) {
+      await recordAuditLog({
+        tableName: 'activities',
+        recordId: id,
+        action: 'DELETE',
+        actorId,
+        before: activity as Record<string, unknown>,
+      });
+    }
+
+    const { error } = await supabase.from('activities').delete().eq('id', id);
     if (error) throw error;
     return NextResponse.json({ success: true, message: 'Activity deleted' });
   } catch {

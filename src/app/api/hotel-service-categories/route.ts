@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { getAuditActor, recordAuditLog } from '@/lib/audit';
 import { z } from 'zod';
 
 const schema = z.object({
@@ -42,6 +43,8 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = schema.parse(await request.json());
+    const actor = await getAuditActor(request);
+    const actorId = actor?.id ?? null;
     const { data, error } = await getSupabaseAdmin().from('hotel_service_categories').insert({
       name: body.name,
       description: body.description,
@@ -50,6 +53,8 @@ export async function POST(request: NextRequest) {
       bg_color_hex: body.bgColorHex,
       display_order: body.displayOrder,
       is_active: body.isActive,
+      created_by: actorId,
+      updated_by: actorId,
     }).select('*').single();
     if (error) throw error;
     return NextResponse.json({ success: true, data }, { status: 201 });
@@ -66,6 +71,8 @@ export async function PUT(request: NextRequest) {
     const body = schema.parse(await request.json());
     const { id, ...updateData } = body;
     if (!id) return NextResponse.json({ success: false, error: 'ID required' }, { status: 400 });
+    const actor = await getAuditActor(request);
+    const actorId = actor?.id ?? null;
     const { data, error } = await getSupabaseAdmin().from('hotel_service_categories').update({
       name: updateData.name,
       description: updateData.description,
@@ -74,6 +81,7 @@ export async function PUT(request: NextRequest) {
       bg_color_hex: updateData.bgColorHex,
       display_order: updateData.displayOrder,
       is_active: updateData.isActive,
+      updated_by: actorId,
     }).eq('id', id).select('*').single();
     if (error) throw error;
     return NextResponse.json({ success: true, data });
@@ -88,7 +96,22 @@ export async function PUT(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   const id = request.nextUrl.searchParams.get('id');
   if (!id) return NextResponse.json({ success: false, error: 'ID required' }, { status: 400 });
-  const { error } = await getSupabaseAdmin().from('hotel_service_categories').delete().eq('id', id);
+  const supabase = getSupabaseAdmin();
+  const actor = await getAuditActor(request);
+  const actorId = actor?.id ?? null;
+  const { data: category } = await supabase.from('hotel_service_categories').select('*').eq('id', id).maybeSingle();
+
+  if (category) {
+    await recordAuditLog({
+      tableName: 'hotel_service_categories',
+      recordId: id,
+      action: 'DELETE',
+      actorId,
+      before: category as Record<string, unknown>,
+    });
+  }
+
+  const { error } = await supabase.from('hotel_service_categories').delete().eq('id', id);
   if (error) return NextResponse.json({ success: false, error: 'Failed to delete category' }, { status: 500 });
   return NextResponse.json({ success: true });
 }

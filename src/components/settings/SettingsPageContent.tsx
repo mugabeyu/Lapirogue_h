@@ -4,7 +4,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { useApi } from '@/hooks/useApi';
 import { ImageUploadField } from '@/components/ui/ImageUploadField';
-import { uploadImage } from '@/lib/upload-image';
+import { deleteStoredImage, uploadImage, uploadProfileAvatar } from '@/lib/upload-image';
 import { User } from '@/types';
 
 type SettingsTab = 'profile' | 'security' | 'hotel';
@@ -18,6 +18,16 @@ type AboutContentForm = {
   imagePath: string;
 };
 
+type AuthMeResponse = {
+  success: boolean;
+  data: User;
+};
+
+type AboutMetric = {
+  label?: string;
+  value?: string;
+};
+
 const TABS: Array<{ id: SettingsTab; label: string }> = [
   { id: 'profile', label: 'Profile' },
   { id: 'security', label: 'Security' },
@@ -28,6 +38,7 @@ export default function SettingsPageContent() {
   const { data: user, mutate } = useApi<User>('/api/auth/me');
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
   const [isSaving, setIsSaving] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [profileForm, setProfileForm] = useState({
     fullName: '',
     email: '',
@@ -62,7 +73,7 @@ export default function SettingsPageContent() {
         highlightsText: Array.isArray(data.highlights) ? data.highlights.join('\n') : '',
         metricsText: Array.isArray(data.metrics)
           ? data.metrics
-              .map((metric: { label?: string; value?: string }) => `${metric.label ?? ''}|${metric.value ?? ''}`)
+              .map((metric: AboutMetric) => `${metric.label ?? ''}|${metric.value ?? ''}`)
               .join('\n')
           : '',
         imagePath: data.image_path ?? '',
@@ -74,6 +85,7 @@ export default function SettingsPageContent() {
 
   useEffect(() => {
     if (!user) return;
+    setAvatarUrl(user.avatarUrl ?? null);
     setProfileForm({
       fullName: user.name || '',
       email: user.email || '',
@@ -92,13 +104,26 @@ export default function SettingsPageContent() {
         fullName: profileForm.fullName,
         email: profileForm.email,
         phone: profileForm.phone || null,
-        avatarUrl: user?.avatarUrl ?? null,
+        avatarUrl,
       }),
     });
 
     setIsSaving(false);
     toast[response.ok ? 'success' : 'error'](response.ok ? 'Profile saved' : 'Unable to update profile');
-    if (response.ok) mutate();
+    if (response.ok) {
+      const payload = await response.json().catch(() => null);
+      if (payload?.success && payload.data) {
+        try {
+          // Update the /api/auth/me cache immediately so Topbar reflects changes
+          await mutate({ success: true, data: payload.data } satisfies AuthMeResponse, false);
+        } catch {
+          // fallback to revalidation
+          await mutate();
+        }
+      } else {
+        await mutate();
+      }
+    }
   }
 
   async function handlePasswordSave(event: FormEvent<HTMLFormElement>) {
@@ -128,28 +153,59 @@ export default function SettingsPageContent() {
 
   async function handleAvatarUpload(file: File) {
     if (!user?.id) return;
-    const url = await uploadImage({
+    const previousAvatarUrl = avatarUrl ?? user.avatarUrl ?? null;
+    const url = await uploadProfileAvatar({
       file,
-      bucket: 'staff-avatars',
-      id: user.id,
-      target: 'profile',
+      userId: user.id,
     });
-    if (!url) throw new Error('Upload failed');
+    setAvatarUrl(url);
+
+    // Prefer the explicit fullName entered in the form. Do not send the
+    // email as the `fullName` value — let the server keep it null if no name
+    // is available so it doesn't get stored as the display name.
+    const body = {
+      fullName: profileForm.fullName || null,
+      email: profileForm.email || user.email,
+      phone: profileForm.phone || null,
+      avatarUrl: url,
+    };
 
     const response = await fetch('/api/settings/profile', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        fullName: profileForm.fullName || user.name,
-        email: profileForm.email || user.email,
-        phone: profileForm.phone || null,
-        avatarUrl: url,
-      }),
+      body: JSON.stringify(body),
     });
 
-    if (!response.ok) throw new Error('Unable to save avatar');
+    if (!response.ok) {
+      setAvatarUrl(previousAvatarUrl);
+      const payload = await response.json().catch(() => null);
+      throw new Error(payload?.error ?? 'Unable to save avatar');
+    }
+
+    // Update SWR cache immediately with the returned profile so UI updates without waiting
+    const payload = await response.json().catch(() => null);
+    if (payload?.success && payload.data) {
+      // mutate the /api/auth/me cache with the new data (no revalidation)
+      try {
+        await mutate({ success: true, data: payload.data } satisfies AuthMeResponse, false);
+      } catch {
+        // ignore mutate errors
+      }
+    }
+
+    if (previousAvatarUrl && previousAvatarUrl !== url) {
+      try {
+        await deleteStoredImage({ bucket: 'staff-avatars', publicUrl: previousAvatarUrl });
+      } catch {
+        toast.warning('Profile picture updated, but the previous image could not be removed');
+      }
+    }
+
     toast.success('Profile picture updated');
+    // Ensure client session is refreshed immediately after updating avatar
     await mutate();
+    // Also refetch auth/me explicitly to ensure other components update
+    await fetch('/api/auth/me', { cache: 'no-store', credentials: 'include' });
   }
 
   async function handleAboutImageUpload(file: File) {
@@ -232,7 +288,7 @@ export default function SettingsPageContent() {
                 <ImageUploadField
                   label="Profile picture"
                   shape="circle"
-                  previewUrl={user?.avatarUrl}
+                  previewUrl={avatarUrl}
                   onFileSelect={handleAvatarUpload}
                 />
               </div>

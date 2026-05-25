@@ -2,7 +2,7 @@ import useSWR from 'swr';
 import { ApiResponse } from '@/types';
 
 const fetcher = async (url: string) => {
-  const response = await fetch(url);
+  const response = await fetch(url, { cache: 'no-store', credentials: 'include' });
   const data = await response.json();
   return data;
 };

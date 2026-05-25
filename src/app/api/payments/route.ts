@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { getAuditActor } from '@/lib/audit';
 import { z } from 'zod';
+
+const extraChargeSchema = z.object({
+  category: z.enum(['Transport services', 'Laundry/services', 'Additional hotel purchases']),
+  label: z.string().min(1).max(120),
+  amount: z.number().min(0.01),
+});
 
 const paymentSchema = z.object({
   id: z.string().uuid().optional(),
@@ -8,9 +15,10 @@ const paymentSchema = z.object({
   reservationId: z.string().uuid().optional(),
   amount: z.number().min(0.01),
   method: z.enum(['CASH', 'CARD', 'BANK_TRANSFER', 'ONLINE']),
-  status: z.enum(['PENDING', 'COMPLETED', 'FAILED', 'REFUNDED']).optional(),
+  status: z.enum(['PENDING', 'PARTIALLY_PAID', 'PAID', 'REFUNDED']).optional(),
   reference: z.string().optional(),
   notes: z.string().optional(),
+  extraCharges: z.array(extraChargeSchema).optional().default([]),
 });
 
 type PaymentRow = {
@@ -83,7 +91,11 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = paymentSchema.parse(await request.json());
-    const { data, error } = await getSupabaseAdmin()
+    const admin = getSupabaseAdmin();
+    const actor = await getAuditActor(request);
+    const actorId = actor?.id ?? null;
+
+    const { data, error } = await admin
       .from('payments')
       .insert({
         guest_id: body.guestId,
@@ -93,11 +105,30 @@ export async function POST(request: NextRequest) {
         status: body.status ?? 'PENDING',
         reference: body.reference,
         notes: body.notes,
+        created_by: actorId,
+        updated_by: actorId,
+        processed_by: actorId,
       })
       .select('*')
       .single();
 
     if (error) throw error;
+
+    if ((body.extraCharges?.length ?? 0) > 0) {
+      const { error: extrasError } = await admin.from('payment_extra_items').insert(
+        body.extraCharges.map((item) => ({
+          payment_id: data.id,
+          guest_id: body.guestId,
+          reservation_id: body.reservationId ?? null,
+          category: item.category,
+          label: item.label,
+          amount: item.amount,
+        })),
+      );
+
+      if (extrasError) throw extrasError;
+    }
+
     return NextResponse.json({ success: true, data }, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -110,8 +141,29 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = paymentSchema.extend({ id: z.string().uuid() }).parse(await request.json());
-    const { id, guestId, reservationId, amount, method, status, reference, notes } = body;
-    const { data, error } = await getSupabaseAdmin()
+    const { id, guestId, reservationId, amount, method, status, reference, notes, extraCharges } = body;
+    const admin = getSupabaseAdmin();
+    const actor = await getAuditActor(request);
+    const actorId = actor?.id ?? null;
+
+    const { data: existingPayment, error: existingError } = await admin
+      .from('payments')
+      .select('status')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (existingError || !existingPayment) {
+      return NextResponse.json({ success: false, error: 'Payment not found' }, { status: 404 });
+    }
+
+    if (['PAID', 'REFUNDED'].includes(String(existingPayment.status ?? '').toUpperCase())) {
+      return NextResponse.json(
+        { success: false, error: 'Finalized payments are immutable and cannot be updated' },
+        { status: 409 },
+      );
+    }
+
+    const { data, error } = await admin
       .from('payments')
       .update({
         guest_id: guestId,
@@ -121,12 +173,32 @@ export async function PUT(request: NextRequest) {
         status,
         reference,
         notes,
+        updated_by: actorId,
+        processed_by: status ? actorId : undefined,
       })
       .eq('id', id)
       .select('*')
       .single();
 
     if (error) throw error;
+
+    const { error: deleteExtrasError } = await admin.from('payment_extra_items').delete().eq('payment_id', id);
+    if (deleteExtrasError) throw deleteExtrasError;
+
+    if ((extraCharges?.length ?? 0) > 0) {
+      const { error: extrasError } = await admin.from('payment_extra_items').insert(
+        extraCharges.map((item) => ({
+          payment_id: id,
+          guest_id: guestId,
+          reservation_id: reservationId ?? null,
+          category: item.category,
+          label: item.label,
+          amount: item.amount,
+        })),
+      );
+      if (extrasError) throw extrasError;
+    }
+
     return NextResponse.json({ success: true, data });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -136,17 +208,9 @@ export async function PUT(request: NextRequest) {
   }
 }
 
-export async function DELETE(request: NextRequest) {
-  try {
-    const { searchParams } = request.nextUrl;
-    const id = searchParams.get('id');
-    if (!id) {
-      return NextResponse.json({ success: false, error: 'ID required' }, { status: 400 });
-    }
-    const { error } = await getSupabaseAdmin().from('payments').delete().eq('id', id);
-    if (error) throw error;
-    return NextResponse.json({ success: true, message: 'Payment deleted' });
-  } catch {
-    return NextResponse.json({ success: false, error: 'Failed to delete payment' }, { status: 500 });
-  }
+export async function DELETE() {
+  return NextResponse.json(
+    { success: false, error: 'Payments are immutable and cannot be deleted' },
+    { status: 405 },
+  );
 }

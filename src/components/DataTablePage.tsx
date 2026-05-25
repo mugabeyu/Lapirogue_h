@@ -6,11 +6,12 @@ import { PageHeader } from '@/components/PageHeader';
 import { StatusBadge } from '@/components/StatusBadge';
 import { LabeledTable } from '@/components/ui/LabeledTable';
 import { useApi } from '@/hooks/useApi';
+import { formatTableValue, getTableValue, type TableColumnType } from '@/lib/table';
 
 type Column = {
   key: string;
   label: string;
-  type?: 'text' | 'currency' | 'date' | 'status' | 'number';
+  type?: TableColumnType;
 };
 
 type DataTablePageProps = {
@@ -23,27 +24,6 @@ type DataTablePageProps = {
   entityName?: string;
   emptyMessage?: string;
 };
-
-function getValue(row: Record<string, unknown>, key: string) {
-  return key.split('.').reduce<unknown>((value, part) => {
-    if (!value || typeof value !== 'object') return undefined;
-    return (value as Record<string, unknown>)[part];
-  }, row);
-}
-
-function formatValue(value: unknown, type: Column['type']) {
-  if (value === null || value === undefined || value === '') return '-';
-
-  if (type === 'currency') {
-    return `Rs ${Number(value).toLocaleString()}`;
-  }
-
-  if (type === 'date') {
-    return new Date(String(value)).toLocaleDateString();
-  }
-
-  return String(value);
-}
 
 export default function DataTablePage({
   title,
@@ -120,13 +100,13 @@ export default function DataTablePage({
               {rows.map((row, index) => (
                 <tr key={String(row.id ?? index)} className="transition-colors hover:bg-sand-50/50">
                   {columns.map((column) => {
-                    const value = getValue(row, column.key);
+                    const value = getTableValue(row, column.key);
                     return (
                       <td key={column.key} className="px-6 py-4 text-sm text-ink-700">
                         {column.type === 'status' ? (
                           <StatusBadge status={String(value ?? '')} />
                         ) : (
-                          formatValue(value, column.type)
+                          formatTableValue(value, column.type)
                         )}
                       </td>
                     );

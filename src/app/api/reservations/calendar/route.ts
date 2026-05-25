@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { addDays, endOfMonth, parseDateKey, startOfMonth, startOfWeek, toDateKey } from '@/lib/date-utils';
 
 type RoomRow = {
   id: string;
@@ -17,37 +18,6 @@ type ReservationRow = {
   guests: { first_name: string | null; last_name: string | null } | null;
   rooms: { room_number: string | null; type: string | null } | null;
 };
-
-function toDateKey(value: Date) {
-  return value.toISOString().slice(0, 10);
-}
-
-function parseDateKey(value: string) {
-  const [year, month, day] = value.split('-').map(Number);
-  return new Date(year, month - 1, day);
-}
-
-function addDays(date: Date, days: number) {
-  const next = new Date(date);
-  next.setDate(next.getDate() + days);
-  return next;
-}
-
-function startOfWeek(date: Date) {
-  const start = new Date(date);
-  const day = start.getDay();
-  start.setDate(start.getDate() - day);
-  start.setHours(0, 0, 0, 0);
-  return start;
-}
-
-function startOfMonth(date: Date) {
-  return new Date(date.getFullYear(), date.getMonth(), 1);
-}
-
-function endOfMonth(date: Date) {
-  return new Date(date.getFullYear(), date.getMonth() + 1, 0);
-}
 
 function buildRange(anchor: string, view: 'week' | 'month') {
   const anchorDate = parseDateKey(anchor);

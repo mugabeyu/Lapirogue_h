@@ -92,7 +92,7 @@ export function CreateScheduleItemModal({
   const optionsUrl = usesLinkedPicker(itemType) ? `/api/schedule/options?type=${itemType}` : null;
   const { data: options, isLoading: optionsLoading } = useApi<LinkableOption[]>(optionsUrl ?? '');
 
-  const linkedOptions = options ?? [];
+  const linkedOptions = useMemo(() => options ?? [], [options]);
   const selectedOption = useMemo(
     () => linkedOptions.find((option) => option.id === sourceId) ?? null,
     [linkedOptions, sourceId],

@@ -13,6 +13,8 @@ export default function PaymentsPage() {
         entityType="payment"
         entityName="payments"
         tableCaption="Guest payments ledger"
+        rowHrefBase="/payments"
+        disableDelete
         columns={[
           { key: 'paymentId', label: 'Payment ID' },
           { key: 'guest', label: 'Guest name' },

@@ -86,7 +86,7 @@ export function EditGuestModal({ isOpen, onClose, guest, currentStay, onSaved }:
   }
 
   async function handlePhotoUpload(file: File) {
-    const url = await uploadImage({ file, bucket: 'guest-documents', id: guest.id, target: 'guest' });
+    const url = await uploadImage({ file, bucket: 'guest-photos', id: guest.id, target: 'guest' });
     if (!url) throw new Error('Upload failed');
     setImagePath(url);
     await fetch(`/api/guests/${guest.id}`, {

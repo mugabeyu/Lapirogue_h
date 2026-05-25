@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { z } from 'zod';
-import { getRouteHandlerSupabaseClient } from '@/lib/supabase-server';
+import { requireAuth } from '@/lib/api-auth';
+import { validationErrorResponse } from '@/lib/api-response';
 
 const contentSchema = z.object({
   title: z.string().min(1),
@@ -11,12 +12,6 @@ const contentSchema = z.object({
   metrics: z.array(z.object({ label: z.string().min(1), value: z.string().min(1) })).default([]),
   imagePath: z.string().optional().nullable(),
 });
-
-async function requireAuth(request: NextRequest) {
-  const authClient = getRouteHandlerSupabaseClient(request);
-  const { data: { user } } = await authClient.auth.getUser();
-  return user ?? null;
-}
 
 export async function GET(request: NextRequest) {
   const decoded = await requireAuth(request);
@@ -66,9 +61,8 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({ success: true, data });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ success: false, error: 'Validation error', details: error.errors }, { status: 400 });
-    }
+    const validationResponse = validationErrorResponse(error);
+    if (validationResponse) return validationResponse;
 
     return NextResponse.json({ success: false, error: 'Failed to update about content' }, { status: 500 });
   }

@@ -13,7 +13,7 @@ export async function GET() {
     ]);
 
     const revenue = (payments.data ?? []).reduce((sum, payment) => (
-      payment.status === 'COMPLETED' ? sum + Number(payment.amount) : sum
+      payment.status === 'PAID' || payment.status === 'PARTIALLY_PAID' ? sum + Number(payment.amount) : sum
     ), 0);
     const foodRevenue = (orders.data ?? []).reduce((sum, order) => sum + Number(order.total), 0);
 
