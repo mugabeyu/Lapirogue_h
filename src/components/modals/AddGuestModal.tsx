@@ -4,6 +4,8 @@ import { FormEvent, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Modal } from '@/components/Modal';
 import { toast } from 'sonner';
+import { CountryComboboxField } from '@/components/ui/CountryComboboxField';
+import { PhoneField } from '@/components/ui/PhoneField';
 
 interface AddGuestModalProps {
   isOpen: boolean;
@@ -79,13 +81,13 @@ export function AddGuestModal({ isOpen, onClose, onSaved, redirectToAssign = tru
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-ink-700">Phone</label>
-            <input name="phone" className="input-field w-full" />
+            <PhoneField name="phone" />
           </div>
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="mb-1 block text-sm font-medium text-ink-700">Nationality</label>
-            <input name="nationality" className="input-field w-full" />
+            <CountryComboboxField name="nationality" />
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-ink-700">Passport</label>

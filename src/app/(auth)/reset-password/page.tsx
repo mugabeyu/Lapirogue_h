@@ -3,9 +3,29 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '@/lib/supabase-browser';
 
+function getRecoveryTokensFromHash() {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  const hash = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : window.location.hash;
+  const params = new URLSearchParams(hash);
+  const accessToken = params.get('access_token');
+  const refreshToken = params.get('refresh_token');
+  const type = params.get('type');
+
+  if (!accessToken || !refreshToken || type !== 'recovery') {
+    return null;
+  }
+
+  return { accessToken, refreshToken };
+}
+
 export default function ResetPasswordPage() {
+  const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isReady, setIsReady] = useState(false);
   const [hasSupabaseConfig, setHasSupabaseConfig] = useState(true);
@@ -31,6 +51,25 @@ export default function ResetPasswordPage() {
     const client = supabaseClient;
 
     async function initializeAuth() {
+      const recoveryTokens = getRecoveryTokensFromHash();
+
+      if (recoveryTokens) {
+        const { error } = await client.auth.setSession({
+          access_token: recoveryTokens.accessToken,
+          refresh_token: recoveryTokens.refreshToken,
+        });
+
+        if (error) {
+          toast.error(error.message || 'Unable to initialize password recovery session');
+          if (isMounted) {
+            setIsReady(false);
+          }
+          return;
+        }
+
+        window.history.replaceState({}, document.title, `${window.location.pathname}${window.location.search}`);
+      }
+
       const { data } = await client.auth.getSession();
 
       if (isMounted) {
@@ -80,25 +119,12 @@ export default function ResetPasswordPage() {
       return;
     }
 
-    const response = await fetch('/api/auth/password-sync', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify({
-        newPassword: passwordData.newPassword,
-      }),
-    });
+    await supabase.auth.signOut();
 
     setIsSubmitting(false);
-    toast[response.ok ? 'success' : 'error'](
-      response.ok ? 'Password reset successfully' : 'Unable to reset password'
-    );
-    
-    if (response.ok) {
-      setPasswordData({ newPassword: '', confirmPassword: '' });
-    }
+    toast.success('Password reset successfully');
+    setPasswordData({ newPassword: '', confirmPassword: '' });
+    router.replace('/login?passwordReset=success');
   }
 
   return (
@@ -107,7 +133,7 @@ export default function ResetPasswordPage() {
         <h1 className="text-2xl font-bold text-center mb-6">Reset Password</h1>
         {!hasSupabaseConfig ? (
           <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900 mb-4">
-            Missing Supabase public configuration. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to use password reset.
+            Missing Supabase public configuration. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY to use password reset.
           </div>
         ) : !isReady ? (
           <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 mb-4">

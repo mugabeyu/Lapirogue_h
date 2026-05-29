@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getRouteHandlerSupabaseClient } from '@/lib/supabase-server';
+import { INTERNATIONAL_PHONE_DISPLAY_PATTERN } from '@/lib/phone';
 
 function emptyToUndefined(value: unknown) {
   if (typeof value !== 'string') return value;
@@ -11,7 +12,10 @@ function emptyToUndefined(value: unknown) {
 const profileSchema = z.object({
   fullName: z.preprocess(emptyToUndefined, z.string().min(1).optional().nullable()),
   email: z.preprocess(emptyToUndefined, z.string().email().optional().nullable()),
-  phone: z.preprocess(emptyToUndefined, z.string().optional().nullable()),
+  phone: z.preprocess(
+    emptyToUndefined,
+    z.string().regex(INTERNATIONAL_PHONE_DISPLAY_PATTERN, 'Use Mauritian format like (+230) 1234 5678').optional().nullable(),
+  ),
   avatarUrl: z.preprocess(emptyToUndefined, z.string().optional().nullable()),
 });
 
@@ -62,8 +66,22 @@ export async function PUT(request: NextRequest) {
 
     if (error) throw error;
 
+    const authUpdatePayload: { email?: string; data?: Record<string, string> } = {};
     if (resolvedEmail && resolvedEmail !== user.email) {
-      await authClient.auth.updateUser({ email: resolvedEmail });
+      authUpdatePayload.email = resolvedEmail;
+    }
+
+    const metadata: Record<string, string> = {};
+    if (resolvedFullName) metadata.full_name = resolvedFullName;
+    if (resolvedPhone) metadata.phone = resolvedPhone;
+    if (resolvedAvatarUrl) metadata.avatar_url = resolvedAvatarUrl;
+
+    if (Object.keys(metadata).length > 0) {
+      authUpdatePayload.data = metadata;
+    }
+
+    if (Object.keys(authUpdatePayload).length > 0) {
+      await authClient.auth.updateUser(authUpdatePayload);
     }
 
     return NextResponse.json({

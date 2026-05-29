@@ -54,121 +54,40 @@ export function PaymentDetailsPage() {
     return `${detail.guest.firstName} ${detail.guest.lastName}`.trim();
   }, [detail?.guest]);
 
-  const paymentStateLabel = detail?.billingSummary.status.replace('_', ' ') ?? 'PENDING';
-
-  const invoiceMeta = useMemo(() => {
-    if (!detail) return null;
-
-    return {
-      generatedAt: new Date(detail.generatedAt).toLocaleString(),
-      reference: detail.invoiceReference,
-      hotelName: 'La Pirogue Hotel',
-      reservation: detail.reservation?.reservationId ?? 'Walk-in / Guest charge',
-    };
-  }, [detail]);
-
-  function downloadInvoicePdf() {
+  async function emailInvoice() {
     if (!detail) return;
 
-    const pdf = new jsPDF({ unit: 'pt', format: 'a4' });
-    const margin = 42;
-    let y = 48;
-    const rightX = 553;
-    const writeLine = (label: string, value: string, nextGap = 16) => {
-      pdf.setFont('helvetica', 'normal');
-      pdf.text(label, margin, y);
-      pdf.text(value, rightX, y, { align: 'right' });
-      y += nextGap;
-    };
+    try {
+      const invoiceElement = document.getElementById('invoice-print-area');
+      if (!invoiceElement) {
+        throw new Error('Invoice layout not found');
+      }
 
-    const ensureSpace = (required = 28) => {
-      if (y + required <= 760) return;
-      pdf.addPage();
-      y = 48;
-    };
+      // Generate PDF from the exact visible invoice layout so email attachment matches UI.
+      const pdf = new jsPDF({ unit: 'pt', format: 'a4' });
+      await (pdf as any).html(invoiceElement, {
+        margin: [16, 16, 16, 16],
+        autoPaging: 'text',
+        html2canvas: {
+          scale: 1,
+          useCORS: true,
+          backgroundColor: '#ffffff',
+        },
+      });
 
-    pdf.setFillColor(29, 58, 50);
-    pdf.rect(0, 0, 595, 96, 'F');
-    pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(255, 255, 255);
-    pdf.setFontSize(22);
-    pdf.text('La Pirogue Hotel', margin, 32);
-    pdf.setFontSize(10);
-    pdf.setFont('helvetica', 'normal');
-    pdf.text('Guest invoice and billing summary', margin, 50);
-    pdf.text(`Invoice reference: ${detail.invoiceReference}`, margin, 68);
-    pdf.text(`Generated: ${new Date(detail.generatedAt).toLocaleString()}`, margin, 84);
+      const pdfBase64 = pdf.output('datauristring').split(',')[1] ?? '';
 
-    pdf.setTextColor(25, 31, 36);
-    y = 118;
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(13);
-    pdf.text('Guest and reservation details', margin, y);
-    y += 18;
-    writeLine('Guest', guestLabel);
-    writeLine('Email', detail.guest?.email ?? 'N/A');
-    writeLine('Phone', detail.guest?.phone ?? 'N/A');
-    writeLine('Reservation', invoiceMeta?.reservation ?? 'N/A');
-    writeLine('Payment method', detail.payment.method);
-    writeLine('Payment status', detail.payment.status);
-    writeLine('Ledger status', paymentStateLabel);
-
-    y += 8;
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('Itemized charges', margin, y);
-    y += 18;
-    pdf.setFont('helvetica', 'normal');
-
-    detail.charges.forEach((item) => {
-      ensureSpace(20);
-      pdf.text(item.label, margin, y);
-      pdf.text(`Rs ${item.amount.toLocaleString()}`, rightX, y, { align: 'right' });
-      y += 15;
-    });
-
-    y += 8;
-    ensureSpace(80);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('Totals', margin, y);
-    y += 18;
-    pdf.setFont('helvetica', 'normal');
-    writeLine('Room charges', `Rs ${detail.billingSummary.totals['Room charges'].toLocaleString()}`);
-    writeLine('Food & Beverage orders', `Rs ${detail.billingSummary.totals['Food & Beverage orders'].toLocaleString()}`);
-    writeLine('Tours and activities', `Rs ${detail.billingSummary.totals['Tours and activities'].toLocaleString()}`);
-    writeLine('Transport services', `Rs ${detail.billingSummary.totals['Transport services'].toLocaleString()}`);
-    writeLine('Laundry/services', `Rs ${detail.billingSummary.totals['Laundry/services'].toLocaleString()}`);
-    writeLine('Additional hotel purchases', `Rs ${detail.billingSummary.totals['Additional hotel purchases'].toLocaleString()}`);
-    writeLine('Taxes and service charges', `Rs ${detail.billingSummary.totals['Taxes and service charges'].toLocaleString()}`);
-    pdf.setFont('helvetica', 'bold');
-    writeLine('Total charges', `Rs ${detail.billingSummary.totalCharges.toLocaleString()}`);
-    writeLine('Total paid', `Rs ${detail.billingSummary.totalPaid.toLocaleString()}`);
-    writeLine('Balance due', `Rs ${detail.billingSummary.balanceDue.toLocaleString()}`);
-
-    y += 8;
-    ensureSpace(90);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('Payment history snapshot', margin, y);
-    y += 18;
-    pdf.setFont('helvetica', 'normal');
-    detail.payments.slice(0, 6).forEach((payment) => {
-      ensureSpace(18);
-      pdf.text(`${payment.paymentId} · ${payment.method} · ${payment.status}`, margin, y);
-      pdf.text(`Rs ${payment.amount.toLocaleString()}`, rightX, y, { align: 'right' });
-      y += 15;
-    });
-
-    y += 8;
-    ensureSpace(72);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('Reference', margin, y);
-    y += 16;
-    pdf.setFont('courier', 'normal');
-    pdf.text(detail.invoiceReference, margin, y);
-    y += 18;
-    pdf.setFont('helvetica', 'normal');
-    pdf.text(`Recorded by: ${detail.payment.notes ?? 'Recorded in system'}`, margin, y, { maxWidth: 512 });
-
-    pdf.save(`invoice-${detail.invoiceReference}.pdf`);
+      const resp = await fetch(`/api/payments/${detail.payment.id}/send-invoice`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pdfBase64 }),
+      });
+      if (!resp.ok) throw new Error('Failed to send invoice');
+      alert('Invoice PDF emailed to guest');
+    } catch (err) {
+      console.error('Send invoice via API failed', err);
+      alert('Failed to email invoice');
+    }
   }
 
   if (isLoading) {
@@ -187,9 +106,9 @@ export function PaymentDetailsPage() {
           subtitle={`Detailed billing view for ${detail.invoiceReference}`}
           action={(
             <div className="flex flex-wrap gap-3">
-              <button type="button" onClick={downloadInvoicePdf} className="btn-primary inline-flex items-center gap-2">
+              <button type="button" onClick={emailInvoice} className="btn-primary inline-flex items-center gap-2">
                 <Download className="h-4 w-4" />
-                Generate Invoice PDF
+                Email Invoice
               </button>
               <button type="button" onClick={() => window.print()} className="btn-secondary inline-flex items-center gap-2">
                 <Printer className="h-4 w-4" />

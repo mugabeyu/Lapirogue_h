@@ -16,6 +16,7 @@ export default function PaymentsPage() {
         rowHrefBase="/payments"
         disableDelete
         columns={[
+          { key: 'guestImagePath', label: 'Guest photo', type: 'image' },
           { key: 'paymentId', label: 'Payment ID' },
           { key: 'guest', label: 'Guest name' },
           { key: 'amount', label: 'Amount (Rs)', type: 'currency' },

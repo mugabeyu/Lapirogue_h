@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { getAuditActor, recordAuditLog } from '@/lib/audit';
 import { z } from 'zod';
+import { sendGuestRoomEmail } from '@/lib/mailer';
 
 const reservationSchema = z.object({
   id: z.string().uuid().optional(),
@@ -27,6 +28,19 @@ type ReservationRow = {
   guests?: { first_name?: string | null; last_name?: string | null } | null;
   rooms?: { room_number?: string | null; type?: string | null } | null;
 };
+
+function reservationErrorResponse(error: unknown, fallbackMessage: string) {
+  const message = error instanceof Error ? error.message : fallbackMessage;
+
+  return NextResponse.json(
+    {
+      success: false,
+      error: process.env.NODE_ENV === 'production' ? fallbackMessage : message,
+      details: process.env.NODE_ENV === 'production' || !(error instanceof Error) ? undefined : error.stack ?? error.message,
+    },
+    { status: 500 },
+  );
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -68,7 +82,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ success: true, data: mapped });
   } catch {
-    return NextResponse.json({ success: false, error: 'Failed to fetch reservations' }, { status: 500 });
+    return reservationErrorResponse(new Error('Failed to fetch reservations'), 'Failed to fetch reservations');
   }
 }
 
@@ -105,19 +119,37 @@ export async function POST(request: NextRequest) {
         adults: body.adults,
         children: body.children,
         total_amount: body.totalAmount,
-        created_by: actorId,
-        updated_by: actorId,
       })
       .select('*')
       .single();
 
     if (error) throw error;
+
+    const [{ data: guestRow }, { data: roomRow }] = await Promise.all([
+      supabase.from('guests').select('first_name,last_name,email').eq('id', body.guestId).maybeSingle(),
+      supabase.from('rooms').select('room_number,type').eq('id', body.roomId).maybeSingle(),
+    ]);
+
+    if (guestRow?.email && roomRow?.room_number) {
+      try {
+        await sendGuestRoomEmail({
+          to: guestRow.email,
+          roomNumber: roomRow.room_number,
+          lastName: guestRow.last_name ?? 'Guest',
+          checkIn: body.checkIn,
+          checkOut: body.checkOut,
+        });
+      } catch (emailError) {
+        console.warn('Guest room email could not be sent', emailError);
+      }
+    }
+
     return NextResponse.json({ success: true, data }, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ success: false, error: 'Validation error', details: error.errors }, { status: 400 });
     }
-    return NextResponse.json({ success: false, error: 'Failed to create reservation' }, { status: 500 });
+    return reservationErrorResponse(error, 'Failed to create reservation');
   }
 }
 
@@ -129,6 +161,14 @@ export async function PUT(request: NextRequest) {
     const supabase = getSupabaseAdmin();
     const actor = await getAuditActor(request);
     const actorId = actor?.id ?? null;
+
+    const { data: previousReservation, error: previousReservationError } = await supabase
+      .from('reservations')
+      .select('id,reservation_id,guest_id,room_id,check_in,check_out,status,guests(first_name,last_name,email),rooms(room_number,type)')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (previousReservationError) throw previousReservationError;
 
     const { data: conflicting, error: conflictError } = await supabase
       .from('reservations')
@@ -158,19 +198,47 @@ export async function PUT(request: NextRequest) {
         children,
         total_amount: totalAmount,
         status,
-        updated_by: actorId,
       })
       .eq('id', id)
       .select('*')
       .single();
 
     if (error) throw error;
+
+    const [{ data: guestRow }, { data: roomRow }] = await Promise.all([
+      supabase.from('guests').select('first_name,last_name,email').eq('id', guestId).maybeSingle(),
+      supabase.from('rooms').select('room_number,type').eq('id', roomId).maybeSingle(),
+    ]);
+
+    const shouldSendGuestEmail = Boolean(
+      previousReservation &&
+      roomRow?.room_number &&
+      (
+        previousReservation.room_id !== roomId ||
+        (status === 'CHECKED_IN' && previousReservation.status !== 'CHECKED_IN')
+      ),
+    );
+
+    if (shouldSendGuestEmail && guestRow?.email) {
+      try {
+        await sendGuestRoomEmail({
+          to: guestRow.email,
+          roomNumber: roomRow?.room_number ?? 'TBA',
+          lastName: guestRow.last_name ?? 'Guest',
+          checkIn: checkIn,
+          checkOut: checkOut,
+        });
+      } catch (emailError) {
+        console.warn('Guest room email could not be sent', emailError);
+      }
+    }
+
     return NextResponse.json({ success: true, data });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ success: false, error: 'Validation error', details: error.errors }, { status: 400 });
     }
-    return NextResponse.json({ success: false, error: 'Failed to update reservation' }, { status: 500 });
+    return reservationErrorResponse(error, 'Failed to update reservation');
   }
 }
 
@@ -187,19 +255,23 @@ export async function DELETE(request: NextRequest) {
     const { data: reservation } = await supabase.from('reservations').select('*').eq('id', id).maybeSingle();
 
     if (reservation) {
-      await recordAuditLog({
-        tableName: 'reservations',
-        recordId: id,
-        action: 'DELETE',
-        actorId,
-        before: reservation as Record<string, unknown>,
-      });
+      try {
+        await recordAuditLog({
+          tableName: 'reservations',
+          recordId: id,
+          action: 'DELETE',
+          actorId,
+          before: reservation as Record<string, unknown>,
+        });
+      } catch (auditError) {
+        console.warn('Reservation audit log skipped', auditError);
+      }
     }
 
     const { error } = await supabase.from('reservations').delete().eq('id', id);
     if (error) throw error;
     return NextResponse.json({ success: true, message: 'Reservation deleted' });
   } catch {
-    return NextResponse.json({ success: false, error: 'Failed to delete reservation' }, { status: 500 });
+    return reservationErrorResponse(new Error('Failed to delete reservation'), 'Failed to delete reservation');
   }
 }

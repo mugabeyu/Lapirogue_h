@@ -45,8 +45,6 @@ export async function POST(request: NextRequest) {
         title: body.title,
         message: body.message,
         category: body.category ?? 'General',
-        created_by: actorId,
-        updated_by: actorId,
       })
       .select('*')
       .single();
@@ -72,13 +70,13 @@ export async function PATCH(request: NextRequest) {
     if (all) {
       const { error } = await getSupabaseAdmin()
         .from('notifications')
-        .update({ is_read: true, updated_by: actorId })
+        .update({ is_read: true })
         .eq('is_read', false);
       if (error) throw error;
     } else if (id) {
       const { error } = await getSupabaseAdmin()
         .from('notifications')
-        .update({ is_read: true, updated_by: actorId })
+        .update({ is_read: true })
         .eq('id', id);
       if (error) throw error;
     }

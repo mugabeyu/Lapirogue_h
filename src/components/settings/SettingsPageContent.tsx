@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { useApi } from '@/hooks/useApi';
+import { formatInternationalPhoneDisplay } from '@/lib/phone';
 import { ImageUploadField } from '@/components/ui/ImageUploadField';
 import { deleteStoredImage, uploadImage, uploadProfileAvatar } from '@/lib/upload-image';
 import { User } from '@/types';
@@ -89,7 +90,7 @@ export default function SettingsPageContent() {
     setProfileForm({
       fullName: user.name || '',
       email: user.email || '',
-      phone: user.phone || '',
+      phone: formatInternationalPhoneDisplay(user.phone || ''),
     });
   }, [user]);
 
@@ -317,8 +318,11 @@ export default function SettingsPageContent() {
                 <input
                   type="tel"
                   value={profileForm.phone}
-                  onChange={(event) => setProfileForm({ ...profileForm, phone: event.target.value })}
+                  onChange={(event) => setProfileForm({ ...profileForm, phone: formatInternationalPhoneDisplay(event.target.value) })}
                   className="input-field w-full"
+                  placeholder="(+230) 1234 5678"
+                  inputMode="tel"
+                  autoComplete="tel"
                 />
               </div>
               <div className="flex justify-center pt-2">

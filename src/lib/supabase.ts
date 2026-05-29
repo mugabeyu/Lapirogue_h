@@ -1,18 +1,18 @@
 import 'server-only';
 import { createClient } from '@supabase/supabase-js';
 
-const resolvedSupabaseUrl = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
+const resolvedSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const resolvedSupabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 export function getSupabaseAdmin() {
   if (!resolvedSupabaseUrl) {
-    throw new Error('SUPABASE_URL is not configured');
+    throw new Error('NEXT_PUBLIC_SUPABASE_URL is not configured');
   }
 
   try {
     new URL(resolvedSupabaseUrl);
   } catch {
-    throw new Error('SUPABASE_URL is invalid. Expected full https URL to your Supabase project.');
+    throw new Error('NEXT_PUBLIC_SUPABASE_URL is invalid. Expected full https URL to your Supabase project.');
   }
 
   if (!resolvedSupabaseServiceKey) {

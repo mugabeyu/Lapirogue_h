@@ -339,6 +339,12 @@ function parseTimeSlot(value?: string) {
   return null;
 }
 
+function isWithinRegistrationCutoff(startAt: string) {
+  const scheduledAt = new Date(startAt);
+  if (Number.isNaN(scheduledAt.getTime())) return false;
+  return scheduledAt.getTime() - Date.now() < 10 * 60 * 1000;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -365,6 +371,13 @@ export async function POST(request: NextRequest) {
 
     const bookingDate = startAt.slice(0, 10);
     const timeSlot = startAt.slice(11, 16);
+
+    if (isWithinRegistrationCutoff(startAt)) {
+      return NextResponse.json(
+        { success: false, error: 'Registration is closed within 10 minutes of the scheduled start time' },
+        { status: 409 },
+      );
+    }
 
     if (itemType === 'ACTIVITY' || itemType === 'BOOKING') {
       const { data: activity, error: activityError } = await supabase

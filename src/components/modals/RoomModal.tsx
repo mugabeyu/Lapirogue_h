@@ -105,11 +105,16 @@ export function RoomModal({ isOpen, onClose, onSaved, editRow }: RoomModalProps)
 
         if (uploaded.length > 0) {
           const updated = Array.from(new Set([...(existingImages ?? []), ...uploaded]));
-          // persist image paths to the room record
+          // Persist the full room payload again so the image paths are saved with the rest of the room data.
           await fetch('/api/rooms', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: roomId, imagePath: updated[0], imagePaths: updated }),
+            body: JSON.stringify({
+              ...payload,
+              id: roomId,
+              imagePath: updated[0],
+              imagePaths: updated,
+            }),
           });
           setExistingImages(updated);
         }

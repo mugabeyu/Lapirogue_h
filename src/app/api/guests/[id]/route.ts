@@ -4,13 +4,17 @@ import { getAuditActor, recordAuditLog } from '@/lib/audit';
 import { z } from 'zod';
 import { validationErrorResponse } from '@/lib/api-response';
 import { toGuest, type GuestRow } from '@/lib/guests';
+import { INTERNATIONAL_PHONE_DISPLAY_PATTERN } from '@/lib/phone';
 
 const guestUpdateSchema = z.object({
   id: z.string().uuid().optional(),
   firstName: z.string().min(1).optional(),
   lastName: z.string().min(1).optional(),
   email: z.string().email().optional(),
-  phone: z.string().optional(),
+  phone: z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+    z.string().regex(INTERNATIONAL_PHONE_DISPLAY_PATTERN, 'Use Mauritian format like (+230) 1234 5678').optional(),
+  ),
   nationality: z.string().optional(),
   passport: z.string().optional(),
   dateOfBirth: z.string().optional(),

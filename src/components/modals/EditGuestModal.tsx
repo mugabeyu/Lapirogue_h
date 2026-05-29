@@ -2,7 +2,9 @@
 
 import { FormEvent, useEffect, useState } from 'react';
 import { Modal } from '@/components/Modal';
+import { CountryComboboxField } from '@/components/ui/CountryComboboxField';
 import { ImageUploadField } from '@/components/ui/ImageUploadField';
+import { PhoneField } from '@/components/ui/PhoneField';
 import { uploadImage } from '@/lib/upload-image';
 import { toast } from 'sonner';
 import { Guest, GuestStay } from '@/types';
@@ -105,8 +107,14 @@ export function EditGuestModal({ isOpen, onClose, guest, currentStay, onSaved }:
           <Field label="First Name" name="firstName" defaultValue={guest.firstName} required />
           <Field label="Last Name" name="lastName" defaultValue={guest.lastName} required />
           <Field label="Email" name="email" type="email" defaultValue={guest.email ?? ''} />
-          <Field label="Phone" name="phone" defaultValue={guest.phone ?? ''} />
-          <Field label="Nationality" name="nationality" defaultValue={guest.nationality ?? ''} />
+          <div>
+            <label className="mb-1 block text-sm font-medium text-ink-700">Phone</label>
+            <PhoneField name="phone" defaultValue={guest.phone ?? ''} />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-ink-700">Nationality</label>
+            <CountryComboboxField name="nationality" defaultValue={guest.nationality ?? ''} />
+          </div>
           <Field label="Passport" name="passport" defaultValue={guest.passport ?? ''} />
           <Field label="Date of Birth" name="dateOfBirth" type="date" defaultValue={guest.dateOfBirth ?? ''} />
           <div>

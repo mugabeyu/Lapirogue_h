@@ -4,13 +4,17 @@ import { getAuditActor, recordAuditLog } from '@/lib/audit';
 import { z } from 'zod';
 import { validationErrorResponse } from '@/lib/api-response';
 import { toGuest, type GuestRow } from '@/lib/guests';
+import { INTERNATIONAL_PHONE_DISPLAY_PATTERN } from '@/lib/phone';
 
 const guestSchema = z.object({
   id: z.string().uuid().optional(),
   firstName: z.string().min(1),
   lastName: z.string().min(1),
   email: z.string().email().optional(),
-  phone: z.string().optional(),
+  phone: z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+    z.string().regex(INTERNATIONAL_PHONE_DISPLAY_PATTERN, 'Use Mauritian format like (+230) 1234 5678').optional(),
+  ),
   nationality: z.string().optional(),
   passport: z.string().optional(),
   dateOfBirth: z.string().optional(),
@@ -151,8 +155,6 @@ export async function POST(request: NextRequest) {
         vip: validatedData.vip ?? false,
         status: validatedData.status ?? 'RESERVED',
         notes: validatedData.notes,
-        created_by: actorId,
-        updated_by: actorId,
       })
       .select('*')
       .single();
@@ -202,7 +204,6 @@ export async function PUT(request: NextRequest) {
         vip: updateData.vip,
         status: updateData.status,
         notes: updateData.notes,
-        updated_by: actorId,
       })
       .eq('id', id)
       .select('*')
@@ -239,13 +240,17 @@ export async function DELETE(request: NextRequest) {
     const { data: guest } = await supabase.from('guests').select('*').eq('id', id).maybeSingle();
 
     if (guest) {
-      await recordAuditLog({
-        tableName: 'guests',
-        recordId: id,
-        action: 'DELETE',
-        actorId,
-        before: guest as Record<string, unknown>,
-      });
+      try {
+        await recordAuditLog({
+          tableName: 'guests',
+          recordId: id,
+          action: 'DELETE',
+          actorId,
+          before: guest as Record<string, unknown>,
+        });
+      } catch (auditError) {
+        console.warn('Guest audit log skipped', auditError);
+      }
     }
 
     const { error } = await supabase.from('guests').delete().eq('id', id);

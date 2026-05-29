@@ -32,7 +32,7 @@ type PaymentRow = {
   reference?: string | null;
   notes?: string | null;
   created_at?: string | null;
-  guests?: { first_name?: string | null; last_name?: string | null } | null;
+  guests?: { first_name?: string | null; last_name?: string | null; image_path?: string | null } | null;
   reservations?: {
     reservation_id?: string | null;
     guests?: { first_name?: string | null; last_name?: string | null } | null;
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
     const { data, error } = await getSupabaseAdmin()
       .from('payments')
       .select(
-        'id,payment_id,guest_id,reservation_id,amount,method,status,reference,notes,created_at,guests(first_name,last_name),reservations(reservation_id,guests(first_name,last_name))',
+        'id,payment_id,guest_id,reservation_id,amount,method,status,reference,notes,created_at,guests(first_name,last_name,image_path),reservations(reservation_id,guests(first_name,last_name))',
       )
       .order('created_at', { ascending: false });
 
@@ -69,6 +69,7 @@ export async function GET(request: NextRequest) {
       reservationId: payment.reservation_id ?? null,
       reservation: payment.reservations?.reservation_id ?? null,
       guest: guestName(payment),
+      guestImagePath: payment.guests?.image_path ?? null,
       amount: payment.amount === undefined || payment.amount === null ? 0 : Number(payment.amount),
       method: payment.method ?? null,
       status: payment.status ?? null,
@@ -105,9 +106,6 @@ export async function POST(request: NextRequest) {
         status: body.status ?? 'PENDING',
         reference: body.reference,
         notes: body.notes,
-        created_by: actorId,
-        updated_by: actorId,
-        processed_by: actorId,
       })
       .select('*')
       .single();
@@ -173,8 +171,6 @@ export async function PUT(request: NextRequest) {
         status,
         reference,
         notes,
-        updated_by: actorId,
-        processed_by: status ? actorId : undefined,
       })
       .eq('id', id)
       .select('*')

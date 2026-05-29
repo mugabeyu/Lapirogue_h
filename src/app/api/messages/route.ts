@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { z } from 'zod';
 import { getAuditActor, recordAuditLog } from '@/lib/audit';
-import { requireAuth } from '@/lib/api-auth';
+import { getRouteHandlerSupabaseClient } from '@/lib/supabase-server';
 import { validationErrorResponse } from '@/lib/api-response';
 
 type MessageRow = {
@@ -25,9 +25,14 @@ const messageSchema = z.object({
   attachmentUrl: z.string().optional().nullable(),
 });
 
+async function requireAuth(request: NextRequest) {
+  const { data: { user } } = await getRouteHandlerSupabaseClient(request).auth.getUser();
+  return user ?? null;
+}
+
 export async function GET(request: NextRequest) {
-  const decoded = await requireAuth(request);
-  if (!decoded) {
+  const user = await requireAuth(request);
+  if (!user) {
     return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 });
   }
 
@@ -65,15 +70,13 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const decoded = await requireAuth(request);
-  if (!decoded) {
+  const user = await requireAuth(request);
+  if (!user) {
     return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 });
   }
 
   try {
     const body = messageSchema.parse(await request.json());
-    const actor = await getAuditActor(request);
-    const actorId = actor?.id ?? null;
     const { data, error } = await getSupabaseAdmin()
       .from('messages')
       .insert({
@@ -83,8 +86,6 @@ export async function POST(request: NextRequest) {
         content: body.content,
         attachment_url: body.attachmentUrl ?? null,
         is_read: false,
-        created_by: actorId,
-        updated_by: actorId,
       })
       .select('id, guest_id, message_type, subject, content, is_read, attachment_url, created_at')
       .single();
@@ -99,8 +100,8 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  const decoded = await requireAuth(request);
-  if (!decoded) {
+  const user = await requireAuth(request);
+  if (!user) {
     return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 });
   }
 
@@ -108,14 +109,12 @@ export async function PATCH(request: NextRequest) {
     const { searchParams } = request.nextUrl;
     const id = searchParams.get('id');
     const all = searchParams.get('all') === 'true';
-    const actor = await getAuditActor(request);
-    const actorId = actor?.id ?? null;
 
     if (all) {
-      const { error } = await getSupabaseAdmin().from('messages').update({ is_read: true, updated_by: actorId }).eq('is_read', false);
+      const { error } = await getSupabaseAdmin().from('messages').update({ is_read: true }).eq('is_read', false);
       if (error) throw error;
     } else if (id) {
-      const { error } = await getSupabaseAdmin().from('messages').update({ is_read: true, updated_by: actorId }).eq('id', id);
+      const { error } = await getSupabaseAdmin().from('messages').update({ is_read: true }).eq('id', id);
       if (error) throw error;
     }
 
@@ -126,8 +125,8 @@ export async function PATCH(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  const decoded = await requireAuth(request);
-  if (!decoded) {
+  const user = await requireAuth(request);
+  if (!user) {
     return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 });
   }
 
@@ -139,7 +138,6 @@ export async function DELETE(request: NextRequest) {
     }
     const supabase = getSupabaseAdmin();
     const actor = await getAuditActor(request);
-    const actorId = actor?.id ?? null;
     const { data: message } = await supabase.from('messages').select('*').eq('id', id).maybeSingle();
 
     if (message) {
@@ -147,7 +145,7 @@ export async function DELETE(request: NextRequest) {
         tableName: 'messages',
         recordId: id,
         action: 'DELETE',
-        actorId,
+        actorId: actor?.id ?? null,
         before: message as Record<string, unknown>,
       });
     }

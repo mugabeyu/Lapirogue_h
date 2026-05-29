@@ -24,13 +24,17 @@ npm install
 
 2. Create a `.env` file at the project root and add your production values.
 
-3. Add your Supabase URL, public anon key, and app URL in `.env` (do not put secret service keys in client-side `.env` files). Supabase Auth handles session tokens — you do not need to manage `JWT_SECRET` locally when using Supabase sessions.
+3. Add your Supabase URL, public publishable key, and app URL in `.env` (do not put secret service keys in client-side `.env` files). Supabase Auth handles session tokens — you do not need to manage `JWT_SECRET` locally when using Supabase sessions.
 
 4. In Supabase Auth settings, configure the email templates for invite and recovery flows. The invite template can show the generated password from `{{ .Data.temp_password }}`.
 
-5. Run the SQL in `supabase/schema.sql` inside the Supabase SQL editor. It creates tables, enums, indexes, triggers, storage buckets, RLS, and starter data.
+5. To enable custom staff and guest notification emails, set SMTP env vars in your deployment environment: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`, and optionally `SMTP_FROM_NAME` / `SMTP_SECURE`.
 
-6. Start the app:
+6. Configure `GUEST_PORTAL_SECRET` in production so the guest portal session cookie is signed with a stable secret.
+
+7. Run the SQL in `supabase/schema.sql` inside the Supabase SQL editor. It creates tables, enums, indexes, triggers, storage buckets, RLS, and starter data.
+
+8. Start the app:
 
 ```bash
 npm run dev
@@ -70,7 +74,7 @@ npm run type-check
 - Source/config files avoid `.js` and `.jsx`; app code uses `.ts` and `.tsx`.
 
 - Important: this app relies on Row-Level Security (RLS). Because the
-      client uses the public ANON key, RLS is enforced for every request. In
+      client uses the public publishable key, RLS is enforced for every request. In
       practice this means a guest (role = `guest`) will only be able to read
       their own bookings, reservations, messages, activities, and related rows
       as defined by your DB policies, while managers/admins with broader RLS

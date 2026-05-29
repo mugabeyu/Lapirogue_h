@@ -2,13 +2,14 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 const AUTH_ROUTES = ['/login', '/forgot-password', '/reset-password'];
+const PUBLIC_ROUTES = ['/register'];
 
 const PUBLIC_API_PREFIXES = [
   '/api/auth/login',
-  '/api/auth/register',
   '/api/auth/forgot-password',
   '/api/auth/verify',
   '/api/auth/password-sync',
+  '/api/staff/onboarding',
 ];
 
 function isAuthRoute(pathname: string) {
@@ -19,9 +20,13 @@ function isPublicApi(pathname: string) {
   return PUBLIC_API_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
 
+function isPublicRoute(pathname: string) {
+  return PUBLIC_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`));
+}
+
 export async function proxy(request: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
   const response = NextResponse.next({
     request: {
@@ -59,6 +64,10 @@ export async function proxy(request: NextRequest) {
     if (!user) {
       return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 });
     }
+    return response;
+  }
+
+  if (isPublicRoute(pathname)) {
     return response;
   }
 

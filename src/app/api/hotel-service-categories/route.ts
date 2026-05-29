@@ -53,8 +53,6 @@ export async function POST(request: NextRequest) {
       bg_color_hex: body.bgColorHex,
       display_order: body.displayOrder,
       is_active: body.isActive,
-      created_by: actorId,
-      updated_by: actorId,
     }).select('*').single();
     if (error) throw error;
     return NextResponse.json({ success: true, data }, { status: 201 });
@@ -81,7 +79,6 @@ export async function PUT(request: NextRequest) {
       bg_color_hex: updateData.bgColorHex,
       display_order: updateData.displayOrder,
       is_active: updateData.isActive,
-      updated_by: actorId,
     }).eq('id', id).select('*').single();
     if (error) throw error;
     return NextResponse.json({ success: true, data });

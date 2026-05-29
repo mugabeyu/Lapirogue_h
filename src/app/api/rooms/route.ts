@@ -32,6 +32,30 @@ type RoomRow = {
   updated_at?: string | null;
 };
 
+function roomErrorResponse(error: unknown, fallbackMessage: string) {
+  const message = error instanceof Error ? error.message : fallbackMessage;
+  const details = process.env.NODE_ENV === 'production'
+    ? undefined
+    : error instanceof Error
+      ? error.stack ?? error.message
+      : (() => {
+          try {
+            return JSON.stringify(error);
+          } catch {
+            return String(error);
+          }
+        })();
+
+  return NextResponse.json(
+    {
+      success: false,
+      error: process.env.NODE_ENV === 'production' ? fallbackMessage : message,
+      details,
+    },
+    { status: 500 },
+  );
+}
+
 function toRoom(row: RoomRow) {
   return {
     id: row.id,
@@ -55,6 +79,7 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '50');
+    const search = searchParams.get('search') || undefined;
     const status = searchParams.get('status') || undefined;
     const type = searchParams.get('type') || undefined;
     const checkIn = searchParams.get('checkIn') || undefined;
@@ -115,7 +140,16 @@ export async function GET(request: NextRequest) {
     }
 
     const rooms = (data ?? []) as RoomRow[];
-    const mapped = rooms.map((row) => toRoom(row));
+    const mapped = rooms
+      .map((row) => toRoom(row))
+      .filter((room) => {
+        if (!search) return true;
+        const queryValue = search.toLowerCase();
+        return [room.roomNumber, room.type, room.floor ?? '', room.description ?? '']
+          .join(' ')
+          .toLowerCase()
+          .includes(queryValue);
+      });
     const total = count ?? 0;
 
     return NextResponse.json({
@@ -129,10 +163,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch {
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch rooms' },
-      { status: 500 }
-    );
+    return roomErrorResponse(new Error('Failed to fetch rooms'), 'Failed to fetch rooms');
   }
 }
 
@@ -156,9 +187,6 @@ export async function POST(request: NextRequest) {
         description: validatedData.description,
         amenities: validatedData.amenities ?? [],
         image_path: validatedData.imagePath ?? null,
-        image_paths: validatedData.imagePaths ?? [],
-        created_by: actorId,
-        updated_by: actorId,
       })
       .select('*')
       .single();
@@ -179,10 +207,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json(
-      { success: false, error: 'Failed to create room' },
-      { status: 500 }
-    );
+    return roomErrorResponse(error, 'Failed to create room');
   }
 }
 
@@ -207,8 +232,6 @@ export async function PUT(request: NextRequest) {
         description: updateData.description,
         amenities: updateData.amenities,
         image_path: updateData.imagePath ?? undefined,
-        image_paths: updateData.imagePaths,
-        updated_by: actorId,
       })
       .eq('id', id)
       .select('*')
@@ -229,10 +252,7 @@ export async function PUT(request: NextRequest) {
         { status: 400 }
       );
     }
-    return NextResponse.json(
-      { success: false, error: 'Failed to update room' },
-      { status: 500 }
-    );
+    return roomErrorResponse(error, 'Failed to update room');
   }
 }
 
@@ -249,19 +269,23 @@ export async function DELETE(request: NextRequest) {
     const { data: room } = await supabase.from('rooms').select('*').eq('id', id).maybeSingle();
 
     if (room) {
-      await recordAuditLog({
-        tableName: 'rooms',
-        recordId: id,
-        action: 'DELETE',
-        actorId,
-        before: room as Record<string, unknown>,
-      });
+      try {
+        await recordAuditLog({
+          tableName: 'rooms',
+          recordId: id,
+          action: 'DELETE',
+          actorId,
+          before: room as Record<string, unknown>,
+        });
+      } catch (auditError) {
+        console.warn('Room audit log skipped', auditError);
+      }
     }
 
     const { error } = await supabase.from('rooms').delete().eq('id', id);
     if (error) throw error;
     return NextResponse.json({ success: true, message: 'Room deleted' });
   } catch {
-    return NextResponse.json({ success: false, error: 'Failed to delete room' }, { status: 500 });
+    return roomErrorResponse(new Error('Failed to delete room'), 'Failed to delete room');
   }
 }

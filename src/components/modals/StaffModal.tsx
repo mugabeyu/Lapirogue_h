@@ -3,6 +3,9 @@
 import { FormEvent, useState } from 'react';
 import { Modal } from '@/components/Modal';
 import { toast } from 'sonner';
+import { PhoneField } from '@/components/ui/PhoneField';
+import { useApi } from '@/hooks/useApi';
+import type { User } from '@/types';
 
 type StaffRow = {
   id?: string;
@@ -25,8 +28,10 @@ interface StaffModalProps {
 
 export function StaffModal({ isOpen, onClose, onSaved, editRow }: StaffModalProps) {
   const [isSaving, setIsSaving] = useState(false);
+  const { data: currentUser } = useApi<User>('/api/auth/me');
   const staff = editRow as StaffRow | null;
   const isEdit = Boolean(staff?.id);
+  const isEmailLocked = isEdit && currentUser?.role !== 'MAIN_RECEPTIONIST';
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -86,11 +91,20 @@ export function StaffModal({ isOpen, onClose, onSaved, editRow }: StaffModalProp
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-ink-700">Email</label>
-            <input name="email" type="email" required className="input-field w-full" defaultValue={staff?.email ?? ''} />
+            <input
+              name="email"
+              type="email"
+              required
+              className="input-field w-full"
+              defaultValue={staff?.email ?? ''}
+              disabled={isEmailLocked}
+              aria-disabled={isEmailLocked}
+            />
+            {isEmailLocked ? <p className="mt-1 text-xs text-ink-500">Only admin users can update staff email addresses.</p> : null}
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-ink-700">Phone</label>
-            <input name="phone" className="input-field w-full" defaultValue={staff?.phone ?? ''} />
+            <PhoneField name="phone" defaultValue={staff?.phone ?? ''} />
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-ink-700">Status</label>

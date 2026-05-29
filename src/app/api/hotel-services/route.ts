@@ -65,8 +65,6 @@ export async function POST(request: NextRequest) {
       image_url: body.imageUrl,
       sort_order: body.sortOrder,
       is_available: body.isAvailable,
-      created_by: actorId,
-      updated_by: actorId,
     }).select('*').single();
     if (error) throw error;
     return NextResponse.json({ success: true, data }, { status: 201 });
@@ -97,7 +95,6 @@ export async function PUT(request: NextRequest) {
       image_url: updateData.imageUrl,
       sort_order: updateData.sortOrder,
       is_available: updateData.isAvailable,
-      updated_by: actorId,
     }).eq('id', id).select('*').single();
     if (error) throw error;
     return NextResponse.json({ success: true, data });

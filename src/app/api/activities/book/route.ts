@@ -39,6 +39,16 @@ function parseTimeSlot(value?: string) {
   return null;
 }
 
+function isWithinRegistrationCutoff(date: string, timeSlot?: string) {
+  const parsedTime = parseTimeSlot(timeSlot);
+  if (!parsedTime) return false;
+
+  const scheduledAt = new Date(`${date}T${parsedTime}`);
+  if (Number.isNaN(scheduledAt.getTime())) return false;
+
+  return scheduledAt.getTime() - Date.now() < 10 * 60 * 1000;
+}
+
 export async function GET() {
   try {
     const { data, error } = await getSupabaseAdmin()
@@ -71,6 +81,14 @@ export async function POST(request: NextRequest) {
   try {
     const body = bookingSchema.parse(await request.json());
     const admin = getSupabaseAdmin();
+
+    if (isWithinRegistrationCutoff(body.date, body.timeSlot)) {
+      return NextResponse.json(
+        { success: false, error: 'Bookings cannot be registered within 10 minutes of the activity start time' },
+        { status: 409 },
+      );
+    }
+
     const { data, error } = await admin
       .from('activity_bookings')
       .insert({
@@ -126,6 +144,14 @@ export async function PUT(request: NextRequest) {
     const body = bookingSchema.parse(await request.json());
     const { id, ...updateData } = body as typeof body & { id?: string };
     const admin = getSupabaseAdmin();
+
+    if (isWithinRegistrationCutoff(updateData.date, updateData.timeSlot)) {
+      return NextResponse.json(
+        { success: false, error: 'Bookings cannot be updated within 10 minutes of the activity start time' },
+        { status: 409 },
+      );
+    }
+
     const { data: existingBooking } = await admin
       .from('activity_bookings')
       .select('id,status,guest_id,activity_id')

@@ -81,6 +81,6 @@ export async function recordAuditLog(entry: {
   });
 
   if (error) {
-    throw error;
+    console.warn('Audit log skipped', error);
   }
 }

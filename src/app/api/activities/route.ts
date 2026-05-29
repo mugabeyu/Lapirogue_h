@@ -184,8 +184,6 @@ export async function POST(request: NextRequest) {
       .from('activities')
       .insert({
         ...buildInsertPayload(body),
-        created_by: actorId,
-        updated_by: actorId,
       })
       .select('*')
       .single();
@@ -242,7 +240,6 @@ export async function PUT(request: NextRequest) {
       .from('activities')
       .update({
         ...buildUpdatePayload(merged),
-        updated_by: actorId,
       })
       .eq('id', id)
       .select('*')

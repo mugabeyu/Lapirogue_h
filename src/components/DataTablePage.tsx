@@ -103,7 +103,19 @@ export default function DataTablePage({
                     const value = getTableValue(row, column.key);
                     return (
                       <td key={column.key} className="px-6 py-4 text-sm text-ink-700">
-                        {column.type === 'status' ? (
+                        {column.type === 'image' ? (
+                          value ? (
+                            <div className="flex items-center gap-3">
+                              <img
+                                src={String(value)}
+                                alt={column.label}
+                                className="h-12 w-12 rounded-xl border border-sand-200 object-cover"
+                              />
+                            </div>
+                          ) : (
+                            <span className="text-ink-400">-</span>
+                          )
+                        ) : column.type === 'status' ? (
                           <StatusBadge status={String(value ?? '')} />
                         ) : (
                           formatTableValue(value, column.type)

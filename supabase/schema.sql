@@ -177,7 +177,6 @@ alter table profiles add constraint profiles_role_receptionist_only check (role 
 
 create table if not exists guests (
   id uuid primary key default gen_random_uuid(),
-  auth_id uuid unique references profiles(auth_id) on delete set null,
   guest_id text not null unique default ('G-' || nextval('guest_seq')),
   first_name text not null,
   last_name text not null,
@@ -573,6 +572,7 @@ create table if not exists eco_tiers (
   min_points integer not null default 0 check (min_points >= 0),
   sort_order integer not null default 0,
   created_by uuid references profiles(auth_id) on delete set null,
+  updated_by uuid references profiles(auth_id) on delete set null,
   created_at timestamptz not null default now()
 );
 
@@ -609,6 +609,7 @@ create table if not exists eco_points_tx (
   reference text,
   notes text,
   created_by uuid references profiles(auth_id) on delete set null,
+  updated_by uuid references profiles(auth_id) on delete set null,
   created_at timestamptz not null default now()
 );
 
