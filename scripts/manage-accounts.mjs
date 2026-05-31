@@ -86,7 +86,7 @@ async function main() {
   results.newStaff = newStaff;
 
   // Invite staff via Supabase auth (server-side)
-  const redirectTo = process.env.APP_URL ? `${process.env.APP_URL}/(auth)/reset-password` : 'http://localhost:3000/reset-password';
+  const redirectTo = process.env.APP_URL ? `${process.env.APP_URL}/(auth)/reset-password` : 'https://lapirogue-hotel.yunusu.me/reset-password';
   const { data: inviteData, error: inviteErr } = await supabase.auth.admin.inviteUserByEmail(staffEmail, {
     redirectTo,
     data: {
