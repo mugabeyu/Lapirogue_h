@@ -54,7 +54,7 @@ export function Modal({
             opacity: 0
           }}
           onClick={onClose}
-          className="absolute inset-0 bg-ink-900/40 backdrop-blur-sm" />
+          className="absolute inset-0 bg-[rgba(27,36,48,0.4)] backdrop-blur-sm" />
         
           <motion.div
           initial={{
@@ -75,32 +75,32 @@ export function Modal({
           transition={{
             duration: 0.2
           }}
-          className={`relative w-full ${maxWidthClass} bg-white rounded-xl shadow-xl flex flex-col max-h-[90vh] overflow-hidden`}>
+          className={`relative w-full ${maxWidthClass} bg-surface rounded-2xl shadow-[var(--shadow-large)] flex flex-col max-h-[90vh] overflow-hidden`}>
           
             {/* Header */}
-            <div className="flex items-start justify-between p-6 border-b border-sand-200 bg-white z-10 shrink-0">
+            <div className="flex items-start justify-between p-6 border-b border-border bg-surface z-10 shrink-0">
               <div>
-                <h2 className="text-2xl font-display text-ink-900">{title}</h2>
+                <h2 className="text-2xl font-display text-[var(--color-text-primary)]">{title}</h2>
                 {subtitle &&
-              <p className="text-sm text-ink-600 mt-1">{subtitle}</p>
+              <p className="text-sm text-[var(--color-text-secondary)] mt-1">{subtitle}</p>
               }
               </div>
               <button
               onClick={onClose}
-              className="p-2 text-ink-400 hover:text-ink-900 hover:bg-sand-100 rounded-full transition-colors">
+              className="p-2 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-surface-secondary rounded-full transition-colors">
               
                 <XIcon className="w-5 h-5" />
               </button>
             </div>
 
             {/* Body */}
-            <div className="p-6 overflow-y-auto custom-scrollbar flex-1 bg-white">
+            <div className="p-6 overflow-y-auto custom-scrollbar flex-1 bg-surface">
               {children}
             </div>
 
             {/* Footer */}
             {footer &&
-          <div className="p-4 border-t border-sand-200 bg-sand-50 flex justify-end gap-3 shrink-0">
+          <div className="p-4 border-t border-border bg-surface-secondary flex justify-end gap-3 shrink-0">
                 {footer}
               </div>
           }

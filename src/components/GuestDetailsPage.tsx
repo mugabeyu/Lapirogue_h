@@ -74,9 +74,7 @@ export default function GuestDetailsPage() {
     return (
       <div className="space-y-6">
         <BackLink />
-        <div className="rounded-[24px] border border-sand-200 bg-white p-8 text-center text-ink-600 shadow-sm">
-          Guest not found.
-        </div>
+        <div className="card p-8 text-center text-[var(--color-text-secondary)]">Guest not found.</div>
       </div>
     );
   }
@@ -172,7 +170,7 @@ export default function GuestDetailsPage() {
 
 function BackLink() {
   return (
-    <Link href="/guests" className="inline-flex items-center gap-2 text-sm font-medium text-ink-600 hover:text-primary">
+    <Link href="/guests" className="inline-flex items-center gap-2 text-sm font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-primary)]">
       <ArrowLeft className="h-4 w-4" />
       Back to Guests
     </Link>
@@ -189,7 +187,7 @@ function ProfileHeaderCard({
   onDelete: () => void;
 }) {
   return (
-    <div className="rounded-[24px] border border-sand-200 bg-white p-6 shadow-sm md:p-8">
+    <div className="card p-6 md:p-8">
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
           <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
@@ -201,7 +199,7 @@ function ProfileHeaderCard({
           </div>
           <div>
             <div className="flex flex-wrap items-center gap-3">
-              <h1 className="font-display text-3xl text-ink-900">
+              <h1 className="font-display text-3xl text-[var(--color-text-primary)]">
                 {guest.firstName} {guest.lastName}
               </h1>
               <StatusBadge status={guest.status} />
@@ -209,7 +207,7 @@ function ProfileHeaderCard({
                 <span className="rounded-full bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning">VIP</span>
               )}
             </div>
-            <p className="mt-2 text-sm text-ink-600">
+            <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
               {guest.nationality && <span>{guest.nationality}</span>}
               {guest.passport && (
                 <span>
@@ -219,16 +217,16 @@ function ProfileHeaderCard({
               )}
               <span> · ID: {guest.guestId}</span>
             </p>
-            <div className="mt-4 flex flex-col gap-2 text-sm text-ink-700">
+            <div className="mt-4 flex flex-col gap-2 text-sm text-[var(--color-text-primary)]">
               {guest.email && (
                 <span className="inline-flex items-center gap-2">
-                  <Mail className="h-4 w-4 text-ink-400" />
+                  <Mail className="h-4 w-4 text-[var(--color-text-secondary)]" />
                   {guest.email}
                 </span>
               )}
               {guest.phone && (
                 <span className="inline-flex items-center gap-2">
-                  <Phone className="h-4 w-4 text-ink-400" />
+                  <Phone className="h-4 w-4 text-[var(--color-text-secondary)]" />
                   {guest.phone}
                 </span>
               )}
@@ -242,7 +240,7 @@ function ProfileHeaderCard({
           </button>
           <button
             type="button"
-            className="inline-flex items-center gap-2 rounded-lg border border-danger/30 px-4 py-2 font-medium text-danger transition-colors hover:bg-danger/5"
+            className="inline-flex items-center gap-2 rounded-lg border border-[rgba(220,38,38,0.12)] px-4 py-2 font-medium text-[var(--color-danger)] transition-colors hover:bg-[rgba(220,38,38,0.05)]"
             onClick={onDelete}
           >
             <Trash2 className="h-4 w-4" />
@@ -264,7 +262,7 @@ function TabBar({ activeTab, onChange }: { activeTab: TabId; onChange: (tab: Tab
   ];
 
   return (
-    <div className="border-b border-sand-200">
+    <div className="border-b border-border">
       <nav className="-mb-px flex gap-6 overflow-x-auto">
         {tabs.map((tab) => (
           <button
@@ -273,8 +271,8 @@ function TabBar({ activeTab, onChange }: { activeTab: TabId; onChange: (tab: Tab
             onClick={() => onChange(tab.id)}
             className={`whitespace-nowrap border-b-2 pb-3 text-sm font-medium transition-colors ${
               activeTab === tab.id
-                ? 'border-accent text-ink-900'
-                : 'border-transparent text-ink-500 hover:text-ink-700'
+                ? 'border-accent text-[var(--color-text-primary)]'
+                : 'border-transparent text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
             }`}
           >
             {tab.label}
@@ -299,20 +297,20 @@ function OverviewTab({
       <ProfileCard title="Current Stay" icon={<BedDouble className="h-5 w-5 text-primary" />}>
         {currentStay ? (
           <div className="space-y-2 text-sm">
-            <p className="text-ink-900">
-              <span className="text-ink-500">Room:</span>{' '}
+            <p className="text-[var(--color-text-primary)]">
+              <span className="text-[var(--color-text-secondary)]">Room:</span>{' '}
               <span className="font-medium">
                 {currentStay.roomNumber}
                 {currentStay.roomType ? ` (${currentStay.roomType.replace('_', ' ')})` : ''}
               </span>
             </p>
-            <p className="text-ink-700">
-              <Calendar className="mr-1 inline h-4 w-4 text-ink-400" />
+            <p className="text-[var(--color-text-primary)]">
+              <Calendar className="mr-1 inline h-4 w-4 text-[var(--color-text-secondary)]" />
               {formatDate(currentStay.checkIn)} — {formatDate(currentStay.checkOut)}
             </p>
           </div>
         ) : (
-          <p className="text-sm text-ink-500">No active stay on record.</p>
+          <p className="text-sm text-[var(--color-text-secondary)]">No active stay on record.</p>
         )}
       </ProfileCard>
 
@@ -326,7 +324,7 @@ function OverviewTab({
       </ProfileCard>
 
       <ProfileCard title="Guest Notes & Preferences" className="lg:col-span-2">
-        <p className="whitespace-pre-wrap text-sm text-ink-700">
+        <p className="whitespace-pre-wrap text-sm text-[var(--color-text-primary)]">
           {guest.notes?.trim() ? guest.notes : 'No notes recorded for this guest.'}
         </p>
       </ProfileCard>
@@ -346,10 +344,10 @@ function ProfileCard({
   className?: string;
 }) {
   return (
-    <div className={`rounded-[24px] border border-sand-200 bg-white p-6 shadow-sm ${className}`}>
+    <div className={`card p-6 ${className}`}>
       <div className="mb-4 flex items-center gap-2">
         {icon}
-        <h2 className="font-display text-lg text-ink-900">{title}</h2>
+        <h2 className="font-display text-lg text-[var(--color-text-primary)]">{title}</h2>
       </div>
       {children}
     </div>
@@ -359,11 +357,11 @@ function ProfileCard({
 function StatRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: string | number }) {
   return (
     <li className="flex items-center justify-between gap-4">
-      <span className="inline-flex items-center gap-2 text-ink-600">
-        <span className="text-primary">{icon}</span>
+      <span className="inline-flex items-center gap-2 text-[var(--color-text-secondary)]">
+        <span className="text-[var(--color-primary)]">{icon}</span>
         {label}
       </span>
-      <span className="font-medium text-ink-900">{value}</span>
+      <span className="font-medium text-[var(--color-text-primary)]">{value}</span>
     </li>
   );
 }
@@ -377,23 +375,21 @@ function TabList({
 }) {
   if (rows.length === 0) {
     return (
-      <div className="rounded-[24px] border border-sand-200 bg-white p-8 text-center text-sm text-ink-500 shadow-sm">
-        {emptyMessage}
-      </div>
+      <div className="card p-8 text-center text-sm text-[var(--color-text-secondary)]">{emptyMessage}</div>
     );
   }
 
   return (
-    <div className="overflow-hidden rounded-[24px] border border-sand-200 bg-white shadow-sm">
-      <ul className="divide-y divide-sand-200">
+    <div className="card overflow-hidden">
+      <ul className="divide-y divide-border">
         {rows.map((row) => (
           <li key={row.id} className="flex flex-wrap items-center justify-between gap-3 px-6 py-4">
             <div>
-              <p className="font-medium text-ink-900">{row.primary}</p>
-              <p className="text-sm text-ink-500">{row.secondary}</p>
+              <p className="font-medium text-[var(--color-text-primary)]">{row.primary}</p>
+              <p className="text-sm text-[var(--color-text-secondary)]">{row.secondary}</p>
             </div>
             <div className="flex items-center gap-3">
-              <span className="text-sm font-medium text-ink-700">{row.meta}</span>
+              <span className="text-sm font-medium text-[var(--color-text-primary)]">{row.meta}</span>
               <StatusBadge status={row.status} />
             </div>
           </li>
@@ -405,8 +401,6 @@ function TabList({
 
 function LoadingState() {
   return (
-    <div className="rounded-[24px] border border-sand-200 bg-white p-8 text-ink-600 shadow-sm">
-      Loading guest profile...
-    </div>
+    <div className="card p-8 text-[var(--color-text-secondary)]">Loading guest profile...</div>
   );
 }

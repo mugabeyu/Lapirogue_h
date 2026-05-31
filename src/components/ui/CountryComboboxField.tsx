@@ -62,17 +62,17 @@ export function CountryComboboxField({
         value={COUNTRY_LABELS.has(selectedValue.toLowerCase()) ? selectedValue : ''}
       />
       {isOpen && matches.length > 0 && (
-        <div className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-xl border border-sand-200 bg-white shadow-lg">
+        <div className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-xl border border-border bg-surface shadow-lg">
           {matches.map((country) => (
             <button
               key={country.code}
               type="button"
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => chooseCountry(country.label)}
-              className="flex w-full items-center justify-between px-4 py-2 text-left text-sm text-ink-700 transition-colors hover:bg-sand-50 hover:text-ink-900"
+              className="flex w-full items-center justify-between px-4 py-2 text-left text-sm text-[var(--color-text-secondary)] transition-colors hover:bg-surface-secondary hover:text-[var(--color-text-primary)]"
             >
               <span>{country.label}</span>
-              <span className="text-xs text-ink-400">{country.code}</span>
+              <span className="text-xs text-[var(--color-text-secondary)]">{country.code}</span>
             </button>
           ))}
         </div>

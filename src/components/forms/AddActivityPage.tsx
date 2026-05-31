@@ -111,15 +111,15 @@ export default function AddActivityPage() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      <h1 className="font-display text-3xl font-semibold text-ink-900">Add New Activity</h1>
+      <h1 className="font-display text-3xl font-semibold text-[var(--color-text-primary)]">Add New Activity</h1>
 
       <div className="grid gap-6 xl:grid-cols-[1fr_320px]">
         <div className="space-y-6">
-          <section className="rounded-2xl border border-sand-200 bg-white p-6 shadow-sm">
-            <h2 className="mb-5 font-display text-xl font-semibold text-ink-900">Activity Details</h2>
+          <section className="rounded-2xl border border-border bg-surface p-6 shadow-sm">
+            <h2 className="mb-5 font-display text-xl font-semibold text-[var(--color-text-primary)]">Activity Details</h2>
             <div className="space-y-5">
               <label className="block space-y-2">
-                <span className="text-sm font-medium text-ink-700">Activity Title</span>
+                <span className="text-sm font-medium text-[var(--color-text-primary)]">Activity Title</span>
                 <input
                   value={name}
                   onChange={(event) => setName(event.target.value)}
@@ -130,7 +130,7 @@ export default function AddActivityPage() {
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="block space-y-2">
-                  <span className="text-sm font-medium text-ink-700">Category</span>
+                  <span className="text-sm font-medium text-[var(--color-text-primary)]">Category</span>
                   <select
                     value={category}
                     onChange={(event) => setCategory(event.target.value)}
@@ -144,7 +144,7 @@ export default function AddActivityPage() {
                   </select>
                 </label>
                 <label className="block space-y-2">
-                  <span className="text-sm font-medium text-ink-700">Price (Rs)</span>
+                  <span className="text-sm font-medium text-[var(--color-text-primary)]">Price (Rs)</span>
                   <input
                     type="number"
                     min={0}
@@ -157,7 +157,7 @@ export default function AddActivityPage() {
               </div>
 
               <label className="block space-y-2">
-                <span className="text-sm font-medium text-ink-700">Description</span>
+                <span className="text-sm font-medium text-[var(--color-text-primary)]">Description</span>
                 <textarea
                   value={description}
                   onChange={(event) => setDescription(event.target.value)}
@@ -168,7 +168,7 @@ export default function AddActivityPage() {
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="block space-y-2">
-                  <span className="text-sm font-medium text-ink-700">Duration</span>
+                  <span className="text-sm font-medium text-[var(--color-text-primary)]">Duration</span>
                   <input
                     value={durationLabel}
                     onChange={(event) => setDurationLabel(event.target.value)}
@@ -177,7 +177,7 @@ export default function AddActivityPage() {
                   />
                 </label>
                 <label className="block space-y-2">
-                  <span className="text-sm font-medium text-ink-700">Maximum Capacity</span>
+                  <span className="text-sm font-medium text-[var(--color-text-primary)]">Maximum Capacity</span>
                   <input
                     value={capacityLabel}
                     onChange={(event) => setCapacityLabel(event.target.value)}
@@ -188,7 +188,7 @@ export default function AddActivityPage() {
               </div>
 
               <label className="block space-y-2">
-                <span className="text-sm font-medium text-ink-700">Meeting Point / Location</span>
+                <span className="text-sm font-medium text-[var(--color-text-primary)]">Meeting Point / Location</span>
                 <input
                   value={meetingPoint}
                   onChange={(event) => setMeetingPoint(event.target.value)}
@@ -199,36 +199,36 @@ export default function AddActivityPage() {
             </div>
           </section>
 
-          <section className="rounded-2xl border border-sand-200 bg-white p-6 shadow-sm">
-            <h2 className="font-display text-xl font-semibold text-ink-900">Schedule & Requirements</h2>
-            <p className="mt-2 text-sm text-ink-500">
+          <section className="rounded-2xl border border-border bg-surface p-6 shadow-sm">
+            <h2 className="font-display text-xl font-semibold text-[var(--color-text-primary)]">Schedule & Requirements</h2>
+            <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
               Scheduling functionality will be configured after creating the activity profile.
             </p>
             <div className="mt-5 space-y-3">
-              <label className="flex items-center gap-3 text-sm text-ink-700">
+              <label className="flex items-center gap-3 text-sm text-[var(--color-text-primary)]">
                 <input
                   type="checkbox"
                   checked={requiresAdvanceBooking}
                   onChange={(event) => setRequiresAdvanceBooking(event.target.checked)}
-                  className="h-4 w-4 rounded border-sand-300 text-primary focus:ring-primary"
+                  className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
                 />
                 Requires advance booking (24h)
               </label>
-              <label className="flex items-center gap-3 text-sm text-ink-700">
+              <label className="flex items-center gap-3 text-sm text-[var(--color-text-primary)]">
                 <input
                   type="checkbox"
                   checked={weatherDependent}
                   onChange={(event) => setWeatherDependent(event.target.checked)}
-                  className="h-4 w-4 rounded border-sand-300 text-primary focus:ring-primary"
+                  className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
                 />
                 Weather dependent (may be cancelled)
               </label>
-              <label className="flex items-center gap-3 text-sm text-ink-700">
+              <label className="flex items-center gap-3 text-sm text-[var(--color-text-primary)]">
                 <input
                   type="checkbox"
                   checked={suitableForChildren}
                   onChange={(event) => setSuitableForChildren(event.target.checked)}
-                  className="h-4 w-4 rounded border-sand-300 text-primary focus:ring-primary"
+                  className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
                 />
                 Suitable for children
               </label>
@@ -237,16 +237,16 @@ export default function AddActivityPage() {
         </div>
 
         <aside className="space-y-6">
-          <section className="rounded-2xl border border-sand-200 bg-white p-5 shadow-sm">
-            <h2 className="mb-4 font-display text-lg font-semibold text-ink-900">Activity Image</h2>
-            <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-sand-300 bg-sand-50/50 px-4 py-10 text-center transition-colors hover:border-primary/40 hover:bg-sand-50">
-              <CloudUpload className="mb-3 h-8 w-8 text-ink-400" />
-              <span className="text-sm font-semibold text-ink-800">Click to upload or drag and drop</span>
-              <span className="mt-1 text-xs text-ink-500">JPG, PNG, or WEBP (max. 5MB)</span>
+          <section className="rounded-2xl border border-border bg-surface p-5 shadow-sm">
+            <h2 className="mb-4 font-display text-lg font-semibold text-[var(--color-text-primary)]">Activity Image</h2>
+            <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-surface-secondary px-4 py-10 text-center transition-colors hover:border-primary/40 hover:bg-surface-secondary">
+              <CloudUpload className="mb-3 h-8 w-8 text-[var(--color-text-secondary)]" />
+              <span className="text-sm font-semibold text-[var(--color-text-primary)]">Click to upload or drag and drop</span>
+              <span className="mt-1 text-xs text-[var(--color-text-secondary)]">JPG, PNG, or WEBP (max. 5MB)</span>
               <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleImageChange} />
             </label>
             {imageFile && (
-              <p className="mt-3 text-center text-xs text-ink-500">{imageFile.name}</p>
+              <p className="mt-3 text-center text-xs text-[var(--color-text-secondary)]">{imageFile.name}</p>
             )}
           </section>
 

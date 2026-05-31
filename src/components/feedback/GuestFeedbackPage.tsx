@@ -52,7 +52,7 @@ function StarRating({ value }: { value: number }) {
         return (
           <Star
             key={index}
-            className={`h-4 w-4 ${filled ? 'fill-amber-400 text-amber-400' : 'text-sand-300'}`}
+            className={`h-4 w-4 ${filled ? 'fill-amber-400 text-amber-400' : 'text-[var(--color-border)]'}`}
             strokeWidth={filled ? 0 : 1.5}
           />
         );
@@ -80,7 +80,7 @@ function TrendBadge({
         : `${positive ? '+' : ''}${Math.round(value)}%`;
 
   return (
-    <span className={`inline-flex items-center gap-0.5 text-xs font-medium ${positive ? 'text-emerald-600' : 'text-rose-600'}`}>
+    <span className={`inline-flex items-center gap-0.5 text-xs font-medium ${positive ? 'text-[var(--color-success)]' : 'text-[var(--color-danger)]'}`}>
       <Icon className="h-3 w-3" />
       {formatted}
     </span>
@@ -105,7 +105,7 @@ function SortableHeader({
     <button
       type="button"
       onClick={() => onSort(column)}
-      className="inline-flex items-center gap-1 uppercase tracking-wider hover:text-ink-900"
+      className="inline-flex items-center gap-1 uppercase tracking-wider hover:text-[var(--color-text-primary)]"
     >
       {label}
       {active ? (
@@ -192,50 +192,50 @@ export default function GuestFeedbackPage() {
         {statCards.map((card) => {
           const Icon = card.icon;
           return (
-            <div key={card.label} className="rounded-2xl border border-sand-200 bg-white p-5 shadow-sm">
+            <div key={card.label} className="card p-5">
               <div className="flex items-start justify-between gap-3">
                 <div className={`flex h-10 w-10 items-center justify-center rounded-full ${card.iconClass}`}>
                   <Icon className="h-5 w-5" />
                 </div>
                 <TrendBadge value={card.trend} format={card.trendFormat} />
               </div>
-              <p className="mt-4 text-sm text-ink-600">{card.label}</p>
-              <p className="mt-1 font-display text-3xl font-semibold text-ink-900">{card.value}</p>
+              <p className="mt-4 text-sm text-[var(--color-text-secondary)]">{card.label}</p>
+              <p className="mt-1 font-display text-3xl font-semibold text-[var(--color-text-primary)]">{card.value}</p>
             </div>
           );
         })}
       </div>
 
-      <div className="rounded-2xl border border-sand-200 bg-white p-6 shadow-sm">
-        <h2 className="font-display text-lg font-semibold text-ink-900">Rating Distribution</h2>
-        {isLoading && <p className="mt-6 text-sm text-ink-500">Loading distribution...</p>}
+      <div className="card p-6">
+        <h2 className="font-display text-lg font-semibold text-[var(--color-text-primary)]">Rating Distribution</h2>
+        {isLoading && <p className="mt-6 text-sm text-[var(--color-text-secondary)]">Loading distribution...</p>}
         {!isLoading && distribution.every((row) => row.count === 0) && (
-          <p className="mt-6 text-sm text-ink-500">No ratings yet.</p>
+          <p className="mt-6 text-sm text-[var(--color-text-secondary)]">No ratings yet.</p>
         )}
         <div className="mt-6 space-y-3">
           {distribution.map((row) => (
             <div key={row.stars} className="grid grid-cols-[72px_1fr_40px] items-center gap-3 text-sm">
-              <span className="text-ink-600">{row.stars} Star{row.stars === 1 ? '' : 's'}</span>
-              <div className="h-3 overflow-hidden rounded-full bg-sand-100">
+              <span className="text-[var(--color-text-secondary)]">{row.stars} Star{row.stars === 1 ? '' : 's'}</span>
+              <div className="h-3 overflow-hidden rounded-full bg-surface-secondary">
                 <div
                   className="h-full rounded-full bg-primary transition-all duration-300"
                   style={{ width: `${row.percent}%` }}
                 />
               </div>
-              <span className="text-right tabular-nums text-ink-500">{row.count}</span>
+              <span className="text-right tabular-nums text-[var(--color-text-secondary)]">{row.count}</span>
             </div>
           ))}
         </div>
       </div>
 
-      <div className="rounded-2xl border border-sand-200 bg-white shadow-sm">
-        <div className="border-b border-sand-200 px-6 py-4">
-          <h2 className="font-display text-lg font-semibold text-ink-900">Recent Feedback</h2>
+      <div className="card overflow-hidden">
+        <div className="px-6 py-4 border-b border-border">
+          <h2 className="font-display text-lg font-semibold text-[var(--color-text-primary)]">Recent Feedback</h2>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[720px] text-left text-sm" aria-label="Recent guest feedback">
             <thead>
-              <tr className="border-b border-sand-200 bg-sand-50 text-xs text-ink-600">
+              <tr className="bg-surface-secondary text-xs text-[var(--color-text-secondary)]">
                 <th scope="col" className="px-5 py-3 font-medium">
                   <SortableHeader label="Guest" column="guest" sort={sort} order={order} onSort={handleSort} />
                 </th>
@@ -253,38 +253,34 @@ export default function GuestFeedbackPage() {
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-sand-200">
+            <tbody className="divide-y divide-border">
               {isLoading && (
                 <tr>
-                  <td colSpan={5} className="px-5 py-12 text-center text-ink-500">
-                    Loading feedback...
-                  </td>
+                  <td colSpan={5} className="px-5 py-12 text-center text-[var(--color-text-secondary)]">Loading feedback...</td>
                 </tr>
               )}
               {!isLoading && reviews.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-5 py-12 text-center text-ink-500">
-                    No feedback recorded yet.
-                  </td>
+                  <td colSpan={5} className="px-5 py-12 text-center text-[var(--color-text-secondary)]">No feedback recorded yet.</td>
                 </tr>
               )}
               {!isLoading &&
                 reviews.map((row) => (
-                  <tr key={row.id} className="hover:bg-sand-50/60">
-                    <td className="px-5 py-4 font-medium text-ink-900">{row.guest}</td>
+                  <tr key={row.id} className="hover:bg-surface-secondary">
+                    <td className="px-5 py-4 font-medium text-[var(--color-text-primary)]">{row.guest}</td>
                     <td className="px-5 py-4">
                       <StarRating value={row.rating} />
                     </td>
-                    <td className="px-5 py-4 text-ink-700">{row.category}</td>
-                    <td className="max-w-xs px-5 py-4 text-ink-600">{truncateComment(row.comment)}</td>
-                    <td className="px-5 py-4 tabular-nums text-ink-600">{row.date}</td>
+                    <td className="px-5 py-4 text-[var(--color-text-primary)]">{row.category}</td>
+                    <td className="max-w-xs px-5 py-4 text-[var(--color-text-secondary)]">{truncateComment(row.comment)}</td>
+                    <td className="px-5 py-4 tabular-nums text-[var(--color-text-secondary)]">{row.date}</td>
                   </tr>
                 ))}
             </tbody>
           </table>
         </div>
         {pagination && (
-          <div className="flex flex-col gap-3 border-t border-sand-200 px-6 py-4 text-sm text-ink-600 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 border-t border-border px-6 py-4 text-sm text-[var(--color-text-secondary)] sm:flex-row sm:items-center sm:justify-between">
             <p>
               Showing {reviews.length} of {pagination.total} {pagination.total === 1 ? 'entry' : 'entries'}
             </p>
@@ -293,7 +289,7 @@ export default function GuestFeedbackPage() {
                 type="button"
                 disabled={page <= 1}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
-                className="disabled:opacity-40 hover:text-ink-900"
+                className="disabled:opacity-40 hover:text-[var(--color-text-primary)]"
               >
                 Previous
               </button>
@@ -301,7 +297,7 @@ export default function GuestFeedbackPage() {
                 type="button"
                 disabled={page >= pagination.totalPages}
                 onClick={() => setPage((p) => p + 1)}
-                className="disabled:opacity-40 hover:text-ink-900"
+                className="disabled:opacity-40 hover:text-[var(--color-text-primary)]"
               >
                 Next
               </button>

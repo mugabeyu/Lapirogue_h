@@ -201,7 +201,7 @@ export function CreateScheduleItemModal({
       <form className="space-y-5" onSubmit={handleSubmit}>
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block space-y-1.5">
-            <span className="text-sm font-medium text-ink-700">Guest</span>
+            <span className="text-sm font-medium text-[var(--color-text-primary)]">Guest</span>
             <select
               value={guestId}
               onChange={(event) => setGuestId(event.target.value)}
@@ -219,7 +219,7 @@ export function CreateScheduleItemModal({
           </label>
 
           <label className="block space-y-1.5">
-            <span className="text-sm font-medium text-ink-700">Type</span>
+            <span className="text-sm font-medium text-[var(--color-text-primary)]">Type</span>
             <select
               value={itemType}
               onChange={(event) => setItemType(event.target.value as ScheduleItemType)}
@@ -236,13 +236,13 @@ export function CreateScheduleItemModal({
         </div>
 
         {showLinkedPicker && (
-          <div className="rounded-xl border border-sand-200 bg-sand-50/60 p-4">
+          <div className="rounded-xl border border-border bg-surface-secondary p-4">
             <label className="block space-y-1.5">
-              <span className="text-sm font-medium text-ink-700">{pickerLabel(itemType)}</span>
+              <span className="text-sm font-medium text-[var(--color-text-primary)]">{pickerLabel(itemType)}</span>
               <select
                 value={sourceId}
                 onChange={(event) => setSourceId(event.target.value)}
-                className="input-field w-full bg-white"
+                className="input-field w-full bg-surface"
                 required
                 disabled={optionsLoading}
               >
@@ -259,7 +259,7 @@ export function CreateScheduleItemModal({
             </label>
 
             {selectedOption && (
-              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ink-600">
+              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-[var(--color-text-secondary)]">
                 {selectedOption.subtitle && <span>{selectedOption.subtitle}</span>}
                 {selectedOption.meta && <span>{selectedOption.meta}</span>}
                 {selectedOption.price !== undefined && (
@@ -269,7 +269,7 @@ export function CreateScheduleItemModal({
             )}
 
             {!optionsLoading && linkedOptions.length === 0 && (
-              <p className="mt-2 text-sm text-ink-500">
+              <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
                 No {pickerLabel(itemType).toLowerCase()}s available. Add items in Activities or Food & Beverage first.
               </p>
             )}
@@ -278,7 +278,7 @@ export function CreateScheduleItemModal({
 
         {showTitleField && (
           <label className="block space-y-1.5">
-            <span className="text-sm font-medium text-ink-700">Title</span>
+            <span className="text-sm font-medium text-[var(--color-text-primary)]">Title</span>
             <input
               value={title}
               onChange={(event) => setTitle(event.target.value)}
@@ -291,7 +291,7 @@ export function CreateScheduleItemModal({
 
         <div className="grid gap-4 sm:grid-cols-3">
           <label className="block space-y-1.5">
-            <span className="text-sm font-medium text-ink-700">Date</span>
+            <span className="text-sm font-medium text-[var(--color-text-primary)]">Date</span>
             <input
               type="date"
               value={date}
@@ -301,7 +301,7 @@ export function CreateScheduleItemModal({
             />
           </label>
           <label className="block space-y-1.5">
-            <span className="text-sm font-medium text-ink-700">Start time</span>
+            <span className="text-sm font-medium text-[var(--color-text-primary)]">Start time</span>
             <input
               type="time"
               value={startTime}
@@ -311,7 +311,7 @@ export function CreateScheduleItemModal({
             />
           </label>
           <label className="block space-y-1.5">
-            <span className="text-sm font-medium text-ink-700">End time</span>
+            <span className="text-sm font-medium text-[var(--color-text-primary)]">End time</span>
             <input
               type="time"
               value={endTime}
@@ -324,7 +324,7 @@ export function CreateScheduleItemModal({
 
         {showParticipants && (
           <label className="block max-w-xs space-y-1.5">
-            <span className="text-sm font-medium text-ink-700">Participants</span>
+            <span className="text-sm font-medium text-[var(--color-text-primary)]">Participants</span>
             <input
               type="number"
               min={1}
@@ -337,8 +337,8 @@ export function CreateScheduleItemModal({
           </label>
         )}
 
-        <label className="block space-y-1.5">
-          <span className="text-sm font-medium text-ink-700">Notes</span>
+          <label className="block space-y-1.5">
+          <span className="text-sm font-medium text-[var(--color-text-primary)]">Notes</span>
           <textarea
             value={notes}
             onChange={(event) => setNotes(event.target.value)}
@@ -348,7 +348,7 @@ export function CreateScheduleItemModal({
           />
         </label>
 
-        <div className="flex justify-end gap-3 border-t border-sand-200 pt-4">
+        <div className="flex justify-end gap-3 border-t border-border pt-4">
           <button type="button" onClick={onClose} className="btn-secondary" disabled={isSaving}>
             Cancel
           </button>

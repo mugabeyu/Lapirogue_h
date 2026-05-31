@@ -27,7 +27,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${dmSans.variable} ${fraunces.variable}`}>
-      <body className="bg-sand-50 text-ink-900 font-sans antialiased">
+      <body className="font-sans antialiased">
         {children}
         <Toaster position="top-center" richColors />
       </body>

@@ -48,41 +48,42 @@ export default function Topbar() {
     .slice(0, 2);
 
   return (
-    <header className="border-b border-sand-200 bg-white/95 px-8 backdrop-blur-sm">
+    <header className="border-b border-border bg-surface px-8">
       <div className="flex min-h-20 flex-col gap-3 py-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="max-w-xl flex-1">
           <div className="relative">
-            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-400" />
+            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-text-secondary)]" />
             <input
               type="text"
               placeholder="Search guests, rooms, reservations..."
               className="input-field w-full pl-10 text-sm"
+              aria-label="Search"
             />
           </div>
         </div>
 
         <div className="flex items-center justify-between gap-4 lg:justify-end">
-          <div className="hidden items-center gap-2 text-sm text-ink-600 sm:flex">
+          <div className="hidden items-center gap-2 text-sm text-[var(--color-text-secondary)] sm:flex">
             <CalendarDaysIcon className="h-4 w-4" />
             <span>{todayLabel}</span>
           </div>
 
-          <button className="relative rounded-lg p-2 text-ink-600 transition-colors hover:bg-sand-100 hover:text-primary">
+          <button className="relative rounded-lg p-2 text-[var(--color-text-secondary)] transition-colors hover:bg-surface-secondary hover:text-[var(--color-text-primary)]" aria-label="Notifications">
             <BellIcon className="h-5 w-5" />
-            <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-accent"></span>
+            <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-accent" />
           </button>
 
-          <div className="flex items-center gap-3 border-l border-sand-200 pl-4">
-            <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border border-primary/10 bg-primary/10 text-sm font-semibold text-primary shadow-sm">
+          <div className="flex items-center gap-3 border-l border-border pl-4">
+            <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border border-[rgba(11,93,87,0.08)] bg-[rgba(11,93,87,0.04)] text-sm font-semibold text-[var(--color-primary)] shadow-sm">
               {avatarUrl ? (
                 <img src={avatarUrl} alt={displayName || ''} className="h-full w-full object-cover" />
               ) : (
                 <span aria-hidden="true">{avatarInitials || <UserIcon className="h-5 w-5" />}</span>
               )}
             </div>
-            <div className="hidden sm:block text-slate-700">
-              {displayName ? <div className="text-base font-semibold leading-tight text-ink-900">{displayName}</div> : null}
-              {displayRole ? <div className="text-xs tracking-wide text-ink-500">{displayRole}</div> : null}
+            <div className="hidden sm:block">
+              {displayName ? <div className="text-base font-semibold leading-tight text-[var(--color-text-primary)]">{displayName}</div> : null}
+              {displayRole ? <div className="text-xs tracking-wide text-[var(--color-text-secondary)]">{displayRole}</div> : null}
             </div>
           </div>
         </div>

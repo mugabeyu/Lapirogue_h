@@ -6,39 +6,42 @@ const config: Config = {
     extend: {
       colors: {
         primary: {
-          DEFAULT: '#0F4C4A',
-          hover: '#0A3A38',
-          700: '#0A3A38',
+          DEFAULT: '#0B5D57',
+          hover: '#084843',
+          700: '#084843',
         },
         accent: {
-          DEFAULT: '#E97B5C',
+          DEFAULT: '#C5A46D',
         },
         sand: {
-          50: '#FAF7F2',
-          100: '#F2EDE3',
-          200: '#E5DCC9',
+          50: '#F7F5F1',
+          100: '#F7F5F1',
+          200: '#E7E2DA',
           300: '#D6C8AF',
         },
         ink: {
-          900: '#1A1F1E',
-          600: '#5C615F',
+          900: '#1B2430',
+          600: '#667085',
           400: '#8A8F8C',
         },
+        surface: {
+          DEFAULT: '#FFFFFF',
+          secondary: '#FAF9F7',
+        },
+        background: {
+          DEFAULT: '#F7F5F1',
+        },
+        border: {
+          DEFAULT: '#E7E2DA',
+        },
         success: {
-          DEFAULT: '#4A7C59',
-          50: '#EAF2EC',
-          600: '#3C6649',
-          700: '#2D4D37',
+          DEFAULT: '#16A34A',
         },
         warning: {
-          DEFAULT: '#C89B3C',
-          50: '#F9F5EB',
-          700: '#7A5E24',
+          DEFAULT: '#D97706',
         },
         danger: {
-          DEFAULT: '#B84A3C',
-          50: '#F8ECEB',
-          700: '#702D24',
+          DEFAULT: '#DC2626',
         },
       },
       fontFamily: {

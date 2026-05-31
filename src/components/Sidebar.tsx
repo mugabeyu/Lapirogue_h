@@ -114,11 +114,11 @@ export default function Sidebar() {
 
   return (
     <aside
-      className={`fixed inset-y-0 left-0 z-20 flex flex-col bg-primary text-sand-50 transition-[width] duration-200 ease-in-out ${
+      className={`fixed inset-y-0 left-0 z-20 flex flex-col bg-surface-secondary text-[var(--color-text-primary)] border-r border-border transition-[width] duration-200 ease-in-out ${
         collapsed ? 'w-[72px]' : 'w-[260px]'
       }`}
     >
-      <div className={`border-b border-primary-hover ${collapsed ? 'px-3 py-4' : 'p-6'}`}>
+      <div className={`border-b border-border ${collapsed ? 'px-3 py-4' : 'p-6'}`}>
         <div className={`flex items-center ${collapsed ? 'flex-col gap-3' : 'gap-3'}`}>
           <img
             src="/lapiroguelogo.jpg"
@@ -127,14 +127,14 @@ export default function Sidebar() {
           />
           {!collapsed && (
             <div className="min-w-0 flex-1">
-              <h1 className="font-display text-2xl font-medium tracking-wide">La Pirogue</h1>
-              <p className="mt-1 text-sm uppercase tracking-widest text-sand-200/70">Hotel Operations</p>
+              <h1 className="font-display text-2xl font-medium tracking-wide text-[var(--color-primary)]">La Pirogue</h1>
+              <p className="mt-1 text-sm uppercase tracking-widest text-[var(--color-text-secondary)]">Hotel Operations</p>
             </div>
           )}
           <button
             type="button"
             onClick={toggle}
-            className={`shrink-0 rounded-lg p-1.5 text-sand-100/80 transition-colors hover:bg-primary-hover/50 hover:text-white ${
+            className={`shrink-0 rounded-lg p-1.5 text-[var(--color-text-secondary)] transition-colors hover:bg-surface hover:text-[var(--color-text-primary)] ${
               collapsed ? '' : 'ml-auto'
             }`}
             aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
@@ -163,10 +163,10 @@ export default function Sidebar() {
                     collapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2.5'
                   } ${
                     exactActive
-                      ? 'bg-primary-hover text-white'
+                      ? 'bg-primary text-white shadow-[var(--shadow-small)]'
                       : sectionActive
-                        ? 'text-white hover:bg-primary-hover/50'
-                        : 'text-sand-100/80 hover:bg-primary-hover/50 hover:text-white'
+                        ? 'bg-surface shadow-sm text-[var(--color-primary)]'
+                        : 'text-[var(--color-text-secondary)] hover:bg-surface hover:text-[var(--color-text-primary)]'
                   }`}
                 >
                   <item.icon className="h-5 w-5 shrink-0" strokeWidth={1.5} />
@@ -189,8 +189,8 @@ export default function Sidebar() {
                               href={child.path}
                               className={`flex items-center gap-3 rounded-lg py-2 pl-11 pr-3 text-xs font-medium transition-all duration-200 ${
                                 pathname === child.path
-                                  ? 'text-white'
-                                  : 'text-sand-100/60 hover:text-white'
+                                  ? 'text-[var(--color-primary)] font-semibold'
+                                  : 'text-[var(--color-text-secondary)] hover:text-[var(--color-primary)]'
                               }`}
                             >
                               {child.label}
@@ -207,15 +207,15 @@ export default function Sidebar() {
         </ul>
       </nav>
 
-      <div className={`border-t border-primary-hover ${collapsed ? 'p-2' : 'p-4'}`}>
+      <div className={`border-t border-border ${collapsed ? 'p-2' : 'p-4'}`}>
         <button
           type="button"
           onClick={handleLogout}
           disabled={isLoggingOut}
           title={collapsed ? 'Logout' : undefined}
-          className={`flex w-full items-center align-content-center rounded-lg text-lg font-bold   bg-primary-hover text-red-500 ${
+          className={`flex w-full items-center align-content-center rounded-lg text-sm font-medium bg-transparent text-[var(--color-text-secondary)] ${
             collapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2.5'
-          }`}
+          } hover:bg-surface hover:text-[var(--color-text-primary)]`}
         >
           <LogOutIcon className="h-5 w-5 shrink-0" strokeWidth={1.5} />
           {!collapsed && <span>{isLoggingOut ? 'Logging out...' : 'Logout'}</span>}

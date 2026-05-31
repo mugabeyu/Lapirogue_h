@@ -57,23 +57,23 @@ export function ImageUploadField({
 
   return (
     <div>
-      <label className="mb-2 block text-sm font-medium text-ink-700">{label}</label>
+      <label className="mb-2 block text-sm font-medium text-[var(--color-text-primary)]">{label}</label>
       <label
-        className={`relative flex cursor-pointer items-center justify-center overflow-hidden border border-dashed border-sand-300 bg-sand-50 transition-colors hover:border-primary/40 hover:bg-primary/5 ${frameClass} ${
+        className={`relative flex cursor-pointer items-center justify-center overflow-hidden border border-dashed border-border bg-surface-secondary transition-colors hover:border-primary/40 hover:bg-primary/5 ${frameClass} ${
           disabled ? 'pointer-events-none opacity-60' : ''
         }`}
       >
         {preview ? (
           <img src={preview} alt="" className="h-full w-full object-cover" />
         ) : (
-          <div className="flex flex-col items-center gap-2 px-3 text-center text-ink-500">
+          <div className="flex flex-col items-center gap-2 px-3 text-center text-[var(--color-text-secondary)]">
             <CloudUpload className="h-6 w-6" />
             <span className="text-xs font-medium">Click to upload</span>
           </div>
         )}
         <input type="file" accept={accept} className="hidden" onChange={handleChange} disabled={disabled} />
       </label>
-      {hint ? <p className="mt-2 text-xs text-ink-500">{hint}</p> : null}
+      {hint ? <p className="mt-2 text-xs text-[var(--color-text-secondary)]">{hint}</p> : null}
     </div>
   );
 }

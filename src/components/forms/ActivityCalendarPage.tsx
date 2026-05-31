@@ -73,28 +73,28 @@ export default function ActivityCalendarPage() {
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <h1 className="font-display text-3xl font-semibold text-ink-900">Activity Calendar</h1>
-          <div className="mt-4 flex flex-wrap items-center gap-3">
+          <h1 className="font-display text-3xl font-semibold text-[var(--color-text-primary)]">Activity Calendar</h1>
+          <div className="mt-4 flex items-center gap-3">
             <button
               type="button"
               onClick={() => setAnchor((current) => shiftWeek(current, -1))}
-              className="rounded-lg border border-sand-200 bg-white p-2 hover:bg-sand-50"
+              className="rounded-lg border border-border bg-surface p-2 hover:bg-surface-secondary"
               aria-label="Previous week"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
-            <span className="min-w-[10rem] text-center text-sm font-medium text-ink-700">
+            <span className="min-w-[10rem] text-center text-sm font-medium text-[var(--color-text-primary)]">
               {calendar?.weekLabel ?? 'Loading...'}
             </span>
             <button
               type="button"
               onClick={() => setAnchor((current) => shiftWeek(current, 1))}
-              className="rounded-lg border border-sand-200 bg-white p-2 hover:bg-sand-50"
+              className="rounded-lg border border-border bg-surface p-2 hover:bg-surface-secondary"
               aria-label="Next week"
             >
               <ChevronRight className="h-4 w-4" />
             </button>
-            <div className="flex flex-wrap gap-2">
+            <div className="ml-4 flex flex-wrap gap-2">
               {(calendar?.categories ?? ['All']).map((item) => {
                 const active = item === category;
                 return (
@@ -105,7 +105,7 @@ export default function ActivityCalendarPage() {
                     className={`rounded-full px-3 py-1.5 text-xs font-medium ${
                       active
                         ? 'bg-primary text-white'
-                        : 'border border-sand-200 bg-white text-ink-700 hover:bg-sand-50'
+                        : 'border border-border bg-surface text-[var(--color-text-primary)] hover:bg-surface-secondary'
                     }`}
                   >
                     {item === 'Water Sports' ? 'Water' : item === 'Island Tours' ? 'Tours' : item === 'Wellness & Spa' ? 'Spa' : item}
@@ -115,36 +115,36 @@ export default function ActivityCalendarPage() {
             </div>
           </div>
         </div>
+
+        <div>
+          <h2 className="font-display text-xl font-semibold text-[var(--color-text-primary)]">Today&apos;s Sessions</h2>
+          <p className="text-sm text-[var(--color-text-secondary)]">{todayLabel}</p>
+        </div>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1fr_320px]">
-        <div className="overflow-hidden rounded-2xl border border-sand-200 bg-white shadow-sm">
-          {isLoading && <p className="p-6 text-sm text-ink-500">Loading calendar...</p>}
+        <div className="overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
+          {isLoading && <p className="p-6 text-sm text-[var(--color-text-secondary)]">Loading calendar...</p>}
+
           {!isLoading && calendar && (
             <div className="overflow-x-auto">
-              <div className="grid min-w-[760px] grid-cols-7 border-b border-sand-200 bg-sand-50/80">
+              <div className="grid min-w-[760px] grid-cols-7 border-b border-border bg-surface-secondary">
                 {calendar.days.map((day) => (
                   <div
                     key={day.date}
-                    className={`border-r border-sand-200 px-2 py-3 text-center last:border-r-0 ${
-                      day.date === today ? 'bg-blue-50/60' : ''
-                    }`}
+                    className={`border-r border-border px-2 py-3 text-center last:border-r-0 ${day.date === today ? 'bg-blue-50/60' : ''}`}
                   >
-                    <p className="text-xs text-ink-500">{day.weekday}</p>
-                    <p className="text-sm font-semibold text-ink-800">{day.day}</p>
+                    <p className="text-xs text-[var(--color-text-secondary)]">{day.weekday}</p>
+                    <p className="text-sm font-semibold text-[var(--color-text-primary)]">{day.day}</p>
                   </div>
                 ))}
               </div>
+
               <div className="grid min-w-[760px] grid-cols-7">
                 {calendar.days.map((day) => {
                   const sessions = calendar.sessionsByDay[day.date] ?? [];
                   return (
-                    <div
-                      key={day.date}
-                      className={`min-h-[420px] space-y-2 border-r border-sand-200 p-2 last:border-r-0 ${
-                        day.date === today ? 'bg-blue-50/30' : ''
-                      }`}
-                    >
+                    <div key={day.date} className={`min-h-[420px] space-y-2 border-r border-border p-2 last:border-r-0 ${day.date === today ? 'bg-blue-50/30' : ''}`}>
                       {sessions.map((session) => {
                         const colorClass = SESSION_COLOR_STYLES[session.colorKey] ?? SESSION_COLOR_STYLES.tours;
                         const fillPercent = Math.min(100, (session.participants / session.capacity) * 100);
@@ -157,19 +157,14 @@ export default function ActivityCalendarPage() {
                           >
                             <p className="font-semibold">{session.timeLabel}</p>
                             <p className="mt-1 font-display text-sm font-semibold leading-tight">{session.activityName}</p>
-                            <p className="mt-2 flex items-center gap-1 text-[11px] text-ink-600">
+                            <p className="mt-2 flex items-center gap-1 text-[11px] text-[var(--color-text-secondary)]">
                               <User className="h-3 w-3" />
                               Guide: {session.guideName}
                             </p>
                             <div className="mt-2">
-                              <p className={`text-[11px] font-medium ${session.isFull ? 'text-orange-700' : ''}`}>
-                                {session.isFull ? 'FULL' : session.bookedLabel}
-                              </p>
-                              <div className="mt-1 h-1 overflow-hidden rounded-full bg-white/70">
-                                <div
-                                  className="h-full rounded-full bg-current opacity-60"
-                                  style={{ width: `${fillPercent}%` }}
-                                />
+                              <p className={`text-[11px] font-medium ${session.isFull ? 'text-orange-700' : ''}`}>{session.isFull ? 'FULL' : session.bookedLabel}</p>
+                              <div className="mt-1 h-1 overflow-hidden rounded-full bg-surface/70">
+                                <div className="h-full rounded-full bg-current opacity-60" style={{ width: `${fillPercent}%` }} />
                               </div>
                             </div>
                           </button>
@@ -185,42 +180,35 @@ export default function ActivityCalendarPage() {
 
         <aside className="space-y-4">
           <div>
-            <h2 className="font-display text-xl font-semibold text-ink-900">Today&apos;s Sessions</h2>
-            <p className="text-sm text-ink-500">{todayLabel}</p>
+            <h2 className="font-display text-xl font-semibold text-[var(--color-text-primary)]">Today&apos;s Sessions</h2>
+            <p className="text-sm text-[var(--color-text-secondary)]">{todayLabel}</p>
           </div>
 
           {sidebarSessions.length === 0 && (
-            <div className="rounded-2xl border border-dashed border-sand-200 bg-white px-4 py-10 text-center text-sm text-ink-500">
-              No sessions scheduled for today.
-            </div>
+            <div className="rounded-2xl border border-dashed border-border bg-surface px-4 py-10 text-center text-sm text-[var(--color-text-secondary)]">No sessions scheduled for today.</div>
           )}
 
           {activeSession && (
-            <div className="rounded-2xl border border-sand-200 bg-white p-4 shadow-sm">
+            <div className="rounded-2xl border border-border bg-surface p-4 shadow-sm">
               <div className="mb-4 flex items-start justify-between gap-2">
                 <div>
-                  <p className="text-lg font-semibold text-ink-900">{activeSession.timeLabel}</p>
-                  <p className="font-display text-lg font-semibold text-ink-900">{activeSession.activityName}</p>
+                  <p className="text-lg font-semibold text-[var(--color-text-primary)]">{activeSession.timeLabel}</p>
+                  <p className="font-display text-lg font-semibold text-[var(--color-text-primary)]">{activeSession.activityName}</p>
                 </div>
-                <span className="rounded-full bg-sand-100 px-2.5 py-1 text-xs font-semibold text-ink-700">
-                  {activeSession.bookedLabel}
-                </span>
+                <span className="rounded-full bg-surface-secondary px-2.5 py-1 text-xs font-semibold text-[var(--color-text-secondary)]">{activeSession.bookedLabel}</span>
               </div>
 
-              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-ink-500">Attendance</p>
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">Attendance</p>
               <ul className="space-y-2">
                 {activeSession.guests.slice(0, 3).map((guest) => (
-                  <li key={guest.id} className="flex items-center gap-2 text-sm text-ink-700">
-                    <input type="checkbox" className="h-4 w-4 rounded border-sand-300" readOnly />
+                  <li key={guest.id} className="flex items-center gap-2 text-sm text-[var(--color-text-primary)]">
+                    <input type="checkbox" className="h-4 w-4 rounded border-border" readOnly />
                     {guest.name}
                   </li>
                 ))}
               </ul>
-              {activeSession.guests.length > 3 && (
-                <button type="button" className="mt-3 text-sm font-medium text-primary">
-                  + {activeSession.guests.length - 3} more guests
-                </button>
-              )}
+
+              {activeSession.guests.length > 3 && <button type="button" className="mt-3 text-sm font-medium text-primary">+ {activeSession.guests.length - 3} more guests</button>}
             </div>
           )}
 
@@ -232,9 +220,7 @@ export default function ActivityCalendarPage() {
                   type="button"
                   onClick={() => setSelectedSession(session)}
                   className={`w-full rounded-xl border px-3 py-2 text-left text-sm transition ${
-                    activeSession?.id === session.id
-                      ? 'border-primary bg-primary/5'
-                      : 'border-sand-200 bg-white hover:bg-sand-50'
+                    activeSession?.id === session.id ? 'border-primary bg-primary/5' : 'border-border bg-surface hover:bg-surface-secondary'
                   }`}
                 >
                   <span className="font-medium">{session.timeLabel}</span> — {session.activityName}

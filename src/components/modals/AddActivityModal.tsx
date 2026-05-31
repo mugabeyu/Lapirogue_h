@@ -114,38 +114,38 @@ export function AddActivityModal({ isOpen, onClose, onSaved, editRow }: AddActiv
         <ImageUploadField label="Activity photo" previewUrl={imagePath} onFileSelect={handleImageUpload} />
         <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <label className="mb-1 block text-sm font-medium text-ink-700">Activity name</label>
+            <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Activity name</label>
             <input name="name" required className="input-field w-full" defaultValue={activity?.name} />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-ink-700">Category</label>
+            <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Category</label>
             <input name="category" required className="input-field w-full" defaultValue={activity?.category} />
           </div>
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-ink-700">Description</label>
+          <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Description</label>
           <textarea name="description" className="input-field w-full min-h-32" defaultValue={activity?.description ?? ''} />
         </div>
 
         <div className="grid gap-4 md:grid-cols-3">
           <div>
-            <label className="mb-1 block text-sm font-medium text-ink-700">Price</label>
+            <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Price</label>
             <input name="price" required type="number" min="0" className="input-field w-full" defaultValue={activity?.price ?? ''} />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-ink-700">Duration minutes</label>
+            <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Duration minutes</label>
             <input name="duration" required type="number" min="1" className="input-field w-full" defaultValue={activity?.duration ?? 60} />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-ink-700">Capacity</label>
+            <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Capacity</label>
             <input name="capacity" required type="number" min="1" className="input-field w-full" defaultValue={activity?.capacity ?? 10} />
           </div>
         </div>
 
         {isEdit && (
           <div>
-            <label className="mb-1 block text-sm font-medium text-ink-700">Status</label>
+            <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Status</label>
             <select name="status" className="input-field w-full" defaultValue={activity?.status ?? 'ACTIVE'}>
               <option value="ACTIVE">Active</option>
               <option value="INACTIVE">Inactive</option>

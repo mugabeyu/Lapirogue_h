@@ -183,11 +183,11 @@ export default function SchedulePage() {
         subtitle="Plan and manage daily itineraries"
         action={
           <div className="flex flex-wrap items-center gap-3">
-            <div className="inline-flex items-center rounded-xl border border-sand-200 bg-white shadow-sm">
+            <div className="inline-flex items-center rounded-xl border border-border bg-surface shadow-sm">
               <button
                 type="button"
                 onClick={() => setWeekStart((current) => shiftWeek(current, -1))}
-                className="rounded-l-xl px-3 py-2 text-ink-600 transition-colors hover:bg-sand-50"
+                className="rounded-l-xl px-3 py-2 text-[var(--color-text-secondary)] transition-colors hover:bg-surface-secondary"
                 aria-label="Previous week"
               >
                 <ChevronLeft className="h-4 w-4" />
@@ -195,7 +195,7 @@ export default function SchedulePage() {
               <button
                 type="button"
                 onClick={() => setWeekStart(toDateInput(buildMonday(new Date())))}
-                className="inline-flex items-center gap-2 border-x border-sand-200 px-4 py-2 text-sm font-medium text-ink-800"
+                className="inline-flex items-center gap-2 border-x border-border px-4 py-2 text-sm font-medium text-[var(--color-text-primary)]"
               >
                 <CalendarDays className="h-4 w-4" />
                 {weekLabel}
@@ -203,7 +203,7 @@ export default function SchedulePage() {
               <button
                 type="button"
                 onClick={() => setWeekStart((current) => shiftWeek(current, 1))}
-                className="rounded-r-xl px-3 py-2 text-ink-600 transition-colors hover:bg-sand-50"
+                className="rounded-r-xl px-3 py-2 text-[var(--color-text-secondary)] transition-colors hover:bg-surface-secondary"
                 aria-label="Next week"
               >
                 <ChevronRight className="h-4 w-4" />
@@ -212,7 +212,7 @@ export default function SchedulePage() {
             <button
               type="button"
               onClick={() => window.print()}
-              className="inline-flex items-center gap-2 rounded-xl border border-sand-200 bg-white px-4 py-2 text-sm font-medium text-ink-800 shadow-sm transition-colors hover:bg-sand-50"
+              className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-4 py-2 text-sm font-medium text-[var(--color-text-primary)] shadow-sm transition-colors hover:bg-surface-secondary"
             >
               <Download className="h-4 w-4" />
               Export PDF
@@ -224,7 +224,7 @@ export default function SchedulePage() {
       <div className="grid gap-6 xl:grid-cols-[260px_minmax(0,1fr)]">
         <aside className="card flex flex-col gap-4 p-4">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-secondary)]" />
             <input
               type="text"
               value={searchTerm}
@@ -234,7 +234,7 @@ export default function SchedulePage() {
             />
           </div>
 
-          <div className="space-y-2 overflow-y-auto pr-1">
+            <div className="space-y-2 overflow-y-auto pr-1">
             {filteredGuests.map((guest) => {
               const active = guest.id === selectedGuestId;
               return (
@@ -244,17 +244,17 @@ export default function SchedulePage() {
                   onClick={() => setSelectedGuestId(guest.id)}
                   className={`relative w-full rounded-2xl border px-3 py-3 text-left transition-colors ${
                     active
-                      ? 'border-sand-200 bg-sand-100/80 shadow-sm before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:rounded-r-full before:bg-accent'
-                      : 'border-sand-200 bg-white hover:bg-sand-50'
-                  }`}
+                      ? 'border-border bg-surface-secondary shadow-sm before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:rounded-r-full before:bg-accent'
+                      : 'border-border bg-surface hover:bg-surface-secondary'
+                  }`} 
                 >
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
                       {guestInitials(guest)}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="truncate font-medium text-ink-900">{formatGuestName(guest)}</div>
-                      <div className="text-xs text-ink-500">
+                      <div className="truncate font-medium text-[var(--color-text-primary)]">{formatGuestName(guest)}</div>
+                      <div className="text-xs text-[var(--color-text-secondary)]">
                         {guest.roomNumber ? `Room ${guest.roomNumber}` : guest.guestId} · {formatGuestStatus(guest.status)}
                       </div>
                     </div>
@@ -266,16 +266,16 @@ export default function SchedulePage() {
         </aside>
 
         <section className="card overflow-hidden">
-          <div className="flex flex-col gap-4 border-b border-sand-200 bg-white px-5 py-5 lg:flex-row lg:items-start lg:justify-between">
+            <div className="flex flex-col gap-4 border-b border-border bg-surface px-5 py-5 lg:flex-row lg:items-start lg:justify-between">
             <div className="flex items-center gap-4">
-              <div className="flex h-14 w-14 items-center justify-center rounded-full border border-sand-200 bg-primary/10 text-lg font-semibold text-primary shadow-sm">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full border border-border bg-primary/10 text-lg font-semibold text-primary shadow-sm">
                 {selectedGuest ? guestInitials(selectedGuest) : '?'}
               </div>
               <div>
-                <h2 className="font-display text-2xl text-ink-900">
+                <h2 className="font-display text-2xl text-[var(--color-text-primary)]">
                   {selectedGuest ? formatGuestName(selectedGuest) : 'Select a guest'}
                 </h2>
-                <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-ink-600">
+                <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-[var(--color-text-secondary)]">
                   <span>{selectedGuest?.roomNumber ? `Room ${selectedGuest.roomNumber}` : 'No room linked'}</span>
                   {selectedGuest?.stay?.checkIn && selectedGuest?.stay?.checkOut ? (
                     <>
@@ -292,20 +292,20 @@ export default function SchedulePage() {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-sand-200 bg-sand-50 px-4 py-3 text-center shadow-sm">
-              <div className="text-3xl font-display text-ink-900">{data?.totalActivities ?? 0}</div>
-              <div className="text-xs font-medium uppercase tracking-[0.22em] text-ink-500">Activities</div>
+            <div className="rounded-2xl border border-border bg-surface-secondary px-4 py-3 text-center shadow-sm">
+              <div className="text-3xl font-display text-[var(--color-text-primary)]">{data?.totalActivities ?? 0}</div>
+              <div className="text-xs font-medium uppercase tracking-[0.22em] text-[var(--color-text-secondary)]">Activities</div>
             </div>
           </div>
 
           {reservationItems.length > 0 ? (
-            <div className="border-b border-sand-200 bg-white px-5 py-4">
-              <div className="mb-2 text-xs font-semibold uppercase tracking-[0.22em] text-ink-500">Stays</div>
-              <div className="flex flex-wrap gap-3">
+            <div className="border-b border-border bg-surface px-5 py-4">
+              <div className="mb-2 text-xs font-semibold uppercase tracking-[0.22em] text-[var(--color-text-secondary)]">Stays</div>
+                  <div className="flex flex-wrap gap-3">
                 {reservationItems.map((item) => (
-                  <div key={item.id} className="rounded-2xl border border-sand-200 bg-sand-50 px-4 py-3 text-sm text-ink-700 shadow-sm">
-                    <div className="font-semibold text-ink-900">{item.title}</div>
-                    <div className="mt-1 text-xs text-ink-500">
+                  <div key={item.id} className="rounded-2xl border border-border bg-surface-secondary px-4 py-3 text-sm text-[var(--color-text-primary)] shadow-sm">
+                    <div className="font-semibold text-[var(--color-text-primary)]">{item.title}</div>
+                    <div className="mt-1 text-xs text-[var(--color-text-secondary)]">
                       {new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short' }).format(new Date(item.startAt))}
                       {' '}
                       -{' '}
@@ -318,21 +318,21 @@ export default function SchedulePage() {
           ) : null}
 
           <div className="overflow-x-auto">
-            <div className="min-w-[900px]">
-              <div className="grid grid-cols-[64px_repeat(7,minmax(0,1fr))] border-b border-sand-200 bg-white">
-                <div className="px-3 py-4 text-xs font-medium uppercase tracking-[0.22em] text-ink-400">Time</div>
+              <div className="min-w-[900px]">
+              <div className="grid grid-cols-[64px_repeat(7,minmax(0,1fr))] border-b border-border bg-surface">
+                <div className="px-3 py-4 text-xs font-medium uppercase tracking-[0.22em] text-[var(--color-text-secondary)]">Time</div>
                 {days.map((day) => (
-                  <div key={day.toISOString()} className="border-l border-sand-200 px-3 py-4 text-center">
-                    <div className="text-xs font-semibold uppercase tracking-[0.22em] text-ink-500">{formatDayLabel(day)}</div>
-                    <div className="mt-1 text-sm text-ink-700">{new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short' }).format(day)}</div>
+                    <div key={day.toISOString()} className="border-l border-border px-3 py-4 text-center">
+                    <div className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--color-text-secondary)]">{formatDayLabel(day)}</div>
+                    <div className="mt-1 text-sm text-[var(--color-text-primary)]">{new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short' }).format(day)}</div>
                   </div>
                 ))}
               </div>
 
               <div className="relative grid grid-cols-[64px_repeat(7,minmax(0,1fr))]">
-                <div className="relative border-r border-sand-200 bg-sand-50/40">
+                <div className="relative border-r border-border bg-surface-secondary/40">
                   {TIME_SLOTS.map((hour) => (
-                    <div key={hour} className="h-[72px] border-b border-sand-200 px-3 py-2 text-xs font-medium text-ink-500">
+                    <div key={hour} className="h-[72px] border-b border-border px-3 py-2 text-xs font-medium text-[var(--color-text-secondary)]">
                       {formatHourLabel(hour)}
                     </div>
                   ))}
@@ -341,7 +341,7 @@ export default function SchedulePage() {
                 {days.map((day, dayIndex) => {
                   const dayItems = eventsByDay[dayIndex] ?? [];
                   return (
-                    <div key={day.toISOString()} className="relative border-r border-sand-200 bg-white" style={{ height: `${TIME_SLOTS.length * 72}px` }}>
+                    <div key={day.toISOString()} className="relative border-r border-border bg-surface" style={{ height: `${TIME_SLOTS.length * 72}px` }}>
                       {TIME_SLOTS.map((hour) => (
                         <button
                           key={`${day.toISOString()}-${hour}`}
@@ -360,10 +360,10 @@ export default function SchedulePage() {
                               title: '',
                             });
                           }}
-                          className="group absolute inset-x-0 h-[72px] border-b border-sand-200/90 text-left transition-colors hover:bg-primary/5"
+                          className="group absolute inset-x-0 h-[72px] border-b border-border text-left transition-colors hover:bg-primary/5"
                           style={{ top: `${(hour - TIME_SLOTS[0]) * 72}px` }}
                         >
-                          <span className="absolute right-3 top-1/2 hidden h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-primary/20 bg-white text-primary shadow-sm group-hover:flex">
+                          <span className="absolute right-3 top-1/2 hidden h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-primary/20 bg-surface text-primary shadow-sm group-hover:flex">
                             <Plus className="h-4 w-4" />
                           </span>
                         </button>
@@ -381,8 +381,8 @@ export default function SchedulePage() {
                             className="absolute left-2 right-2 z-10 rounded-2xl border px-3 py-2 text-left shadow-sm transition-transform hover:-translate-y-0.5"
                             style={{ top, height, backgroundColor: `${getColor(item)}22`, borderColor: getColor(item) }}
                           >
-                            <div className="text-xs font-semibold text-ink-900">{item.title}</div>
-                            <div className="mt-1 text-[11px] text-ink-600">
+                            <div className="text-xs font-semibold text-[var(--color-text-primary)]">{item.title}</div>
+                            <div className="mt-1 text-[11px] text-[var(--color-text-secondary)]">
                               {formatShortTime(item.startAt)} - {formatShortTime(item.endAt)}
                             </div>
                           </button>
@@ -408,7 +408,7 @@ export default function SchedulePage() {
         }}
       />
 
-      {isLoading && <div className="card p-6 text-ink-600">Loading schedule...</div>}
+      {isLoading && <div className="card p-6 text-[var(--color-text-secondary)]">Loading schedule...</div>}
     </div>
   );
 }

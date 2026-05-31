@@ -108,17 +108,17 @@ export function EditGuestModal({ isOpen, onClose, guest, currentStay, onSaved }:
           <Field label="Last Name" name="lastName" defaultValue={guest.lastName} required />
           <Field label="Email" name="email" type="email" defaultValue={guest.email ?? ''} />
           <div>
-            <label className="mb-1 block text-sm font-medium text-ink-700">Phone</label>
+            <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Phone</label>
             <PhoneField name="phone" defaultValue={guest.phone ?? ''} />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-ink-700">Nationality</label>
+            <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Nationality</label>
             <CountryComboboxField name="nationality" defaultValue={guest.nationality ?? ''} />
           </div>
           <Field label="Passport" name="passport" defaultValue={guest.passport ?? ''} />
           <Field label="Date of Birth" name="dateOfBirth" type="date" defaultValue={guest.dateOfBirth ?? ''} />
           <div>
-            <label className="mb-1 block text-sm font-medium text-ink-700">Status</label>
+            <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Status</label>
             <select name="status" defaultValue={guest.status} className="input-field w-full">
               <option value="RESERVED">Reserved</option>
               <option value="CHECKED_IN">Checked In</option>
@@ -129,15 +129,15 @@ export function EditGuestModal({ isOpen, onClose, guest, currentStay, onSaved }:
         </div>
 
         {currentStay && (
-          <div className="rounded-xl border border-sand-200 bg-sand-50/50 p-4">
-            <p className="mb-3 text-sm font-medium text-ink-900">Current Stay</p>
+          <div className="rounded-xl border border-border bg-surface-secondary/50 p-4">
+            <p className="mb-3 text-sm font-medium text-[var(--color-text-primary)]">Current Stay</p>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="mb-1 block text-sm font-medium text-ink-700">Check-in</label>
-                <input type="date" className="input-field w-full bg-sand-100" value={currentStay.checkIn} readOnly />
+                <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Check-in</label>
+                <input type="date" className="input-field w-full bg-surface-secondary" value={currentStay.checkIn} readOnly />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-ink-700">Check-out</label>
+                <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Check-out</label>
                 <input
                   name="checkOut"
                   type="date"
@@ -152,12 +152,12 @@ export function EditGuestModal({ isOpen, onClose, guest, currentStay, onSaved }:
         )}
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-ink-700">Notes</label>
+          <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Notes</label>
           <textarea name="notes" className="input-field w-full" rows={3} defaultValue={guest.notes ?? ''} />
         </div>
 
-        <label className="flex items-center gap-2 text-sm text-ink-700">
-          <input type="checkbox" name="vip" defaultChecked={guest.vip} className="rounded border-sand-300" />
+        <label className="flex items-center gap-2 text-sm text-[var(--color-text-primary)]">
+          <input type="checkbox" name="vip" defaultChecked={guest.vip} className="rounded border-border" />
           VIP guest
         </label>
 
@@ -189,7 +189,7 @@ function Field({
 }) {
   return (
     <div>
-      <label className="mb-1 block text-sm font-medium text-ink-700">{label}</label>
+      <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">{label}</label>
       <input
         name={name}
         type={type}

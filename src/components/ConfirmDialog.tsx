@@ -1,6 +1,7 @@
 'use client';
 
 import { Modal } from '@/components/Modal';
+import Button from '@/components/ui/Button';
 
 interface ConfirmDialogProps {
   isOpen: boolean;
@@ -23,19 +24,14 @@ export function ConfirmDialog({
 }: ConfirmDialogProps) {
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title} size="sm">
-      <p className="text-sm text-ink-600">{message}</p>
+      <p className="text-sm text-[var(--color-text-secondary)]">{message}</p>
       <div className="mt-6 flex justify-end gap-3">
-        <button type="button" className="btn-secondary" onClick={onClose} disabled={isLoading}>
+        <Button variant="secondary" onClick={onClose} disabled={isLoading}>
           Cancel
-        </button>
-        <button
-          type="button"
-          className="rounded-lg bg-danger px-4 py-2 font-medium text-white transition-colors hover:bg-danger/90 disabled:opacity-50"
-          onClick={onConfirm}
-          disabled={isLoading}
-        >
+        </Button>
+        <Button variant="danger" onClick={onConfirm} disabled={isLoading}>
           {isLoading ? 'Deleting...' : confirmLabel}
-        </button>
+        </Button>
       </div>
     </Modal>
   );

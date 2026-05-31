@@ -134,12 +134,12 @@ export function RoomModal({ isOpen, onClose, onSaved, editRow }: RoomModalProps)
     <Modal isOpen={isOpen} onClose={onClose} title={isEdit ? 'Edit Room' : 'Add Room'} size="lg">
       <form key={room?.id ?? 'new'} onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="mb-2 block text-sm font-medium text-ink-700">Room photos</label>
-          <label className="flex min-h-40 cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-sand-300 bg-sand-50/70 px-4 py-8 text-center transition-colors hover:border-primary/40 hover:bg-primary/5">
-            <CloudUpload className="h-8 w-8 text-ink-400" />
+          <label className="mb-2 block text-sm font-medium text-[var(--color-text-primary)]">Room photos</label>
+          <label className="flex min-h-40 cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-surface-secondary px-4 py-8 text-center transition-colors hover:border-primary/40 hover:bg-[rgba(11,93,87,0.04)]">
+            <CloudUpload className="h-8 w-8 text-[var(--color-text-secondary)]" />
             <div>
-              <div className="text-sm font-medium text-ink-800">Upload one or more room photos</div>
-              <div className="mt-1 text-xs text-ink-500">Preview images before saving the room record</div>
+              <div className="text-sm font-medium text-[var(--color-text-primary)]">Upload one or more room photos</div>
+              <div className="mt-1 text-xs text-[var(--color-text-secondary)]">Preview images before saving the room record</div>
             </div>
             <input type="file" accept="image/jpeg,image/png,image/webp" multiple className="hidden" onChange={handleFileSelect} disabled={isSaving} />
           </label>
@@ -147,30 +147,30 @@ export function RoomModal({ isOpen, onClose, onSaved, editRow }: RoomModalProps)
           {galleryImages.length > 0 && (
             <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3">
               {existingImages.map((imageUrl) => (
-                <div key={imageUrl} className="group relative overflow-hidden rounded-xl border border-sand-200 bg-white">
+                <div key={imageUrl} className="group relative overflow-hidden rounded-xl border border-border bg-surface">
                   <img src={imageUrl} alt="Room photo" className="h-28 w-full object-cover" />
-                  <span className="absolute left-2 top-2 rounded-full bg-white/90 px-2 py-1 text-[11px] font-medium text-ink-700">
+                  <span className="absolute left-2 top-2 rounded-full bg-surface px-2 py-1 text-[11px] font-medium text-[var(--color-text-primary)]">
                     Saved
                   </span>
                 </div>
               ))}
               {pendingFiles.map((entry) => (
-                <div key={entry.previewUrl} className="group relative overflow-hidden rounded-xl border border-sand-200 bg-white">
+                <div key={entry.previewUrl} className="group relative overflow-hidden rounded-xl border border-border bg-surface">
                   <img src={entry.previewUrl} alt={entry.file.name} className="h-28 w-full object-cover" />
                   <button
                     type="button"
                     onClick={() => removePendingFile(entry.previewUrl)}
-                    className="absolute right-2 top-2 rounded-full bg-black/65 p-1 text-white opacity-100 transition-opacity group-hover:bg-black/80"
+                    className="absolute right-2 top-2 rounded-full bg-[rgba(0,0,0,0.65)] p-1 text-white opacity-100 transition-opacity group-hover:bg-[rgba(0,0,0,0.8)]"
                     aria-label="Remove photo"
                   >
                     <X className="h-3.5 w-3.5" />
                   </button>
-                  <span className="absolute left-2 top-2 rounded-full bg-white/90 px-2 py-1 text-[11px] font-medium text-ink-700">
+                  <span className="absolute left-2 top-2 rounded-full bg-surface px-2 py-1 text-[11px] font-medium text-[var(--color-text-primary)]">
                     New
                   </span>
                 </div>
               ))}
-              <label className="flex min-h-28 items-center justify-center rounded-xl border border-dashed border-sand-300 bg-sand-50 text-ink-500 transition-colors hover:border-primary/40 hover:bg-primary/5">
+              <label className="flex min-h-28 items-center justify-center rounded-xl border border-dashed border-border bg-surface-secondary text-[var(--color-text-secondary)] transition-colors hover:border-primary/40 hover:bg-[rgba(11,93,87,0.04)]">
                 <Plus className="h-5 w-5" />
                 <input type="file" accept="image/jpeg,image/png,image/webp" multiple className="hidden" onChange={handleFileSelect} disabled={isSaving} />
               </label>
@@ -179,11 +179,11 @@ export function RoomModal({ isOpen, onClose, onSaved, editRow }: RoomModalProps)
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="mb-1 block text-sm font-medium text-ink-700">Room number</label>
+            <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Room number</label>
             <input name="roomNumber" required className="input-field w-full" defaultValue={room?.roomNumber} />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-ink-700">Type</label>
+            <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Type</label>
             <select name="type" required className="input-field w-full" defaultValue={room?.type ?? 'STANDARD'}>
               {roomTypes.map((type) => (
                 <option key={type} value={type}>
@@ -193,20 +193,20 @@ export function RoomModal({ isOpen, onClose, onSaved, editRow }: RoomModalProps)
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-ink-700">Floor</label>
+            <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Floor</label>
             <input name="floor" className="input-field w-full" defaultValue={room?.floor ?? ''} />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-ink-700">Capacity</label>
+            <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Capacity</label>
             <input name="capacity" type="number" min="1" required className="input-field w-full" defaultValue={room?.capacity ?? 2} />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-ink-700">Price per night</label>
+            <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Price per night</label>
             <input name="price" type="number" min="0" required className="input-field w-full" defaultValue={room?.price ?? ''} />
           </div>
           {isEdit && (
             <div>
-              <label className="mb-1 block text-sm font-medium text-ink-700">Status</label>
+              <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Status</label>
               <select name="status" className="input-field w-full" defaultValue={room?.status ?? 'AVAILABLE'}>
                 <option value="AVAILABLE">Available</option>
                 <option value="OCCUPIED">Occupied</option>
@@ -217,7 +217,7 @@ export function RoomModal({ isOpen, onClose, onSaved, editRow }: RoomModalProps)
           )}
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-ink-700">Description</label>
+          <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Description</label>
           <textarea name="description" className="input-field w-full" rows={3} defaultValue={room?.description ?? ''} />
         </div>
         <div className="flex justify-end gap-3 pt-2">

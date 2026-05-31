@@ -5,7 +5,7 @@ import AssignRoomPage from '@/components/forms/AssignRoomPage';
 export default function RoomAssignmentRoute() {
   return (
     <ProtectedPage>
-      <Suspense fallback={<div className="p-8 text-ink-600">Loading...</div>}>
+      <Suspense fallback={<div className="p-8 text-[var(--color-text-secondary)]">Loading...</div>}>
         <AssignRoomPage />
       </Suspense>
     </ProtectedPage>

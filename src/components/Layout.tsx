@@ -13,7 +13,7 @@ function LayoutShell({ children }: LayoutProps) {
   const { collapsed } = useSidebar();
 
   return (
-    <div className="min-h-screen flex bg-sand-50">
+    <div className="min-h-screen flex">
       <Sidebar />
       <div
         className={`flex min-w-0 flex-1 flex-col transition-[margin] duration-200 ease-in-out ${

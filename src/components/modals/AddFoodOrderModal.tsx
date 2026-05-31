@@ -57,11 +57,11 @@ export function AddFoodOrderModal({ isOpen, onClose }: AddFoodOrderModalProps) {
 
         <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <label className="mb-1 block text-sm font-medium text-ink-700">Quantity</label>
+            <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Quantity</label>
             <input name="quantity" required type="number" min="1" className="input-field w-full" defaultValue="1" />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-ink-700">Notes</label>
+            <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Notes</label>
             <input name="notes" className="input-field w-full" placeholder="Room service instructions" />
           </div>
         </div>

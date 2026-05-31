@@ -33,7 +33,7 @@ const STATUS_STYLES: Record<string, string> = {
   PENDING: 'bg-blue-100 text-blue-800',
   PREPARING: 'bg-orange-100 text-orange-800',
   SERVED: 'bg-emerald-100 text-emerald-800',
-  CANCELLED: 'bg-sand-200 text-ink-600',
+  CANCELLED: 'bg-surface-secondary text-[var(--color-text-secondary)]',
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -85,17 +85,17 @@ export default function FoodOrdersListPage() {
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {statCards.map((card) => (
-          <div key={card.label} className="rounded-2xl border border-sand-200 bg-white p-5 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-wider text-ink-500">{card.label}</p>
-            <p className="mt-2 font-display text-3xl font-semibold text-ink-900">{card.value}</p>
-            <p className="mt-1 text-xs text-ink-500">{card.hint}</p>
+          <div key={card.label} className="card p-5">
+            <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">{card.label}</p>
+            <p className="mt-2 font-display text-3xl font-semibold text-[var(--color-text-primary)]">{card.value}</p>
+            <p className="mt-1 text-xs text-[var(--color-text-secondary)]">{card.hint}</p>
           </div>
         ))}
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-secondary)]" />
           <input
             type="text"
             value={search}
@@ -122,17 +122,17 @@ export default function FoodOrdersListPage() {
         </button>
       </div>
 
-      <section className="overflow-hidden rounded-2xl border border-sand-200 bg-white shadow-sm" aria-labelledby="food-orders-table-heading">
-        <div className="border-b border-sand-200 px-5 py-4">
-          <h2 id="food-orders-table-heading" className="font-display text-lg font-semibold text-ink-900">
+      <section className="card" aria-labelledby="food-orders-table-heading">
+        <div className="px-5 py-4 border-b border-border">
+          <h2 id="food-orders-table-heading" className="font-display text-lg font-semibold text-[var(--color-text-primary)]">
             Order list
           </h2>
-          <p className="mt-1 text-sm text-ink-500">Order ID, guest & room, items, total, kitchen status, time placed</p>
+          <p className="mt-1 text-sm text-[var(--color-text-secondary)]">Order ID, guest & room, items, total, kitchen status, time placed</p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[800px] text-left text-sm" aria-label="Food and beverage orders">
             <thead>
-              <tr className="border-b border-sand-200 bg-sand-50 text-xs uppercase tracking-wider text-ink-600">
+              <tr className="bg-surface-secondary text-xs uppercase tracking-wider text-[var(--color-text-secondary)]">
                 <th scope="col" className="px-5 py-4 font-medium">Order ID</th>
                 <th scope="col" className="px-5 py-4 font-medium">Guest & room</th>
                 <th scope="col" className="px-5 py-4 font-medium">Items ordered</th>
@@ -141,32 +141,28 @@ export default function FoodOrdersListPage() {
                 <th scope="col" className="px-5 py-4 font-medium">Time placed</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-sand-200">
+            <tbody className="divide-y divide-border">
               {isLoading && (
                 <tr>
-                  <td colSpan={6} className="px-5 py-12 text-center text-ink-500">
-                    Loading orders...
-                  </td>
+                  <td colSpan={6} className="px-5 py-12 text-center text-[var(--color-text-secondary)]">Loading orders...</td>
                 </tr>
               )}
               {!isLoading && orders.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-5 py-12 text-center text-ink-500">
-                    No orders found.
-                  </td>
+                  <td colSpan={6} className="px-5 py-12 text-center text-[var(--color-text-secondary)]">No orders found.</td>
                 </tr>
               )}
               {orders.map((order) => {
                 const statusKey = order.status ?? 'PENDING';
                 return (
-                  <tr key={order.id} className="hover:bg-sand-50/50">
-                    <td className="px-5 py-4 font-medium text-ink-900">{order.orderId ?? order.id.slice(0, 8)}</td>
+                  <tr key={order.id} className="hover:bg-surface-secondary">
+                    <td className="px-5 py-4 font-medium text-[var(--color-text-primary)]">{order.orderId ?? order.id.slice(0, 8)}</td>
                     <td className="px-5 py-4">
-                      <p className="font-medium text-ink-900">{order.guest ?? 'Walk-in'}</p>
-                      <p className="text-xs text-ink-500">{order.room ? `Room ${order.room}` : '—'}</p>
+                      <p className="font-medium text-[var(--color-text-primary)]">{order.guest ?? 'Walk-in'}</p>
+                      <p className="text-xs text-[var(--color-text-secondary)]">{order.room ? `Room ${order.room}` : '—'}</p>
                     </td>
-                    <td className="px-5 py-4 text-ink-700">{order.itemsSummary}</td>
-                    <td className="px-5 py-4 font-medium text-ink-900">{formatMenuPrice(order.total)}</td>
+                    <td className="px-5 py-4 text-[var(--color-text-primary)]">{order.itemsSummary}</td>
+                    <td className="px-5 py-4 font-medium text-[var(--color-text-primary)]">{formatMenuPrice(order.total)}</td>
                     <td className="px-5 py-4">
                       <span
                         className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold uppercase ${
@@ -176,7 +172,7 @@ export default function FoodOrdersListPage() {
                         {STATUS_LABELS[statusKey] ?? statusKey}
                       </span>
                     </td>
-                    <td className="px-5 py-4 text-ink-600">{order.time}</td>
+                    <td className="px-5 py-4 text-[var(--color-text-secondary)]">{order.time}</td>
                   </tr>
                 );
               })}

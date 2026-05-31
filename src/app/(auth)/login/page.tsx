@@ -92,7 +92,7 @@ export default function LoginPage() {
 
   return (
     <>
-      <div className="min-h-screen bg-white text-slate-900 lg:flex">
+      <div className="min-h-screen bg-surface text-[var(--color-text-primary)] lg:flex">
         <section
           className="relative hidden min-h-screen overflow-hidden bg-slate-900 text-white lg:flex lg:w-1/2"
           style={{
@@ -107,7 +107,7 @@ export default function LoginPage() {
           <div className="relative z-10 flex w-full items-center px-14 xl:px-20">
             <div className="max-w-xl">
               <div className="mb-8 flex items-center gap-4">
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/10 ring-2 ring-white/30">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-surface-secondary/10 ring-2 ring-surface/30">
                   <img src="/lapiroguelogo.jpg" alt="La Pirogue Resort" className="h-full w-full object-cover" />
                 </div>
                 <div>
@@ -148,7 +148,7 @@ export default function LoginPage() {
 
             <form onSubmit={handleLogin} className="space-y-5">
               <div className="space-y-2">
-                <label className="block text-[15px] font-semibold text-slate-900" htmlFor="email">
+                <label className="block text-[15px] font-semibold text-[var(--color-text-primary)]" htmlFor="email">
                   Email Address
                 </label>
                 <input
@@ -156,7 +156,7 @@ export default function LoginPage() {
                   type="email"
                   autoComplete="email"
                   required
-                  className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-[16px] text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-4 focus:ring-slate-200/70 disabled:cursor-not-allowed disabled:bg-slate-50"
+                  className="h-12 w-full rounded-2xl border border-border bg-surface px-4 text-[16px] text-[var(--color-text-primary)] outline-none transition placeholder:text-[var(--color-text-secondary)] focus:border-border focus:ring-4 focus:ring-surface/70 disabled:cursor-not-allowed disabled:bg-surface-secondary"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={isLoading}
@@ -203,7 +203,7 @@ export default function LoginPage() {
                       className="peer sr-only"
                       disabled={isLoading}
                     />
-                    <span className="absolute inset-0 rounded-md border border-slate-300 bg-white transition peer-checked:border-emerald-600 peer-checked:bg-emerald-600" />
+                    <span className="absolute inset-0 rounded-md border border-border bg-surface transition peer-checked:border-emerald-600 peer-checked:bg-emerald-600" />
                     <svg
                       viewBox="0 0 24 24"
                       className="relative z-10 hidden h-4 w-4 text-white peer-checked:block"

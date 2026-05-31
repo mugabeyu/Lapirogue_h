@@ -38,14 +38,14 @@ export function GuestRoomSearchField({ selectedGuest, onSelect }: GuestRoomSearc
       <div className="rounded-xl border border-primary/20 bg-primary/5 p-3">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-[var(--color-text-primary)]">
               <User className="h-5 w-5" />
             </div>
             <div className="min-w-0">
-              <p className="truncate font-medium text-ink-900">
+              <p className="truncate font-medium text-[var(--color-text-primary)]">
                 {selectedGuest.firstName} {selectedGuest.lastName}
               </p>
-              <p className="text-sm text-ink-500">
+              <p className="text-sm text-[var(--color-text-secondary)]">
                 {selectedGuest.roomNumber ? `Room ${selectedGuest.roomNumber}` : 'No room assigned'}
               </p>
             </div>
@@ -53,7 +53,7 @@ export function GuestRoomSearchField({ selectedGuest, onSelect }: GuestRoomSearc
           <button
             type="button"
             onClick={() => onSelect(null)}
-            className="rounded-lg p-1 text-ink-500 hover:bg-white hover:text-ink-800"
+            className="rounded-lg p-1 text-[var(--color-text-secondary)] hover:bg-surface hover:text-[var(--color-text-primary)]"
             aria-label="Clear guest"
           >
             <X className="h-4 w-4" />
@@ -77,10 +77,10 @@ export function GuestRoomSearchField({ selectedGuest, onSelect }: GuestRoomSearc
       </div>
 
       {(search.trim() || filteredGuests.length > 0) && (
-        <div className="max-h-44 space-y-1 overflow-y-auto rounded-xl border border-sand-200 bg-white p-1 shadow-sm">
-          {isLoading && <p className="px-3 py-2 text-sm text-ink-500">Searching...</p>}
+        <div className="max-h-44 space-y-1 overflow-y-auto rounded-xl border border-border bg-surface p-1 shadow-sm">
+          {isLoading && <p className="px-3 py-2 text-sm text-[var(--color-text-secondary)]">Searching...</p>}
           {!isLoading && filteredGuests.length === 0 && (
-            <p className="px-3 py-2 text-sm text-ink-500">No guests found.</p>
+            <p className="px-3 py-2 text-sm text-[var(--color-text-secondary)]">No guests found.</p>
           )}
           {filteredGuests.map((guest) => (
             <button
@@ -90,12 +90,12 @@ export function GuestRoomSearchField({ selectedGuest, onSelect }: GuestRoomSearc
                 onSelect(guest);
                 setSearch('');
               }}
-              className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-sand-50"
+              className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-surface-secondary"
             >
-              <span className="font-medium text-ink-900">
+              <span className="font-medium text-[var(--color-text-primary)]">
                 {guest.firstName} {guest.lastName}
               </span>
-              <span className="ml-auto text-ink-500">
+              <span className="ml-auto text-[var(--color-text-secondary)]">
                 {guest.roomNumber ? `Room ${guest.roomNumber}` : guest.guestId}
               </span>
             </button>

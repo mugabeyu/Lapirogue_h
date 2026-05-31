@@ -67,15 +67,15 @@ export function BookActivityModal({ isOpen, onClose, activity, guestId, onBooked
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Book Activity" size="lg">
       <form onSubmit={handleSubmit} className="space-y-5">
-        <div className="flex gap-4 rounded-xl border border-sand-200 bg-sand-50/80 p-4">
-          <div className="h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-sand-200">
+        <div className="flex gap-4 rounded-xl border border-border bg-surface-secondary/80 p-4">
+          <div className="h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-surface-secondary">
             {activity.imagePath ? (
               <img src={activity.imagePath} alt="" className="h-full w-full object-cover" />
             ) : null}
           </div>
           <div className="min-w-0">
-            <h3 className="font-display text-lg font-semibold text-ink-900">{activity.name}</h3>
-            <p className="text-sm text-ink-500">
+            <h3 className="font-display text-lg font-semibold text-[var(--color-text-primary)]">{activity.name}</h3>
+            <p className="text-sm text-[var(--color-text-secondary)]">
               {activity.durationLabel} • {activity.category}
             </p>
             <p className="mt-1 text-sm font-semibold text-primary">{priceLabel}</p>
@@ -83,7 +83,7 @@ export function BookActivityModal({ isOpen, onClose, activity, guestId, onBooked
         </div>
 
         <div className="space-y-2">
-          <span className="text-sm font-semibold text-ink-800">Select Guest</span>
+          <span className="text-sm font-semibold text-[var(--color-text-primary)]">Select Guest</span>
           <GuestSearchPicker
             selectedId={guestSelectedId}
             onSelect={setSelectedGuest}
@@ -92,10 +92,10 @@ export function BookActivityModal({ isOpen, onClose, activity, guestId, onBooked
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <label className="block space-y-2">
-            <span className="text-sm font-semibold text-ink-800">Date</span>
-            <div className="relative">
-              <Calendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" />
+            <label className="block space-y-2">
+              <span className="text-sm font-semibold text-[var(--color-text-primary)]">Date</span>
+              <div className="relative">
+                <Calendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-secondary)]" />
               <input
                 type="date"
                 required
@@ -106,7 +106,7 @@ export function BookActivityModal({ isOpen, onClose, activity, guestId, onBooked
             </div>
           </label>
           <label className="block space-y-2">
-            <span className="text-sm font-semibold text-ink-800">Time Slot</span>
+            <span className="text-sm font-semibold text-[var(--color-text-primary)]">Time Slot</span>
             <select
               value={timeSlot}
               onChange={(event) => setTimeSlot(event.target.value)}
@@ -120,7 +120,7 @@ export function BookActivityModal({ isOpen, onClose, activity, guestId, onBooked
             </select>
           </label>
           <label className="block space-y-2">
-            <span className="text-sm font-semibold text-ink-800">Participants</span>
+            <span className="text-sm font-semibold text-[var(--color-text-primary)]">Participants</span>
             <input
               type="number"
               min={1}
@@ -132,7 +132,7 @@ export function BookActivityModal({ isOpen, onClose, activity, guestId, onBooked
             />
           </label>
           <label className="block space-y-2">
-            <span className="text-sm font-semibold text-ink-800">Pickup Point</span>
+            <span className="text-sm font-semibold text-[var(--color-text-primary)]">Pickup Point</span>
             <select
               value={pickupPoint}
               onChange={(event) => setPickupPoint(event.target.value)}
@@ -147,8 +147,8 @@ export function BookActivityModal({ isOpen, onClose, activity, guestId, onBooked
           </label>
         </div>
 
-        <label className="block space-y-2">
-          <span className="text-sm font-semibold text-ink-800">Special Requirements</span>
+          <label className="block space-y-2">
+          <span className="text-sm font-semibold text-[var(--color-text-primary)]">Special Requirements</span>
           <textarea
             value={notes}
             onChange={(event) => setNotes(event.target.value)}
@@ -157,7 +157,7 @@ export function BookActivityModal({ isOpen, onClose, activity, guestId, onBooked
           />
         </label>
 
-        <div className="flex justify-end gap-3 border-t border-sand-200 pt-4">
+        <div className="flex justify-end gap-3 border-t border-border pt-4">
           <button type="button" onClick={onClose} className="btn-secondary">
             Cancel
           </button>

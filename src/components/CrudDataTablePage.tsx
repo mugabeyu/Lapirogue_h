@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Pencil, Plus, SearchIcon, Trash2 } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { StatusBadge } from '@/components/StatusBadge';
+import Button from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { useApi } from '@/hooks/useApi';
 import { toast } from 'sonner';
@@ -142,33 +143,28 @@ export default function CrudDataTablePage({
         subtitle={subtitle}
         action={
           addHref ? (
-            <Link href={addHref} className="btn-primary inline-flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              {addLabel}
+            <Link href={addHref} className="inline-flex">
+              <Button variant="primary">
+                <Plus className="h-4 w-4" />
+                {addLabel}
+              </Button>
             </Link>
           ) : (
-            <button
-              type="button"
-              className="btn-primary inline-flex items-center gap-2"
-              onClick={() => {
-                setEditRow(null);
-                setIsModalOpen(true);
-              }}
-            >
+            <Button variant="primary" onClick={() => { setEditRow(null); setIsModalOpen(true); }}>
               <Plus className="h-4 w-4" />
               {addLabel}
-            </button>
+            </Button>
           )
         }
       />
 
-      <div className="overflow-hidden rounded-[24px] border border-sand-200 bg-white shadow-sm">
-        <div className="border-b border-sand-200 p-4">
+      <div className="card">
+        <div className="px-4 py-4 border-b border-border">
           <label htmlFor={`${title}-search`} className="sr-only">
             Search {rowLabel}
           </label>
           <div className="relative w-full sm:w-96">
-            <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" />
+            <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-secondary)]" />
             <input
               id={`${title}-search`}
               type="search"
@@ -190,8 +186,8 @@ export default function CrudDataTablePage({
                 : `Showing ${rows.length} ${rows.length === 1 ? rowLabel.replace(/s$/, '') : rowLabel}`
             }
           >
-            <thead>
-              <tr className="border-b border-sand-200 bg-sand-50 text-xs uppercase tracking-wider text-ink-600">
+              <thead>
+              <tr className="bg-surface-secondary text-xs uppercase tracking-wider text-[var(--color-text-secondary)]">
                 {columns.map((column) => (
                   <th key={column.key} scope="col" className="px-6 py-4 font-medium">
                     {column.label}
@@ -204,10 +200,10 @@ export default function CrudDataTablePage({
                 ) : null}
               </tr>
             </thead>
-            <tbody className="divide-y divide-sand-200">
+            <tbody className="divide-y divide-border">
               {!isLoading && rows.length === 0 && (
                 <tr>
-                  <td colSpan={columns.length + (disableEdit && disableDelete ? 0 : 1)} className="px-6 py-12 text-center text-sm text-ink-500">
+                  <td colSpan={columns.length + (disableEdit && disableDelete ? 0 : 1)} className="px-6 py-12 text-center text-sm text-[var(--color-text-secondary)]">
                     {emptyText}
                   </td>
                 </tr>
@@ -215,24 +211,24 @@ export default function CrudDataTablePage({
               {rows.map((row, index) => (
                 <tr
                   key={String(row.id ?? index)}
-                  className={`hover:bg-sand-50/50 ${rowHrefBase ? 'cursor-pointer' : ''}`}
+                  className={`hover:bg-surface-secondary ${rowHrefBase ? 'cursor-pointer' : ''}`}
                   onClick={rowHrefBase && row.id != null ? () => router.push(`${rowHrefBase}/${String(row.id)}`) : undefined}
                 >
                   {columns.map((column) => {
                     const value = getTableValue(row, column.key);
                     return (
-                      <td key={column.key} className="px-6 py-4 text-sm text-ink-700">
+                      <td key={column.key} className="px-6 py-4 text-sm text-[var(--color-text-primary)]">
                         {column.type === 'image' ? (
                           value ? (
                             <div className="flex items-center gap-3">
                               <img
                                 src={String(value)}
                                 alt={column.label}
-                                className="h-12 w-12 rounded-xl border border-sand-200 object-cover"
+                                className="h-12 w-12 rounded-xl border border-border object-cover"
                               />
                             </div>
                           ) : (
-                            <span className="text-ink-400">-</span>
+                            <span className="text-[var(--color-text-secondary)]">-</span>
                           )
                         ) : column.type === 'status' ? (
                           <StatusBadge status={String(value ?? '')} />
@@ -248,7 +244,7 @@ export default function CrudDataTablePage({
                         {!disableEdit && (
                           <button
                             type="button"
-                            className="rounded-lg p-2 text-ink-500 hover:bg-sand-100 hover:text-primary"
+                            className="rounded-lg p-2 text-[var(--color-text-secondary)] hover:bg-surface-secondary hover:text-[var(--color-primary)]"
                             onClick={(event) => {
                               event.stopPropagation();
                               setEditRow(row);
@@ -261,8 +257,8 @@ export default function CrudDataTablePage({
                         )}
                         {!disableDelete && entityType !== 'payment' && (
                         <button
-                          type="button"
-                          className="rounded-lg p-2 text-ink-500 hover:bg-danger/10 hover:text-danger"
+                            type="button"
+                            className="rounded-lg p-2 text-[var(--color-text-secondary)] hover:bg-danger/10 hover:text-[var(--color-danger)]"
                           onClick={(event) => {
                             event.stopPropagation();
                             setDeleteRow(row);

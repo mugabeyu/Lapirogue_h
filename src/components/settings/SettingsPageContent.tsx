@@ -262,7 +262,7 @@ export default function SettingsPageContent() {
 
   return (
     <div className="animate-in fade-in duration-500">
-      <h1 className="font-display text-4xl text-ink-900">Settings</h1>
+      <h1 className="font-display text-4xl text-[var(--color-text-primary)]">Settings</h1>
 
       <div className="mt-10 grid gap-10 lg:grid-cols-[220px_minmax(0,1fr)]">
         <nav className="space-y-1 text-sm">
@@ -272,7 +272,7 @@ export default function SettingsPageContent() {
               type="button"
               onClick={() => setActiveTab(tab.id)}
               className={`block w-full rounded-lg px-1 py-2 text-left transition-colors ${
-                activeTab === tab.id ? 'font-semibold text-ink-900' : 'text-ink-600 hover:text-ink-900'
+                activeTab === tab.id ? 'font-semibold text-[var(--color-text-primary)]' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
               }`}
             >
               {tab.label}
@@ -280,8 +280,8 @@ export default function SettingsPageContent() {
           ))}
         </nav>
 
-        <section className="rounded-[28px] border border-sand-200 bg-white px-6 py-10 shadow-sm sm:px-10">
-          <h2 className="text-center font-display text-3xl text-ink-900">{tabTitle}</h2>
+        <section className="rounded-[28px] border border-border bg-surface px-6 py-10 shadow-sm sm:px-10">
+          <h2 className="text-center font-display text-3xl text-[var(--color-text-primary)]">{tabTitle}</h2>
 
           {activeTab === 'profile' && (
             <form onSubmit={handleProfileSave} className="mx-auto mt-8 max-w-lg space-y-6">
@@ -294,7 +294,7 @@ export default function SettingsPageContent() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-ink-700">Full name</label>
+                <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Full name</label>
                 <input
                   type="text"
                   value={profileForm.fullName}
@@ -304,7 +304,7 @@ export default function SettingsPageContent() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-ink-700">Email</label>
+                <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Email</label>
                 <input
                   type="email"
                   value={profileForm.email}
@@ -314,7 +314,7 @@ export default function SettingsPageContent() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-ink-700">Phone</label>
+                <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Phone</label>
                 <input
                   type="tel"
                   value={profileForm.phone}
@@ -336,7 +336,7 @@ export default function SettingsPageContent() {
           {activeTab === 'security' && (
             <form onSubmit={handlePasswordSave} className="mx-auto mt-8 max-w-lg space-y-6">
               <div>
-                <label className="mb-1 block text-sm font-medium text-ink-700">Current password</label>
+                <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Current password</label>
                 <input
                   type="password"
                   value={passwordData.currentPassword}
@@ -346,7 +346,7 @@ export default function SettingsPageContent() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-ink-700">New password</label>
+                <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">New password</label>
                 <input
                   type="password"
                   value={passwordData.newPassword}
@@ -357,7 +357,7 @@ export default function SettingsPageContent() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-ink-700">Confirm new password</label>
+                <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Confirm new password</label>
                 <input
                   type="password"
                   value={passwordData.confirmPassword}
@@ -384,7 +384,7 @@ export default function SettingsPageContent() {
                 hint="Shown on the public about page"
               />
               <div>
-                <label className="mb-1 block text-sm font-medium text-ink-700">Title</label>
+                <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Title</label>
                 <input
                   type="text"
                   value={aboutData.title}
@@ -394,7 +394,7 @@ export default function SettingsPageContent() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-ink-700">Subtitle</label>
+                <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Subtitle</label>
                 <input
                   type="text"
                   value={aboutData.subtitle}
@@ -404,7 +404,7 @@ export default function SettingsPageContent() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-ink-700">About text</label>
+                <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">About text</label>
                 <textarea
                   value={aboutData.body}
                   onChange={(event) => setAboutData({ ...aboutData, body: event.target.value })}
@@ -413,7 +413,7 @@ export default function SettingsPageContent() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-ink-700">Highlights</label>
+                <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Highlights</label>
                 <textarea
                   value={aboutData.highlightsText}
                   onChange={(event) => setAboutData({ ...aboutData, highlightsText: event.target.value })}
@@ -422,7 +422,7 @@ export default function SettingsPageContent() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-ink-700">Metrics</label>
+                <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Metrics</label>
                 <textarea
                   value={aboutData.metricsText}
                   onChange={(event) => setAboutData({ ...aboutData, metricsText: event.target.value })}

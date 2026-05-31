@@ -96,10 +96,10 @@ export default function RegisterPage() {
 
   if (!isReady && !staff) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-sand-100 px-4">
+      <div className="flex min-h-screen items-center justify-center bg-surface-secondary px-4">
         <div className="card w-full max-w-md p-8 text-center">
-          <h1 className="mb-4 text-2xl font-bold text-ink-900">Invalid Invitation</h1>
-          <p className="text-ink-600 mb-6">
+          <h1 className="mb-4 text-2xl font-bold text-[var(--color-text-primary)]">Invalid Invitation</h1>
+          <p className="text-[var(--color-text-secondary)] mb-6">
             This invitation link is invalid or has expired. Please contact your administrator.
           </p>
           <Link href="/login" className="btn-primary">Back to Login</Link>
@@ -114,15 +114,15 @@ export default function RegisterPage() {
       style={{ backgroundImage: `url('${PAGE_BG_IMAGE}')` }}
     >
       <div className="absolute inset-0 bg-slate-950/35 backdrop-blur-[1px]" />
-      <div className="card relative z-10 w-full max-w-md border border-white/60 bg-white/92 p-8 shadow-2xl backdrop-blur-md">
-        <h1 className="mb-2 text-center text-2xl font-bold text-ink-900">Complete Staff Registration</h1>
-        <p className="mb-6 text-center text-sm text-ink-600">Your invitation details are pre-filled below.</p>
+      <div className="card relative z-10 w-full max-w-md border border-border bg-surface p-8 shadow-2xl backdrop-blur-md">
+        <h1 className="mb-2 text-center text-2xl font-bold text-[var(--color-text-primary)]">Complete Staff Registration</h1>
+        <p className="mb-6 text-center text-sm text-[var(--color-text-secondary)]">Your invitation details are pre-filled below.</p>
 
         {staff && (
-          <div className="mb-6 rounded-lg bg-slate-50 p-4 text-sm">
-            <p><strong>Email:</strong> <span className="text-ink-600">{staff.email}</span></p>
-            <p><strong>Name:</strong> <span className="text-ink-600">{staff.full_name}</span></p>
-            <p><strong>Employee Code:</strong> <span className="text-ink-600">{staff.employee_code}</span></p>
+            <div className="mb-6 rounded-lg bg-slate-50 p-4 text-sm">
+            <p><strong>Email:</strong> <span className="text-[var(--color-text-secondary)]">{staff.email}</span></p>
+            <p><strong>Name:</strong> <span className="text-[var(--color-text-secondary)]">{staff.full_name}</span></p>
+            <p><strong>Employee Code:</strong> <span className="text-[var(--color-text-secondary)]">{staff.employee_code}</span></p>
           </div>
         )}
 
@@ -157,7 +157,7 @@ export default function RegisterPage() {
             {isSubmitting ? 'Setting up...' : 'Create Password'}
           </button>
 
-          <Link href="/login" className="block text-center text-sm text-ink-600 hover:text-ink-900">Back to Login</Link>
+          <Link href="/login" className="block text-center text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]">Back to Login</Link>
         </form>
       </div>
     </div>

@@ -14,7 +14,7 @@ export function LabeledTable({ caption, summary, children, footer, className = '
   return (
     <div className={className}>
       {summary ? (
-        <p id={`${tableId}-summary`} className="mb-3 px-1 text-sm font-medium text-ink-700">
+        <p id={`${tableId}-summary`} className="mb-3 px-1 text-sm font-medium text-[var(--color-text-primary)]">
           {summary}
         </p>
       ) : null}
@@ -26,7 +26,7 @@ export function LabeledTable({ caption, summary, children, footer, className = '
         <caption className="sr-only">{caption}</caption>
         {children}
       </table>
-      {footer ? <div className="border-t border-sand-200 p-4 text-sm text-ink-600">{footer}</div> : null}
+      {footer ? <div className="border-t border-border p-4 text-sm text-[var(--color-text-secondary)]">{footer}</div> : null}
     </div>
   );
 }

@@ -143,15 +143,15 @@ export function MenuItemModal({ isOpen, onClose, onSaved, editItem }: MenuItemMo
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="grid gap-5 lg:grid-cols-[200px_1fr]">
             <div className="space-y-2">
-              <span className="text-sm font-medium text-ink-700">Item photo</span>
-              <label className="flex aspect-square cursor-pointer flex-col items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-sand-300 bg-sand-50/60 text-center transition-colors hover:border-primary/40 hover:bg-sand-50">
+              <span className="text-sm font-medium text-[var(--color-text-primary)]">Item photo</span>
+              <label className="flex aspect-square cursor-pointer flex-col items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-border bg-surface-secondary/60 text-center transition-colors hover:border-primary/40 hover:bg-surface-secondary">
                 {imagePreview ? (
                   <img src={imagePreview} alt="" className="h-full w-full object-cover" />
                 ) : (
                   <>
-                    <CloudUpload className="mb-2 h-7 w-7 text-ink-400" />
-                    <span className="px-3 text-xs font-medium text-ink-600">Upload photo</span>
-                    <span className="mt-1 px-3 text-[11px] text-ink-500">PNG, JPG up to 5MB</span>
+                    <CloudUpload className="mb-2 h-7 w-7 text-[var(--color-text-secondary)]" />
+                    <span className="px-3 text-xs font-medium text-[var(--color-text-secondary)]">Upload photo</span>
+                    <span className="mt-1 px-3 text-[11px] text-[var(--color-text-secondary)]">PNG, JPG up to 5MB</span>
                   </>
                 )}
                 <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleImageChange} />
@@ -161,7 +161,7 @@ export function MenuItemModal({ isOpen, onClose, onSaved, editItem }: MenuItemMo
             <div className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="block space-y-1.5 sm:col-span-2">
-                  <span className="text-sm font-medium text-ink-700">Name</span>
+                  <span className="text-sm font-medium text-[var(--color-text-primary)]">Name</span>
                   <input
                     value={name}
                     onChange={(event) => setName(event.target.value)}
@@ -171,7 +171,7 @@ export function MenuItemModal({ isOpen, onClose, onSaved, editItem }: MenuItemMo
                   />
                 </label>
                 <label className="block space-y-1.5">
-                  <span className="text-sm font-medium text-ink-700">Category</span>
+                  <span className="text-sm font-medium text-[var(--color-text-primary)]">Category</span>
                   <select
                     value={category}
                     onChange={(event) => setCategory(event.target.value)}
@@ -186,7 +186,7 @@ export function MenuItemModal({ isOpen, onClose, onSaved, editItem }: MenuItemMo
                   </select>
                 </label>
                 <label className="block space-y-1.5">
-                  <span className="text-sm font-medium text-ink-700">Price (Rs)</span>
+                  <span className="text-sm font-medium text-[var(--color-text-primary)]">Price (Rs)</span>
                   <input
                     type="number"
                     min={0}
@@ -199,7 +199,7 @@ export function MenuItemModal({ isOpen, onClose, onSaved, editItem }: MenuItemMo
                   />
                 </label>
                 <label className="block space-y-1.5 sm:col-span-2">
-                  <span className="text-sm font-medium text-ink-700">Preparation time (minutes)</span>
+                  <span className="text-sm font-medium text-[var(--color-text-primary)]">Preparation time (minutes)</span>
                   <input
                     type="number"
                     min={0}
@@ -210,7 +210,7 @@ export function MenuItemModal({ isOpen, onClose, onSaved, editItem }: MenuItemMo
                   />
                 </label>
                 <label className="block space-y-1.5 sm:col-span-2">
-                  <span className="text-sm font-medium text-ink-700">Description</span>
+                  <span className="text-sm font-medium text-[var(--color-text-primary)]">Description</span>
                   <textarea
                     value={description}
                     onChange={(event) => setDescription(event.target.value)}
@@ -221,19 +221,19 @@ export function MenuItemModal({ isOpen, onClose, onSaved, editItem }: MenuItemMo
                 </label>
               </div>
 
-              <label className="flex items-center gap-3 rounded-lg border border-sand-200 bg-sand-50/50 px-3 py-2.5 text-sm text-ink-700">
+              <label className="flex items-center gap-3 rounded-lg border border-border bg-surface-secondary/50 px-3 py-2.5 text-sm text-[var(--color-text-primary)]">
                 <input
                   type="checkbox"
                   checked={isAvailable}
                   onChange={(event) => setIsAvailable(event.target.checked)}
-                  className="h-4 w-4 rounded border-sand-300 text-primary focus:ring-primary"
+                  className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
                 />
                 Available on menu
               </label>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-sand-200 pt-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
             {isEdit ? (
               <button
                 type="button"

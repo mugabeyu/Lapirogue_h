@@ -36,47 +36,47 @@ function MenuItemCard({
   const prepLabel = formatPrepTime(item.preparationMinutes);
 
   return (
-    <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-sand-200 bg-white shadow-sm transition-shadow hover:shadow-md">
-      <div className="relative aspect-[4/3] bg-sand-200">
+    <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-[var(--shadow-small)] transition-shadow hover:shadow-[var(--shadow-medium)]">
+      <div className="relative aspect-[4/3] bg-surface-secondary">
         {item.imagePath ? (
           <img src={item.imagePath} alt="" className="h-full w-full object-cover" />
         ) : (
-          <div className="flex h-full items-center justify-center text-sm text-ink-500">No photo</div>
+          <div className="flex h-full items-center justify-center text-sm text-[var(--color-text-secondary)]">No photo</div>
         )}
         {!item.isAvailable && (
           <div className="absolute inset-0 flex items-center justify-center bg-ink-900/40">
-            <span className="rounded-full bg-white/95 px-4 py-1.5 text-sm font-semibold text-ink-800">
+            <span className="rounded-full bg-surface px-4 py-1.5 text-sm font-semibold text-[var(--color-text-primary)]">
               Out of Stock
             </span>
           </div>
         )}
-        <span className="absolute left-3 top-3 rounded-full bg-white/95 px-2.5 py-1 text-xs font-medium text-ink-700 shadow-sm">
+        <span className="absolute left-3 top-3 rounded-full bg-surface px-2.5 py-1 text-xs font-medium text-[var(--color-text-primary)] shadow-sm">
           {item.category}
         </span>
       </div>
 
       <div className="flex flex-1 flex-col p-4">
         <div className="mb-2 flex items-start justify-between gap-2">
-          <h3 className="font-display text-lg font-semibold leading-tight text-ink-900">{item.name}</h3>
-          <p className="shrink-0 font-display text-lg font-semibold text-ink-900">{formatMenuPrice(item.price)}</p>
+          <h3 className="font-display text-lg font-semibold leading-tight text-[var(--color-text-primary)]">{item.name}</h3>
+          <p className="shrink-0 font-display text-lg font-semibold text-[var(--color-text-primary)]">{formatMenuPrice(item.price)}</p>
         </div>
 
         {item.description && (
-          <p className="mb-3 line-clamp-2 text-sm leading-relaxed text-ink-600">{item.description}</p>
+          <p className="mb-3 line-clamp-2 text-sm leading-relaxed text-[var(--color-text-secondary)]">{item.description}</p>
         )}
 
         {prepLabel && (
-          <p className="mb-3 flex items-center gap-1.5 text-xs text-ink-500">
+          <p className="mb-3 flex items-center gap-1.5 text-xs text-[var(--color-text-secondary)]">
             <Clock className="h-3.5 w-3.5" />
             Prep {prepLabel}
           </p>
         )}
 
-        <div className="mt-auto flex items-center justify-between border-t border-sand-200 pt-3">
-          <label className="flex cursor-pointer items-center gap-2 text-sm text-ink-700">
-            <span
-              className={`relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors ${
-                item.isAvailable ? 'bg-primary' : 'bg-sand-300'
+        <div className="mt-auto flex items-center justify-between border-t border-border pt-3">
+          <label className="flex cursor-pointer items-center gap-2 text-sm text-[var(--color-text-primary)]">
+                <span
+                className={`relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors ${
+                item.isAvailable ? 'bg-primary' : 'bg-surface-secondary'
               }`}
             >
               <input
@@ -86,7 +86,7 @@ function MenuItemCard({
                 onChange={onToggleAvailability}
               />
               <span
-                className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                className={`absolute top-0.5 h-5 w-5 rounded-full bg-surface shadow transition-transform ${
                   item.isAvailable ? 'left-[22px]' : 'left-0.5'
                 }`}
               />
@@ -96,7 +96,7 @@ function MenuItemCard({
           <button
             type="button"
             onClick={onEdit}
-            className="rounded-lg p-2 text-ink-500 transition-colors hover:bg-sand-100 hover:text-primary"
+            className="rounded-lg p-2 text-[var(--color-text-secondary)] transition-colors hover:bg-surface-secondary hover:text-[var(--color-primary)]"
             aria-label={`Edit ${item.name}`}
           >
             <Pencil className="h-4 w-4" />
@@ -169,7 +169,7 @@ export default function FoodBeverageMenuPage() {
       />
 
       <div className="relative max-w-xl">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" />
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-secondary)]" />
         <input
           type="text"
           value={search}
@@ -179,7 +179,7 @@ export default function FoodBeverageMenuPage() {
         />
       </div>
 
-      <div className="flex flex-wrap gap-6 border-b border-sand-200">
+      <div className="flex flex-wrap gap-6 border-b border-border">
         {uniqueCategories.map((item) => {
           const active = item === category;
           return (
@@ -190,7 +190,7 @@ export default function FoodBeverageMenuPage() {
               className={`border-b-2 pb-3 text-sm font-medium transition-colors ${
                 active
                   ? 'border-primary text-primary'
-                  : 'border-transparent text-ink-600 hover:text-ink-900'
+                  : 'border-transparent text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
               }`}
             >
               {item}
@@ -199,12 +199,12 @@ export default function FoodBeverageMenuPage() {
         })}
       </div>
 
-      {isLoading && <p className="text-sm text-ink-500">Loading menu...</p>}
+      {isLoading && <p className="text-sm text-[var(--color-text-secondary)]">Loading menu...</p>}
 
       {!isLoading && items.length === 0 && (
-        <div className="rounded-2xl border border-dashed border-sand-200 bg-white px-6 py-16 text-center">
-          <p className="text-ink-600">No menu items found.</p>
-          <button type="button" onClick={openCreate} className="mt-4 text-sm font-semibold text-primary">
+        <div className="card rounded-2xl border-dashed border-border px-6 py-16 text-center">
+          <p className="text-[var(--color-text-secondary)]">No menu items found.</p>
+          <button type="button" onClick={openCreate} className="mt-4 text-sm font-semibold text-[var(--color-primary)]">
             Add your first item →
           </button>
         </div>

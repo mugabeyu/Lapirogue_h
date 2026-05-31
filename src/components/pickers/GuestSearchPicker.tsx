@@ -31,7 +31,7 @@ export function GuestSearchPicker({
   return (
     <div className="space-y-4">
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" />
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-secondary)]" />
         <input
           type="text"
           value={search}
@@ -42,9 +42,9 @@ export function GuestSearchPicker({
       </div>
 
       <div className="space-y-3">
-        {isLoading && <p className="text-sm text-ink-500">Loading guests...</p>}
+        {isLoading && <p className="text-sm text-[var(--color-text-secondary)]">Loading guests...</p>}
         {!isLoading && rows.length === 0 && (
-          <p className="rounded-xl border border-dashed border-sand-200 bg-sand-50/50 px-4 py-8 text-center text-sm text-ink-500">
+          <p className="rounded-xl border border-dashed border-border bg-surface-secondary/50 px-4 py-8 text-center text-sm text-[var(--color-text-secondary)]">
             No guests match your search.
           </p>
         )}
@@ -58,17 +58,17 @@ export function GuestSearchPicker({
               className={`flex w-full items-center gap-4 rounded-xl border p-4 text-left transition-colors ${
                 selected
                   ? 'border-primary bg-primary/5 ring-1 ring-primary'
-                  : 'border-sand-200 bg-white hover:border-sand-300 hover:bg-sand-50/50'
+                  : 'border-border bg-surface hover:border-border hover:bg-surface-secondary'
               }`}
             >
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                 <User className="h-5 w-5" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="font-medium text-ink-900">
+                <p className="font-medium text-[var(--color-text-primary)]">
                   {guest.firstName} {guest.lastName}
                 </p>
-                <p className="truncate text-sm text-ink-500">
+                <p className="truncate text-sm text-[var(--color-text-secondary)]">
                   {[guest.email, guest.phone].filter(Boolean).join(' • ') || 'No contact details'}
                 </p>
               </div>
@@ -78,7 +78,7 @@ export function GuestSearchPicker({
         })}
       </div>
 
-      {footer && <div className="border-t border-sand-200 pt-4 text-center text-sm text-ink-600">{footer}</div>}
+      {footer && <div className="border-t border-border pt-4 text-center text-sm text-[var(--color-text-secondary)]">{footer}</div>}
     </div>
   );
 }

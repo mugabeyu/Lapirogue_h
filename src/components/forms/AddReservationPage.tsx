@@ -85,20 +85,20 @@ export default function AddReservationPage() {
     <div className="mx-auto max-w-3xl space-y-8 animate-in fade-in duration-500">
       <Link
         href="/reservations"
-        className="inline-flex items-center gap-2 text-sm font-medium text-ink-600 hover:text-primary"
+        className="inline-flex items-center gap-2 text-sm font-medium text-[var(--color-text-secondary)] hover:text-primary"
       >
         <ArrowLeft className="h-4 w-4" />
         Back to Reservations
       </Link>
 
-      <h1 className="font-display text-3xl text-ink-900">New Reservation</h1>
+      <h1 className="font-display text-3xl text-[var(--color-text-primary)]">New Reservation</h1>
 
       <ReservationStepper currentStep={step} />
 
-      <div className="rounded-[24px] border border-sand-200 bg-white p-6 shadow-sm md:p-8">
+      <div className="rounded-[24px] border border-border bg-surface p-6 shadow-sm md:p-8">
         {step === 0 && (
           <>
-            <h2 className="mb-5 font-display text-xl text-ink-900">Select Guest</h2>
+            <h2 className="mb-5 font-display text-xl text-[var(--color-text-primary)]">Select Guest</h2>
             <GuestSearchPicker
               selectedId={guest?.id ?? ''}
               onSelect={setGuest}
@@ -120,7 +120,7 @@ export default function AddReservationPage() {
 
         {step === 1 && (
           <>
-            <h2 className="mb-5 font-display text-xl text-ink-900">Select Room</h2>
+            <h2 className="mb-5 font-display text-xl text-[var(--color-text-primary)]">Select Room</h2>
             <RoomSearchPicker
               selectedId={room?.id ?? ''}
               onSelect={setRoom}
@@ -132,11 +132,11 @@ export default function AddReservationPage() {
 
         {step === 2 && (
           <>
-            <h2 className="mb-5 font-display text-xl text-ink-900">Dates &amp; Options</h2>
+            <h2 className="mb-5 font-display text-xl text-[var(--color-text-primary)]">Dates &amp; Options</h2>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-ink-700">Check-in</label>
+                  <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Check-in</label>
                   <input
                     type="date"
                     className="input-field w-full"
@@ -146,7 +146,7 @@ export default function AddReservationPage() {
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-ink-700">Check-out</label>
+                  <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Check-out</label>
                   <input
                     type="date"
                     className="input-field w-full"
@@ -157,7 +157,7 @@ export default function AddReservationPage() {
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-ink-700">Adults</label>
+                  <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Adults</label>
                   <input
                     type="number"
                     min={1}
@@ -167,7 +167,7 @@ export default function AddReservationPage() {
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-ink-700">Children</label>
+                  <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Children</label>
                   <input
                     type="number"
                     min={0}
@@ -178,7 +178,7 @@ export default function AddReservationPage() {
                 </div>
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-ink-700">
+                <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">
                   Total amount {autoTotal > 0 ? `(suggested: Rs ${autoTotal.toLocaleString()})` : ''}
                 </label>
                 <input
@@ -191,7 +191,7 @@ export default function AddReservationPage() {
                 />
               </div>
               {checkIn && checkOut && room && (
-                <p className="text-sm text-ink-500">
+                <p className="text-sm text-[var(--color-text-secondary)]">
                   Room {room.roomNumber} · {daysBetween(checkIn, checkOut)} night(s)
                 </p>
               )}
@@ -201,7 +201,7 @@ export default function AddReservationPage() {
 
         {step === 3 && guest && room && (
           <>
-            <h2 className="mb-5 font-display text-xl text-ink-900">Confirm Reservation</h2>
+            <h2 className="mb-5 font-display text-xl text-[var(--color-text-primary)]">Confirm Reservation</h2>
             <dl className="space-y-3 text-sm">
               <SummaryRow label="Guest" value={`${guest.firstName} ${guest.lastName}`} />
               <SummaryRow label="Room" value={`${room.roomNumber} (${room.type.replace('_', ' ')})`} />
@@ -263,26 +263,26 @@ function ReservationStepper({ currentStep }: { currentStep: number }) {
         const done = index < currentStep;
         return (
           <div key={label} className="flex flex-1 flex-col items-center">
-            <div className="flex w-full items-center">
-              {index > 0 && (
-                <div className={`h-px flex-1 ${done || active ? 'bg-primary' : 'bg-sand-200'}`} />
-              )}
-              <div
-                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-medium ${
-                  active || done ? 'bg-primary text-white' : 'bg-sand-100 text-ink-400'
-                }`}
-              >
+            <div className="flex items-center">
+                      {index > 0 && (
+                        <div className={`h-px flex-1 ${done || active ? 'bg-primary' : 'bg-surface-secondary'}`} />
+                      )}
+                      <div
+                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-medium ${
+                          active || done ? 'bg-primary text-white' : 'bg-surface-secondary text-[var(--color-text-secondary)]'
+                        }`}
+                      >
                 {index + 1}
               </div>
               {index < STEPS.length - 1 && (
-                <div className={`h-px flex-1 ${done ? 'bg-primary' : 'bg-sand-200'}`} />
+                        <div className={`h-px flex-1 ${done ? 'bg-primary' : 'bg-surface-secondary'}`} />
               )}
             </div>
-            <span
-              className={`mt-2 hidden text-center text-xs sm:block ${
-                active ? 'font-medium text-ink-900' : 'text-ink-500'
-              }`}
-            >
+                    <span
+                      className={`mt-2 hidden text-center text-xs sm:block ${
+                        active ? 'font-medium text-[var(--color-text-primary)]' : 'text-[var(--color-text-secondary)]'
+                      }`}
+                    >
               {label}
             </span>
           </div>
@@ -294,9 +294,9 @@ function ReservationStepper({ currentStep }: { currentStep: number }) {
 
 function SummaryRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between gap-4 border-b border-sand-100 pb-2">
-      <dt className="text-ink-500">{label}</dt>
-      <dd className="font-medium text-ink-900">{value}</dd>
+    <div className="flex justify-between gap-4 border-b border-border pb-2">
+      <dt className="text-[var(--color-text-secondary)]">{label}</dt>
+      <dd className="font-medium text-[var(--color-text-primary)]">{value}</dd>
     </div>
   );
 }

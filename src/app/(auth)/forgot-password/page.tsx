@@ -14,7 +14,7 @@ function PageShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative flex min-h-screen items-center justify-center bg-cover bg-center bg-no-repeat px-4" style={{ backgroundImage: `url('${BACKGROUND_IMAGE}')` }}>
       <div className="absolute inset-0 bg-slate-950/35 backdrop-blur-[1px]" />
-      <div className="card relative z-10 w-full max-w-md border border-white/60 bg-white/92 p-8 shadow-2xl backdrop-blur-md">
+      <div className="card relative z-10 w-full max-w-md p-8 shadow-2xl backdrop-blur-md">
         {children}
       </div>
     </div>
@@ -28,8 +28,8 @@ function StatusAlert({ message, type }: { message: string; type: StatusType }) {
 
   const variantClasses =
     type === 'success'
-      ? 'border-success/20 bg-success-50 text-success-700'
-      : 'border-danger/20 bg-danger-50 text-danger-700';
+      ? 'border-[rgba(22,163,74,0.12)] bg-[rgba(22,163,74,0.06)] text-[var(--color-success)]'
+      : 'border-[rgba(220,38,38,0.12)] bg-[rgba(220,38,38,0.06)] text-[var(--color-danger)]';
 
   return (
     <div className={`rounded-lg border px-4 py-3 text-sm ${variantClasses}`}>
@@ -87,8 +87,8 @@ export default function ForgotPasswordPage() {
     return (
       <PageShell>
         <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">Check Your Email</h1>
-          <p className="text-ink-600 mb-6">
+          <h1 className="text-2xl font-bold mb-4 text-[var(--color-text-primary)]">Check Your Email</h1>
+          <p className="text-[var(--color-text-secondary)] mb-6">
             If an account with that email exists, we've sent a password reset link.
           </p>
           <Link href="/login" className="btn-primary">
@@ -102,8 +102,8 @@ export default function ForgotPasswordPage() {
   return (
     <PageShell>
       <div>
-        <h1 className="text-2xl font-bold text-center mb-6">Forgot Password</h1>
-        <p className="text-ink-600 text-center mb-4">
+        <h1 className="text-2xl font-bold text-center mb-6 text-[var(--color-text-primary)]">Forgot Password</h1>
+        <p className="text-[var(--color-text-secondary)] text-center mb-4">
           Enter your email address and we'll send you a reset link.
         </p>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -122,7 +122,7 @@ export default function ForgotPasswordPage() {
           <button type="submit" disabled={isSubmitting} className="btn-primary w-full disabled:opacity-50">
             {isSubmitting ? 'Sending...' : 'Send Reset Link'}
           </button>
-          <Link href="/login" className="block text-center text-sm text-ink-600 hover:text-ink-900">
+          <Link href="/login" className="block text-center text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]">
             Back to Login
           </Link>
         </form>

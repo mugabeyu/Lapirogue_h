@@ -5,7 +5,7 @@ import ReservationCalendarPage from '@/components/forms/ReservationCalendarPage'
 export default function ReservationCalendarRoute() {
   return (
     <ProtectedPage>
-      <Suspense fallback={<div className="p-8 text-ink-600">Loading calendar...</div>}>
+      <Suspense fallback={<div className="p-8 text-[var(--color-text-secondary)]">Loading calendar...</div>}>
         <ReservationCalendarPage />
       </Suspense>
     </ProtectedPage>

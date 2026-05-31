@@ -45,9 +45,9 @@ type CalendarData = {
 const STATUS_STYLES: Record<CalendarBooking['displayStatus'], string> = {
   confirmed: 'bg-primary text-white',
   'checked-in': 'bg-success text-white',
-  pending: 'bg-warning text-ink-900',
+  pending: 'bg-warning text-[var(--color-text-primary)]',
   departing: 'bg-[#3B82B6] text-white',
-  cancelled: 'bg-sand-300 text-ink-600',
+  cancelled: 'bg-surface-secondary text-[var(--color-text-secondary)]',
 };
 
 const LEGEND = [
@@ -119,30 +119,30 @@ export default function ReservationCalendarPage({ embedded = false }: Reservatio
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         {!embedded ? (
           <div>
-            <h1 className="font-display text-3xl text-ink-900">Reservation Calendar</h1>
+              <h1 className="font-display text-3xl text-[var(--color-text-primary)]">Reservation Calendar</h1>
           </div>
         ) : (
           <div>
-            <h2 className="font-display text-2xl text-ink-900">Monthly reservations</h2>
-            <p className="mt-1 text-sm text-ink-600">Room occupancy across the month</p>
+              <h2 className="font-display text-2xl text-[var(--color-text-primary)]">Monthly reservations</h2>
+              <p className="mt-1 text-sm text-[var(--color-text-secondary)]">Room occupancy across the month</p>
           </div>
         )}
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex rounded-lg border border-sand-200 bg-white p-1 text-sm">
-            <button
-              type="button"
-              onClick={() => setView('month')}
-              className={`rounded-md px-4 py-1.5 font-medium transition-colors ${
-                view === 'month' ? 'bg-primary text-white' : 'text-ink-600 hover:text-ink-900'
-              }`}
+          <div className="flex rounded-lg border border-border bg-surface p-1 text-sm">
+              <button
+                type="button"
+                onClick={() => setView('month')}
+                className={`rounded-md px-4 py-1.5 font-medium transition-colors ${
+                  view === 'month' ? 'bg-primary text-white' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
+                }`}
             >
               Month
             </button>
-            <button
+                <button
               type="button"
               onClick={() => setView('week')}
               className={`rounded-md px-4 py-1.5 font-medium transition-colors ${
-                view === 'week' ? 'bg-primary text-white' : 'text-ink-600 hover:text-ink-900'
+                view === 'week' ? 'bg-primary text-white' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
               }`}
             >
               Week
@@ -158,21 +158,21 @@ export default function ReservationCalendarPage({ embedded = false }: Reservatio
       </div>
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
           <button
             type="button"
-            className="rounded-lg border border-sand-200 bg-white p-2 hover:bg-sand-50"
+            className="rounded-lg border border-border bg-surface p-2 hover:bg-surface-secondary"
             onClick={() => setAnchor((value) => shiftAnchor(value, view, -1))}
             aria-label="Previous period"
           >
             <ChevronLeft className="h-5 w-5" />
           </button>
-          <span className="min-w-[140px] text-center font-display text-lg text-ink-900">
+          <span className="min-w-[140px] text-center font-display text-lg text-[var(--color-text-primary)]">
             {data?.label ?? '...'}
           </span>
           <button
             type="button"
-            className="rounded-lg border border-sand-200 bg-white p-2 hover:bg-sand-50"
+            className="rounded-lg border border-border bg-surface p-2 hover:bg-surface-secondary"
             onClick={() => setAnchor((value) => shiftAnchor(value, view, 1))}
             aria-label="Next period"
           >
@@ -182,7 +182,7 @@ export default function ReservationCalendarPage({ embedded = false }: Reservatio
 
         <div className="flex flex-wrap gap-3 text-xs">
           {LEGEND.map((item) => (
-            <span key={item.key} className="inline-flex items-center gap-1.5 text-ink-600">
+            <span key={item.key} className="inline-flex items-center gap-1.5 text-[var(--color-text-secondary)]">
               <span className={`h-2.5 w-2.5 rounded-full ${item.className.split(' ')[0]}`} />
               {item.label}
             </span>
@@ -190,8 +190,8 @@ export default function ReservationCalendarPage({ embedded = false }: Reservatio
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-[24px] border border-sand-200 bg-white shadow-sm">
-        {isLoading && <p className="p-8 text-sm text-ink-500">Loading calendar...</p>}
+          <div className="overflow-hidden rounded-[24px] border border-border bg-surface shadow-sm">
+        {isLoading && <p className="p-8 text-sm text-[var(--color-text-secondary)]">Loading calendar...</p>}
 
         {!isLoading && data && (
           <div className="overflow-x-auto">
@@ -199,7 +199,7 @@ export default function ReservationCalendarPage({ embedded = false }: Reservatio
               className="grid min-w-max"
               style={{ gridTemplateColumns: `200px repeat(${days.length}, minmax(${dayColMin}px, 1fr))` }}
             >
-              <div className="sticky left-0 z-20 border-b border-r border-sand-200 bg-sand-50 px-4 py-3 text-xs font-medium uppercase tracking-wider text-ink-500">
+              <div className="sticky left-0 z-20 border-b border-r border-border bg-surface-secondary px-4 py-3 text-xs font-medium uppercase tracking-wider text-[var(--color-text-secondary)]">
                 Room
               </div>
               {days.map((dayKey) => {
@@ -208,14 +208,14 @@ export default function ReservationCalendarPage({ embedded = false }: Reservatio
                 return (
                   <div
                     key={dayKey}
-                    className={`border-b border-sand-200 px-1 py-3 text-center text-xs ${
-                      isToday ? 'bg-primary/5' : 'bg-sand-50'
+                    className={`border-b border-border px-1 py-3 text-center text-xs ${
+                      isToday ? 'bg-primary/5' : 'bg-surface-secondary'
                     }`}
                   >
-                    <div className="text-ink-500">{weekday}</div>
+                    <div className="text-[var(--color-text-secondary)]">{weekday}</div>
                     <div
                       className={`mx-auto mt-1 flex h-7 w-7 items-center justify-center rounded-full text-sm font-medium ${
-                        isToday ? 'bg-sand-200 text-ink-900' : 'text-ink-900'
+                        isToday ? 'bg-surface-secondary text-[var(--color-text-primary)]' : 'text-[var(--color-text-primary)]'
                       }`}
                     >
                       {day}
@@ -254,7 +254,7 @@ function GroupRows({
   return (
     <>
       <div
-        className="col-span-full border-b border-sand-200 bg-sand-50/80 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-ink-600"
+        className="col-span-full border-b border-border bg-surface-secondary/80 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]"
         style={{ gridColumn: `1 / span ${days.length + 1}` }}
       >
         {group.label}
@@ -263,15 +263,15 @@ function GroupRows({
         const bookings = bookingsByRoom.get(room.id) ?? [];
         return (
           <div key={room.id} className="contents">
-            <div className="sticky left-0 z-10 border-b border-r border-sand-200 bg-white px-4 py-4">
-              <p className="font-medium text-ink-900">Room {room.roomNumber}</p>
-              {room.subtitle && <p className="text-xs text-ink-500">{room.subtitle}</p>}
+            <div className="sticky left-0 z-10 border-b border-r border-border bg-surface px-4 py-4">
+              <p className="font-medium text-[var(--color-text-primary)]">Room {room.roomNumber}</p>
+              {room.subtitle && <p className="text-xs text-[var(--color-text-secondary)]">{room.subtitle}</p>}
               {!room.subtitle && (
-                <p className="text-xs text-ink-500">{room.type.replace('_', ' ')}</p>
+                <p className="text-xs text-[var(--color-text-secondary)]">{room.type.replace('_', ' ')}</p>
               )}
             </div>
             <div
-              className="relative border-b border-sand-200 bg-white"
+              className="relative border-b border-border bg-surface"
               style={{ gridColumn: `span ${days.length}` }}
             >
               <div
@@ -279,7 +279,7 @@ function GroupRows({
                 style={{ gridTemplateColumns: `repeat(${days.length}, minmax(44px, 1fr))` }}
               >
                 {days.map((dayKey) => (
-                  <div key={dayKey} className="border-r border-sand-100 last:border-r-0" />
+                  <div key={dayKey} className="border-r border-border last:border-r-0" />
                 ))}
               </div>
               <div className="absolute inset-y-2 left-0 right-0">

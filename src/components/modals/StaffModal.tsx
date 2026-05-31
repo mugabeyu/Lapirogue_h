@@ -74,23 +74,23 @@ export function StaffModal({ isOpen, onClose, onSaved, editRow }: StaffModalProp
       <form key={staff?.id ?? 'new'} onSubmit={handleSubmit} className="space-y-5">
         <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <label className="mb-1 block text-sm font-medium text-ink-700">Employee code</label>
+            <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Employee code</label>
             <input name="employeeCode" required className="input-field w-full" defaultValue={staff?.employeeCode ?? ''} />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-ink-700">Full name</label>
+            <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Full name</label>
             <input name="name" required className="input-field w-full" defaultValue={staff?.name ?? ''} />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-ink-700">Department</label>
+            <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Department</label>
             <input name="department" required className="input-field w-full" defaultValue={staff?.department ?? ''} />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-ink-700">Position</label>
+            <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Position</label>
             <input name="position" required className="input-field w-full" defaultValue={staff?.position ?? ''} />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-ink-700">Email</label>
+            <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Email</label>
             <input
               name="email"
               type="email"
@@ -100,14 +100,14 @@ export function StaffModal({ isOpen, onClose, onSaved, editRow }: StaffModalProp
               disabled={isEmailLocked}
               aria-disabled={isEmailLocked}
             />
-            {isEmailLocked ? <p className="mt-1 text-xs text-ink-500">Only admin users can update staff email addresses.</p> : null}
+            {isEmailLocked ? <p className="mt-1 text-xs text-[var(--color-text-secondary)]">Only admin users can update staff email addresses.</p> : null}
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-ink-700">Phone</label>
+            <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Phone</label>
             <PhoneField name="phone" defaultValue={staff?.phone ?? ''} />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-ink-700">Status</label>
+            <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Status</label>
             <select name="status" className="input-field w-full" defaultValue={staff?.status ?? 'ACTIVE'}>
               <option value="ACTIVE">Active</option>
               <option value="INACTIVE">Inactive</option>
@@ -115,16 +115,16 @@ export function StaffModal({ isOpen, onClose, onSaved, editRow }: StaffModalProp
           </div>
         </div>
 
-        <label className="flex items-start gap-3 rounded-xl border border-sand-200 bg-sand-50/60 px-4 py-3 text-sm text-ink-700">
+        <label className="flex items-start gap-3 rounded-xl border border-border bg-surface-secondary px-4 py-3 text-sm text-[var(--color-text-primary)]">
           <input
             type="checkbox"
             name="isMain"
             defaultChecked={Boolean(staff?.isMain)}
-            className="mt-1 h-4 w-4 rounded border-sand-300 text-primary focus:ring-primary"
+            className="mt-1 h-4 w-4 rounded border border-border text-primary focus:ring-primary"
           />
           <span>
             Mark as main receptionist
-            <span className="mt-1 block text-xs text-ink-500">Only one staff member should be the main receptionist at a time.</span>
+            <span className="mt-1 block text-xs text-[var(--color-text-secondary)]">Only one staff member should be the main receptionist at a time.</span>
           </span>
         </label>
 

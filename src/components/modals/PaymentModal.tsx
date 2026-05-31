@@ -176,13 +176,13 @@ export function PaymentModal({ isOpen, onClose, onSaved, editRow }: PaymentModal
     <Modal isOpen={isOpen} onClose={onClose} title={isEdit ? 'Edit Payment' : 'Record Payment'} size="lg">
       <form key={String(editRow?.id ?? 'new')} onSubmit={handleSubmit} className="space-y-5">
         <div>
-          <h3 className="mb-3 font-display text-lg text-ink-900">Select Guest</h3>
+          <h3 className="mb-3 font-display text-lg text-[var(--color-text-primary)]">Select Guest</h3>
           <GuestSearchPicker selectedId={guest?.id ?? ''} onSelect={setGuest} />
         </div>
 
-        <div className="grid grid-cols-2 gap-4 border-t border-sand-200 pt-4">
+        <div className="grid grid-cols-2 gap-4 border-t border-border pt-4">
           <div>
-            <label className="mb-1 block text-sm font-medium text-ink-700">Amount (Auto calculated)</label>
+            <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Amount (Auto calculated)</label>
             <input
               name="amount"
               type="number"
@@ -193,14 +193,14 @@ export function PaymentModal({ isOpen, onClose, onSaved, editRow }: PaymentModal
               value={Number.isFinite(autoAmountDue) ? autoAmountDue : 0}
               readOnly
             />
-            <p className="mt-1 text-xs text-ink-500">
+            <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
               {isLoadingSummary
                 ? 'Calculating guest balance...'
                 : `Outstanding balance + extra charges = Rs ${autoAmountDue.toLocaleString()}`}
             </p>
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-ink-700">Method</label>
+            <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Method</label>
             <select name="method" required className="input-field w-full" defaultValue={String(editRow?.method ?? 'CASH')}>
               {paymentMethods.map((method) => (
                 <option key={method} value={method}>
@@ -210,7 +210,7 @@ export function PaymentModal({ isOpen, onClose, onSaved, editRow }: PaymentModal
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-ink-700">Status</label>
+            <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Status</label>
             <select name="status" required className="input-field w-full" defaultValue={String(editRow?.status ?? 'PENDING')}>
               {paymentStatuses.map((status) => (
                 <option key={status} value={status}>
@@ -220,15 +220,15 @@ export function PaymentModal({ isOpen, onClose, onSaved, editRow }: PaymentModal
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-ink-700">Reference</label>
+            <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Reference</label>
             <input name="reference" className="input-field w-full" defaultValue={String(editRow?.reference ?? '')} />
           </div>
         </div>
 
         {guest && (
-          <div className="rounded-xl border border-sand-200 bg-sand-50/70 p-4">
-            <div className="text-sm font-semibold text-ink-900">Auto billing summary</div>
-            <div className="mt-2 grid grid-cols-2 gap-2 text-sm text-ink-700">
+          <div className="rounded-xl border border-border bg-surface-secondary/70 p-4">
+            <div className="text-sm font-semibold text-[var(--color-text-primary)]">Auto billing summary</div>
+            <div className="mt-2 grid grid-cols-2 gap-2 text-sm text-[var(--color-text-secondary)]">
               <div>Room charges</div>
               <div className="text-right">Rs {Number(billingSummary?.totals?.['Room charges'] ?? 0).toLocaleString()}</div>
               <div>Food & Beverage</div>
@@ -237,17 +237,17 @@ export function PaymentModal({ isOpen, onClose, onSaved, editRow }: PaymentModal
               <div className="text-right">Rs {Number(billingSummary?.totals?.['Tours and activities'] ?? 0).toLocaleString()}</div>
               <div>Taxes/service charges</div>
               <div className="text-right">Rs {Number(billingSummary?.totals?.['Taxes and service charges'] ?? 0).toLocaleString()}</div>
-              <div className="font-semibold text-ink-900">Outstanding balance</div>
-              <div className="text-right font-semibold text-ink-900">
+              <div className="font-semibold text-[var(--color-text-primary)]">Outstanding balance</div>
+              <div className="text-right font-semibold text-[var(--color-text-primary)]">
                 Rs {Number(billingSummary?.balanceDue ?? 0).toLocaleString()}
               </div>
             </div>
           </div>
         )}
 
-        <div className="rounded-xl border border-sand-200 p-4">
+        <div className="rounded-xl border border-border p-4 bg-surface">
           <div className="mb-3 flex items-center justify-between">
-            <h4 className="text-sm font-semibold text-ink-900">Extra payments / additional charges</h4>
+            <h4 className="text-sm font-semibold text-[var(--color-text-primary)]">Extra payments / additional charges</h4>
             <button type="button" className="btn-secondary inline-flex items-center gap-2" onClick={addExtraCharge}>
               <Plus className="h-4 w-4" />
               Add Extra
@@ -255,10 +255,10 @@ export function PaymentModal({ isOpen, onClose, onSaved, editRow }: PaymentModal
           </div>
           <div className="space-y-3">
             {extraCharges.length === 0 ? (
-              <p className="text-sm text-ink-500">No extra charges added.</p>
+              <p className="text-sm text-[var(--color-text-secondary)]">No extra charges added.</p>
             ) : (
               extraCharges.map((item) => (
-                <div key={item.id} className="grid grid-cols-12 gap-2 rounded-lg border border-sand-200 bg-sand-50/60 p-2">
+                <div key={item.id} className="grid grid-cols-12 gap-2 rounded-lg border border-border bg-surface-secondary/60 p-2">
                   <select
                     className="input-field col-span-4"
                     value={item.category}
@@ -285,7 +285,7 @@ export function PaymentModal({ isOpen, onClose, onSaved, editRow }: PaymentModal
                   />
                   <button
                     type="button"
-                    className="col-span-1 inline-flex items-center justify-center rounded-md border border-sand-300 bg-white text-ink-600 hover:text-red-600"
+                    className="col-span-1 inline-flex items-center justify-center rounded-md border border-border bg-surface text-[var(--color-text-secondary)] hover:text-red-600"
                     onClick={() => removeExtraCharge(item.id)}
                     aria-label="Remove extra charge"
                   >
@@ -295,7 +295,7 @@ export function PaymentModal({ isOpen, onClose, onSaved, editRow }: PaymentModal
               ))
             )}
           </div>
-          <div className="mt-3 text-right text-sm font-medium text-ink-800">Extra total: Rs {extrasTotal.toLocaleString()}</div>
+          <div className="mt-3 text-right text-sm font-medium text-[var(--color-text-primary)]">Extra total: Rs {extrasTotal.toLocaleString()}</div>
         </div>
 
         <div>

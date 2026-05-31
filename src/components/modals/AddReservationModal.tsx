@@ -65,7 +65,7 @@ export function AddReservationModal({ isOpen, onClose, onSaved, editRow }: AddRe
     <Modal isOpen={isOpen} onClose={onClose} title={isEdit ? 'Edit Reservation' : 'Add Reservation'} size="lg">
       <form key={String(editRow?.id ?? 'new')} onSubmit={handleSubmit} className="space-y-5">
         <div>
-          <label className="mb-1 block text-sm font-medium text-ink-700">Guest</label>
+          <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Guest</label>
           <select name="guestId" required className="input-field w-full" defaultValue={String(editRow?.guestId ?? '')}>
             <option value="">Select guest</option>
             {(guests ?? []).map((guest) => (
@@ -77,7 +77,7 @@ export function AddReservationModal({ isOpen, onClose, onSaved, editRow }: AddRe
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-ink-700">Room</label>
+          <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Room</label>
           <select name="roomId" required className="input-field w-full" defaultValue={String(editRow?.roomId ?? '')}>
             <option value="">Select room</option>
             {(rooms ?? []).map((room) => (
@@ -90,7 +90,7 @@ export function AddReservationModal({ isOpen, onClose, onSaved, editRow }: AddRe
 
         <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <label className="mb-1 block text-sm font-medium text-ink-700">Check-in</label>
+            <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Check-in</label>
             <input
               name="checkIn"
               required
@@ -101,7 +101,7 @@ export function AddReservationModal({ isOpen, onClose, onSaved, editRow }: AddRe
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-ink-700">Check-out</label>
+            <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Check-out</label>
             <input
               name="checkOut"
               required
@@ -112,15 +112,15 @@ export function AddReservationModal({ isOpen, onClose, onSaved, editRow }: AddRe
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-ink-700">Adults</label>
+            <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Adults</label>
             <input name="adults" required type="number" min="1" className="input-field w-full" defaultValue={Number(editRow?.adults ?? 1)} />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-ink-700">Children</label>
+            <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Children</label>
             <input name="children" required type="number" min="0" className="input-field w-full" defaultValue={Number(editRow?.children ?? 0)} />
           </div>
           <div className="md:col-span-2">
-            <label className="mb-1 block text-sm font-medium text-ink-700">Total amount</label>
+            <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Total amount</label>
             <input
               name="totalAmount"
               required

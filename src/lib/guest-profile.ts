@@ -168,4 +168,4 @@ export async function loadGuestProfileData(guestId: string): Promise<GuestProfil
   };
 }
 
-export { loadGuestProfile, loadGuestProfileData };
+export { loadGuestProfile };

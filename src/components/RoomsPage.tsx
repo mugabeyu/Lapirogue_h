@@ -5,6 +5,7 @@ import { Grid3X3, LayoutList, Plus, SearchIcon, BedDouble, Users, Pen, Trash2 } 
 import { useApi } from '@/hooks/useApi';
 import { PageHeader } from '@/components/PageHeader';
 import { StatusBadge } from '@/components/StatusBadge';
+import Button from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { RoomModal } from '@/components/modals/RoomModal';
 import { Room } from '@/types';
@@ -68,25 +69,18 @@ export default function RoomsPage() {
         title="Rooms"
         subtitle="Manage room inventory, status, and pricing."
         action={(
-          <button
-            type="button"
-            className="btn-primary inline-flex items-center gap-2"
-            onClick={() => {
-              setEditRow(null);
-              setIsModalOpen(true);
-            }}
-          >
+          <Button variant="primary" onClick={() => { setEditRow(null); setIsModalOpen(true); }}>
             <Plus className="h-4 w-4" />
             Add Room
-          </button>
+          </Button>
         )}
       />
 
-      <div className="overflow-hidden rounded-[24px] border border-sand-200 bg-white shadow-sm">
-        <div className="flex flex-col gap-4 border-b border-sand-200 p-4 lg:flex-row lg:items-center lg:justify-between">
+      <div className="card">
+        <div className="flex flex-col gap-4 px-4 py-4 border-b border-border lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-1 flex-wrap items-center gap-3">
             <div className="relative w-full min-w-[220px] max-w-md">
-              <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" />
+              <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-secondary)]" />
               <input
                 type="search"
                 value={search}
@@ -113,11 +107,11 @@ export default function RoomsPage() {
             </select>
           </div>
 
-          <div className="inline-flex rounded-2xl border border-sand-200 bg-sand-50 p-1">
+          <div className="inline-flex rounded-2xl border border-border bg-surface-secondary p-1">
             <button
               type="button"
               onClick={() => setView('grid')}
-              className={`rounded-xl p-2 ${view === 'grid' ? 'bg-white text-primary shadow-sm' : 'text-ink-500'}`}
+              className={`rounded-xl p-2 ${view === 'grid' ? 'bg-surface text-[var(--color-primary)] shadow-[var(--shadow-small)]' : 'text-[var(--color-text-secondary)]'}`}
               aria-label="Grid view"
             >
               <Grid3X3 className="h-4 w-4" />
@@ -125,7 +119,7 @@ export default function RoomsPage() {
             <button
               type="button"
               onClick={() => setView('list')}
-              className={`rounded-xl p-2 ${view === 'list' ? 'bg-white text-primary shadow-sm' : 'text-ink-500'}`}
+              className={`rounded-xl p-2 ${view === 'list' ? 'bg-surface text-[var(--color-primary)] shadow-[var(--shadow-small)]' : 'text-[var(--color-text-secondary)]'}`}
               aria-label="List view"
             >
               <LayoutList className="h-4 w-4" />
@@ -136,7 +130,7 @@ export default function RoomsPage() {
         {view === 'grid' ? (
           <div className="grid gap-5 p-4 sm:grid-cols-2 xl:grid-cols-4">
             {!isLoading && filteredRows.length === 0 ? (
-              <div className="col-span-full rounded-[20px] border border-dashed border-sand-300 p-10 text-center text-sm text-ink-500">
+              <div className="col-span-full rounded-2xl border border-dashed border-border p-10 text-center text-sm text-[var(--color-text-secondary)]">
                 No rooms found.
               </div>
             ) : null}
@@ -145,24 +139,24 @@ export default function RoomsPage() {
               return (
                 <article
                   key={room.id}
-                  className="group overflow-hidden rounded-[20px] border border-sand-200 bg-white shadow-sm transition-transform hover:-translate-y-1 hover:shadow-lg"
+                  className="group overflow-hidden rounded-2xl border border-border bg-surface shadow-[var(--shadow-small)] transition-transform hover:-translate-y-1 hover:shadow-[var(--shadow-medium)]"
                 >
                   <button type="button" className="block w-full text-left" onClick={() => {
                     setEditRow(room as unknown as Record<string, unknown>);
                     setIsModalOpen(true);
                   }}>
-                    <div className="relative aspect-[4/3] overflow-hidden bg-sand-100">
+                    <div className="relative aspect-[4/3] overflow-hidden bg-surface-secondary">
                       {image ? (
                         <img src={image} alt={`Room ${room.roomNumber}`} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
                       ) : (
-                        <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-sand-100 to-sand-200 text-ink-400">
+                        <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[var(--color-surface-secondary)] to-[var(--color-background)] text-[var(--color-text-secondary)]">
                           <BedDouble className="h-10 w-10" />
                         </div>
                       )}
-                      <div className="absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-ink-700">
+                      <div className="absolute left-3 top-3 rounded-full bg-surface px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-[var(--color-text-primary)]">
                         {room.status}
                       </div>
-                      <div className="absolute bottom-3 left-3 rounded-full bg-black/70 px-3 py-1 text-sm font-semibold text-white">
+                      <div className="absolute bottom-3 left-3 rounded-full bg-[rgba(0,0,0,0.65)] px-3 py-1 text-sm font-semibold text-white">
                         Rs {Number(room.price).toLocaleString()} / night
                       </div>
                     </div>
@@ -170,13 +164,13 @@ export default function RoomsPage() {
                     <div className="space-y-3 p-4">
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <h3 className="font-display text-xl text-ink-900">Room {room.roomNumber}</h3>
-                          <p className="text-sm text-ink-600">{roomTypeLabel(room.type)}</p>
+                          <h3 className="font-display text-xl text-[var(--color-text-primary)]">Room {room.roomNumber}</h3>
+                          <p className="text-sm text-[var(--color-text-secondary)]">{roomTypeLabel(room.type)}</p>
                         </div>
-                        <p className="text-sm text-ink-500">{room.floor ?? '-'}</p>
+                        <p className="text-sm text-[var(--color-text-secondary)]">{room.floor ?? '-'}</p>
                       </div>
 
-                      <div className="flex items-center gap-4 border-t border-sand-200 pt-3 text-sm text-ink-600">
+                      <div className="flex items-center gap-4 border-t border-border pt-3 text-sm text-[var(--color-text-secondary)]">
                         <span className="inline-flex items-center gap-1.5">
                           <Users className="h-4 w-4" /> Up to {room.capacity}
                         </span>
@@ -185,12 +179,12 @@ export default function RoomsPage() {
                     </div>
                   </button>
 
-                  <div className="flex items-center justify-between border-t border-sand-200 px-4 py-3">
+                  <div className="flex items-center justify-between border-t border-border px-4 py-3">
                     <StatusBadge status={room.status} />
                     <div className="inline-flex gap-1">
                       <button
                         type="button"
-                        className="rounded-lg p-2 text-ink-500 hover:bg-sand-100 hover:text-primary"
+                        className="rounded-lg p-2 text-[var(--color-text-secondary)] hover:bg-surface-secondary hover:text-[var(--color-primary)]"
                         onClick={() => {
                           setEditRow(room as unknown as Record<string, unknown>);
                           setIsModalOpen(true);
@@ -201,7 +195,7 @@ export default function RoomsPage() {
                       </button>
                       <button
                         type="button"
-                        className="rounded-lg p-2 text-ink-500 hover:bg-danger/10 hover:text-danger"
+                        className="rounded-lg p-2 text-[var(--color-text-secondary)] hover:bg-danger/10 hover:text-danger"
                         onClick={() => setDeleteRow(room as unknown as Record<string, unknown>)}
                         aria-label={`Delete room ${room.roomNumber}`}
                       >
@@ -217,7 +211,7 @@ export default function RoomsPage() {
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-left">
               <thead>
-                <tr className="border-b border-sand-200 bg-sand-50 text-xs uppercase tracking-wider text-ink-600">
+                <tr className="border-b border-border bg-surface-secondary text-xs uppercase tracking-wider text-[var(--color-text-secondary)]">
                   <th className="px-6 py-4 font-medium">Photo</th>
                   <th className="px-6 py-4 font-medium">Room</th>
                   <th className="px-6 py-4 font-medium">Type</th>
@@ -231,7 +225,7 @@ export default function RoomsPage() {
               <tbody className="divide-y divide-sand-200">
                 {!isLoading && filteredRows.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-6 py-12 text-center text-sm text-ink-500">
+                    <td colSpan={8} className="px-6 py-12 text-center text-sm text-[var(--color-text-secondary)]">
                       No rooms found.
                     </td>
                   </tr>
@@ -239,27 +233,27 @@ export default function RoomsPage() {
                 {filteredRows.map((room) => {
                   const image = roomImage(room);
                   return (
-                    <tr key={room.id} className="hover:bg-sand-50/50">
+                    <tr key={room.id} className="hover:bg-surface-secondary/50">
                       <td className="px-6 py-4">
                         {image ? (
-                          <img src={image} alt={`Room ${room.roomNumber}`} className="h-12 w-12 rounded-xl border border-sand-200 object-cover" />
+                          <img src={image} alt={`Room ${room.roomNumber}`} className="h-12 w-12 rounded-xl border border-border object-cover" />
                         ) : (
-                          <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-sand-200 bg-sand-50 text-ink-400">
+                          <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-border bg-surface-secondary text-[var(--color-text-secondary)]">
                             <BedDouble className="h-4 w-4" />
                           </div>
                         )}
                       </td>
-                      <td className="px-6 py-4 font-medium text-ink-900">{room.roomNumber}</td>
-                      <td className="px-6 py-4 text-ink-700">{roomTypeLabel(room.type)}</td>
-                      <td className="px-6 py-4 text-ink-700">{room.floor ?? '-'}</td>
-                      <td className="px-6 py-4 text-ink-700">{room.capacity}</td>
-                      <td className="px-6 py-4 text-ink-700">Rs {Number(room.price).toLocaleString()}</td>
+                      <td className="px-6 py-4 font-medium text-[var(--color-text-primary)]">{room.roomNumber}</td>
+                      <td className="px-6 py-4 text-[var(--color-text-secondary)]">{roomTypeLabel(room.type)}</td>
+                      <td className="px-6 py-4 text-[var(--color-text-secondary)]">{room.floor ?? '-'}</td>
+                      <td className="px-6 py-4 text-[var(--color-text-secondary)]">{room.capacity}</td>
+                      <td className="px-6 py-4 text-[var(--color-text-secondary)]">Rs {Number(room.price).toLocaleString()}</td>
                       <td className="px-6 py-4"><StatusBadge status={room.status} /></td>
                       <td className="px-6 py-4 text-right">
                         <div className="inline-flex gap-1">
                           <button
                             type="button"
-                            className="rounded-lg p-2 text-ink-500 hover:bg-sand-100 hover:text-primary"
+                            className="rounded-lg p-2 text-[var(--color-text-secondary)] hover:bg-surface-secondary hover:text-primary"
                             onClick={() => {
                               setEditRow(room as unknown as Record<string, unknown>);
                               setIsModalOpen(true);
@@ -270,7 +264,7 @@ export default function RoomsPage() {
                           </button>
                           <button
                             type="button"
-                            className="rounded-lg p-2 text-ink-500 hover:bg-danger/10 hover:text-danger"
+                            className="rounded-lg p-2 text-[var(--color-text-secondary)] hover:bg-danger/10 hover:text-danger"
                             onClick={() => setDeleteRow(room as unknown as Record<string, unknown>)}
                             aria-label={`Delete room ${room.roomNumber}`}
                           >

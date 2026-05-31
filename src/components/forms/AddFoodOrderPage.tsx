@@ -114,7 +114,7 @@ export default function AddFoodOrderPage() {
         <div className="mb-4 flex items-center gap-3">
           <Link
             href="/food-beverage/orders"
-            className="inline-flex items-center gap-2 text-sm font-medium text-ink-600 hover:text-primary"
+            className="inline-flex items-center gap-2 text-sm font-medium text-[var(--color-text-secondary)] hover:text-primary"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to orders
@@ -122,7 +122,7 @@ export default function AddFoodOrderPage() {
         </div>
 
         <div className="relative mb-4 max-w-md">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-secondary)]" />
           <input
             type="text"
             value={menuSearch}
@@ -139,10 +139,10 @@ export default function AddFoodOrderPage() {
               type="button"
               onClick={() => setCategory(item)}
               className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
-                category === item
-                  ? 'bg-primary text-white'
-                  : 'border border-sand-200 bg-white text-ink-700 hover:bg-sand-50'
-              }`}
+                  category === item
+                    ? 'bg-primary text-white'
+                    : 'border border-border bg-surface text-[var(--color-text-primary)] hover:bg-surface-secondary'
+                }`}
             >
               {item}
             </button>
@@ -155,17 +155,17 @@ export default function AddFoodOrderPage() {
               key={item.id}
               type="button"
               onClick={() => addToCart(item)}
-              className="overflow-hidden rounded-2xl border border-sand-200 bg-white text-left shadow-sm transition-shadow hover:shadow-md"
+              className="overflow-hidden rounded-2xl border border-border bg-surface text-left shadow-sm transition-shadow hover:shadow-md"
             >
-              <div className="aspect-[4/3] bg-sand-200">
+              <div className="aspect-[4/3] bg-surface-secondary">
                 {item.imagePath ? (
                   <img src={item.imagePath} alt="" className="h-full w-full object-cover" />
                 ) : (
-                  <div className="flex h-full items-center justify-center text-sm text-ink-500">No photo</div>
+                  <div className="flex h-full items-center justify-center text-sm text-[var(--color-text-secondary)]">No photo</div>
                 )}
               </div>
               <div className="flex items-center justify-between gap-2 p-3">
-                <span className="font-medium text-ink-900">{item.name}</span>
+                <span className="font-medium text-[var(--color-text-primary)]">{item.name}</span>
                 <span className="shrink-0 font-semibold text-primary">{formatMenuPrice(item.price)}</span>
               </div>
             </button>
@@ -173,31 +173,31 @@ export default function AddFoodOrderPage() {
         </div>
       </div>
 
-      <aside className="w-full shrink-0 rounded-2xl border border-sand-200 bg-white p-5 shadow-sm lg:w-[360px]">
-        <h2 className="font-display text-xl font-semibold text-ink-900">Order Details</h2>
+      <aside className="w-full shrink-0 rounded-2xl border border-border bg-surface p-5 shadow-sm lg:w-[360px]">
+        <h2 className="font-display text-xl font-semibold text-[var(--color-text-primary)]">Order Details</h2>
 
         <div className="mt-4">
           <GuestRoomSearchField selectedGuest={selectedGuest} onSelect={setSelectedGuest} />
         </div>
 
         <div className="mt-5 space-y-3">
-          <p className="text-xs font-semibold uppercase tracking-wider text-ink-500">Current order</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">Current order</p>
           {cart.length === 0 && (
-            <p className="rounded-xl border border-dashed border-sand-200 py-8 text-center text-sm text-ink-500">
+            <p className="rounded-xl border border-dashed border-border py-8 text-center text-sm text-[var(--color-text-secondary)]">
               Tap menu items to add them here
             </p>
           )}
           {cart.map((line) => (
-            <div key={line.id} className="flex items-center gap-2 rounded-xl border border-sand-200 p-3">
+            <div key={line.id} className="flex items-center gap-2 rounded-xl border border-border p-3">
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-ink-900">{line.name}</p>
-                <p className="text-xs text-ink-500">{formatMenuPrice(line.price)}</p>
+                <p className="truncate text-sm font-medium text-[var(--color-text-primary)]">{line.name}</p>
+                <p className="text-xs text-[var(--color-text-secondary)]">{formatMenuPrice(line.price)}</p>
               </div>
-              <div className="flex items-center gap-1 rounded-lg border border-sand-200 bg-sand-50">
+              <div className="flex items-center gap-1 rounded-lg border border-border bg-surface-secondary">
                 <button
                   type="button"
                   onClick={() => updateQuantity(line.id, -1)}
-                  className="p-1.5 text-ink-600 hover:text-primary"
+                  className="p-1.5 text-[var(--color-text-secondary)] hover:text-primary"
                   aria-label="Decrease quantity"
                 >
                   <Minus className="h-3.5 w-3.5" />
@@ -206,38 +206,33 @@ export default function AddFoodOrderPage() {
                 <button
                   type="button"
                   onClick={() => updateQuantity(line.id, 1)}
-                  className="p-1.5 text-ink-600 hover:text-primary"
+                  className="p-1.5 text-[var(--color-text-secondary)] hover:text-primary"
                   aria-label="Increase quantity"
                 >
                   <Plus className="h-3.5 w-3.5" />
                 </button>
               </div>
-              <button
-                type="button"
-                onClick={() => updateQuantity(line.id, -line.quantity)}
-                className="p-1 text-ink-400 hover:text-danger"
-                aria-label="Remove item"
-              >
+              <button type="button" onClick={() => updateQuantity(line.id, -line.quantity)} className="p-1 text-[var(--color-text-secondary)] hover:text-danger" aria-label="Remove item">
                 <Trash2 className="h-4 w-4" />
               </button>
             </div>
           ))}
         </div>
 
-        <div className="mt-5 space-y-2 border-t border-sand-200 pt-4 text-sm">
-          <div className="flex justify-between text-ink-600">
+        <div className="mt-5 space-y-2 border-t border-border pt-4 text-sm">
+          <div className="flex justify-between text-[var(--color-text-secondary)]">
             <span>Subtotal</span>
             <span>{formatMenuPrice(subtotal)}</span>
           </div>
-          <div className="flex justify-between text-ink-600">
+          <div className="flex justify-between text-[var(--color-text-secondary)]">
             <span>Service charge (10%)</span>
             <span>{formatMenuPrice(serviceCharge)}</span>
           </div>
-          <div className="flex justify-between text-ink-600">
+          <div className="flex justify-between text-[var(--color-text-secondary)]">
             <span>VAT (15%)</span>
             <span>{formatMenuPrice(vat)}</span>
           </div>
-          <div className="flex justify-between border-t border-sand-200 pt-2 font-display text-lg font-semibold text-primary">
+          <div className="flex justify-between border-t border-border pt-2 font-display text-lg font-semibold text-primary">
             <span>Total</span>
             <span>{formatMenuPrice(total)}</span>
           </div>

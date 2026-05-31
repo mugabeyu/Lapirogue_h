@@ -91,11 +91,11 @@ export function PaymentDetailsPage() {
   }
 
   if (isLoading) {
-    return <div className="rounded-[24px] border border-sand-200 bg-white p-6 shadow-sm">Loading payment details...</div>;
+    return <div className="rounded-[24px] border border-border bg-surface p-6 shadow-sm">Loading payment details...</div>;
   }
 
   if (!detail) {
-    return <div className="rounded-[24px] border border-sand-200 bg-white p-6 shadow-sm">Payment not found.</div>;
+    return <div className="rounded-[24px] border border-border bg-surface p-6 shadow-sm">Payment not found.</div>;
   }
 
   return (
@@ -162,17 +162,17 @@ function InvoiceList({
 
   return (
     <div className="space-y-5">
-      <article id="invoice-print-area" className="rounded-[24px] border border-sand-200 bg-white p-6 md:p-8">
-        <header className="grid gap-6 border-b border-sand-200 pb-6 md:grid-cols-2">
+      <article id="invoice-print-area" className="rounded-[24px] border border-border bg-surface p-6 md:p-8">
+        <header className="grid gap-6 border-b border-border pb-6 md:grid-cols-2">
           <div>
             <div className="flex items-center gap-3">
-              <img src="/lapiroguelogo.jpg" alt="La Pirogue logo" className="h-12 w-12 rounded-full object-cover ring-1 ring-sand-300" />
+              <img src="/lapiroguelogo.jpg" alt="La Pirogue logo" className="h-12 w-12 rounded-full object-cover ring-1 ring-border" />
               <div>
-                <h3 className="font-display text-3xl text-ink-900">La Pirogue</h3>
-                <p className="text-sm text-ink-600">Wolmar, Flic en Flac, Mauritius</p>
+                <h3 className="font-display text-3xl text-[var(--color-text-primary)]">La Pirogue</h3>
+                <p className="text-sm text-[var(--color-text-secondary)]">Wolmar, Flic en Flac, Mauritius</p>
               </div>
             </div>
-            <div className="mt-4 space-y-1 text-sm text-ink-600">
+            <div className="mt-4 space-y-1 text-sm text-[var(--color-text-secondary)]">
               <p>Tel: +230 403 3900</p>
               <p>Email: info@lapirogue.mu</p>
               <p>VAT No: 12345678</p>
@@ -180,16 +180,16 @@ function InvoiceList({
           </div>
 
           <div className="text-left md:text-right">
-            <div className="text-3xl font-semibold text-ink-900">INVOICE</div>
-            <div className="mt-3 space-y-1 text-sm text-ink-700">
+            <div className="text-3xl font-semibold text-[var(--color-text-primary)]">INVOICE</div>
+              <div className="mt-3 space-y-1 text-sm text-[var(--color-text-secondary)]">
+                <p>
+                  <span className="text-[var(--color-text-secondary)]">Invoice No:</span> <strong>#{detail.invoiceReference}</strong>
+                </p>
+                <p>
+                  <span className="text-[var(--color-text-secondary)]">Issue Date:</span> <strong>{new Date(detail.generatedAt).toLocaleDateString()}</strong>
+                </p>
               <p>
-                <span className="text-ink-500">Invoice No:</span> <strong>#{detail.invoiceReference}</strong>
-              </p>
-              <p>
-                <span className="text-ink-500">Issue Date:</span> <strong>{new Date(detail.generatedAt).toLocaleDateString()}</strong>
-              </p>
-              <p>
-                <span className="text-ink-500">Status:</span>{' '}
+                  <span className="text-[var(--color-text-secondary)]">Status:</span>{' '}
                 <span className="rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700">
                   {detail.billingSummary.status.replace('_', ' ')}
                 </span>
@@ -199,21 +199,21 @@ function InvoiceList({
         </header>
 
         <section className="mt-6 border-b border-sand-200 pb-6">
-          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-ink-500">Bill To</div>
-          <h4 className="mt-3 text-2xl font-semibold text-ink-900">{guestLabel}</h4>
-          <div className="mt-2 space-y-1 text-sm text-ink-600">
+            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-text-secondary)]">Bill To</div>
+            <h4 className="mt-3 text-2xl font-semibold text-[var(--color-text-primary)]">{guestLabel}</h4>
+            <div className="mt-2 space-y-1 text-sm text-[var(--color-text-secondary)]">
             <p>{detail.guest?.email ?? 'Email not available'}</p>
             <p>{detail.guest?.phone ?? 'Phone not available'}</p>
             <p>Passport: {detail.guest?.passport ?? 'N/A'}</p>
             <p>Nationality: {detail.guest?.nationality ?? 'N/A'}</p>
             <p>Reservation: {detail.reservation?.reservationId ?? 'Walk-in / Guest charge'}</p>
           </div>
-        </section>
+          </section>
 
         <section className="mt-6 overflow-x-auto">
           <table className="min-w-full text-left">
             <thead>
-              <tr className="border-b border-sand-200 text-xs uppercase tracking-[0.14em] text-ink-500">
+              <tr className="border-b border-border text-xs uppercase tracking-[0.14em] text-[var(--color-text-secondary)]">
                 <th className="pb-3 pr-3">Description</th>
                 <th className="pb-3 pr-3">Date</th>
                 <th className="pb-3 pr-3 text-right">Qty</th>
@@ -227,10 +227,10 @@ function InvoiceList({
                 const quantity = 1;
                 const rate = item.amount;
                 return (
-                  <tr key={`${item.label}-${index}`} className="border-b border-sand-100 text-sm text-ink-800">
+                  <tr key={`${item.label}-${index}`} className="border-b border-border text-sm text-[var(--color-text-primary)]">
                     <td className="py-4 pr-3">
-                      <div className="font-medium text-ink-900">{item.label}</div>
-                      <div className="text-xs text-ink-500">{item.category}</div>
+                      <div className="font-medium text-[var(--color-text-primary)]">{item.label}</div>
+                      <div className="text-xs text-[var(--color-text-secondary)]">{item.category}</div>
                     </td>
                     <td className="py-4 pr-3">{lineDate}</td>
                     <td className="py-4 pr-3 text-right">{quantity}</td>
@@ -244,31 +244,31 @@ function InvoiceList({
         </section>
 
         <footer className="mt-7 grid gap-6 md:grid-cols-2">
-          <div className="space-y-2 text-sm text-ink-600">
-            <div className="font-semibold text-ink-900">Payment Notes</div>
-            <p>{detail.payment.notes ?? 'Payment is due upon receipt. We accept major cards, bank transfers, and cash.'}</p>
-            <p>Reference: {detail.payment.reference ?? 'N/A'}</p>
+          <div className="space-y-2 text-sm text-[var(--color-text-secondary)]">
+            <div className="font-semibold text-[var(--color-text-primary)]">Payment Notes</div>
+            <p className="text-[var(--color-text-secondary)]">{detail.payment.notes ?? 'Payment is due upon receipt. We accept major cards, bank transfers, and cash.'}</p>
+            <p className="text-[var(--color-text-secondary)]">Reference: {detail.payment.reference ?? 'N/A'}</p>
           </div>
 
           <div className="ml-auto w-full max-w-sm space-y-3 text-sm">
             <div className="flex items-center justify-between">
-              <span className="text-ink-600">Subtotal</span>
-              <span className="font-medium text-ink-900">Rs {detail.billingSummary.totalCharges.toLocaleString()}</span>
+              <span className="text-[var(--color-text-secondary)]">Subtotal</span>
+              <span className="font-medium text-[var(--color-text-primary)]">Rs {detail.billingSummary.totalCharges.toLocaleString()}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-ink-600">Total Paid</span>
-              <span className="font-medium text-ink-900">Rs {detail.billingSummary.totalPaid.toLocaleString()}</span>
+              <span className="text-[var(--color-text-secondary)]">Total Paid</span>
+              <span className="font-medium text-[var(--color-text-primary)]">Rs {detail.billingSummary.totalPaid.toLocaleString()}</span>
             </div>
-            <div className="flex items-center justify-between border-t border-sand-300 pt-3 text-lg">
-              <span className="font-semibold text-ink-900">Total Due</span>
-              <span className="font-display text-4xl text-ink-900">Rs {detail.billingSummary.balanceDue.toLocaleString()}</span>
+            <div className="flex items-center justify-between border-t border-border pt-3 text-lg">
+              <span className="font-semibold text-[var(--color-text-primary)]">Total Due</span>
+              <span className="font-display text-4xl text-[var(--color-text-primary)]">Rs {detail.billingSummary.balanceDue.toLocaleString()}</span>
             </div>
           </div>
         </footer>
 
-        <div className="mt-8 border-t border-sand-200 pt-6 text-center">
-          <p className="font-display text-3xl italic text-ink-900">Thank you for staying with us</p>
-          <p className="mt-2 text-sm text-ink-600">We hope to welcome you back to La Pirogue soon.</p>
+        <div className="mt-8 border-t border-border pt-6 text-center">
+          <p className="font-display text-3xl italic text-[var(--color-text-primary)]">Thank you for staying with us</p>
+          <p className="mt-2 text-sm text-[var(--color-text-secondary)]">We hope to welcome you back to La Pirogue soon.</p>
         </div>
       </article>
     </div>

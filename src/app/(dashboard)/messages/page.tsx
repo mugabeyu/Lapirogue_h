@@ -130,11 +130,11 @@ export default function MessagesPage() {
 
       <div className="grid gap-6 xl:grid-cols-[340px_1fr]">
         <aside className="card overflow-hidden">
-          <div className="border-b border-sand-200 bg-white p-5">
+          <div className="border-b border-border bg-surface p-5">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <div className="text-xs uppercase tracking-[0.25em] text-ink-500">Inbox</div>
-                <div className="mt-1 font-display text-2xl text-ink-900">{unreadCount} unread</div>
+                <div className="text-xs uppercase tracking-[0.25em] text-[var(--color-text-secondary)]">Inbox</div>
+                <div className="mt-1 font-display text-2xl text-[var(--color-text-primary)]">{unreadCount} unread</div>
               </div>
               <button
                 type="button"
@@ -146,7 +146,7 @@ export default function MessagesPage() {
             </div>
 
             <div className="relative mt-4">
-              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-400" />
+              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--color-text-secondary)]" />
               <input
                 className="input-field w-full pl-10"
                 placeholder="Search conversations..."
@@ -158,9 +158,9 @@ export default function MessagesPage() {
 
           <div className="max-h-[720px] overflow-y-auto">
             {isLoading ? (
-              <div className="p-5 text-sm text-ink-600">Loading messages...</div>
+              <div className="p-5 text-sm text-[var(--color-text-secondary)]">Loading messages...</div>
             ) : visibleConversations.length === 0 ? (
-              <div className="p-5 text-sm text-ink-600">No messages available.</div>
+              <div className="p-5 text-sm text-[var(--color-text-secondary)]">No messages available.</div>
             ) : (
               visibleConversations.map((conversation) => {
                 const selected = conversation.guestId === selectedGuestId;
@@ -179,15 +179,15 @@ export default function MessagesPage() {
                       setSelectedGuestId(conversation.guestId);
                       setForm((current) => ({ ...current, guestId: conversation.guestId }));
                     }}
-                    className={`flex w-full items-start gap-3 border-b border-sand-200 px-5 py-4 text-left transition-colors ${selected ? 'bg-primary/5' : 'hover:bg-sand-50'}`}
+                    className={`flex w-full items-start gap-3 border-b border-border px-5 py-4 text-left transition-colors ${selected ? 'bg-primary/5' : 'hover:bg-surface-secondary'}`}
                   >
                     <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary text-sm font-semibold text-white">
                       {initials || '?'}
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-3">
-                        <div className="truncate font-medium text-ink-900">{conversation.guestName}</div>
-                        <span className="text-[11px] text-ink-500">
+                        <div className="truncate font-medium text-[var(--color-text-primary)]">{conversation.guestName}</div>
+                          <span className="text-[11px] text-[var(--color-text-secondary)]">
                           {new Date(conversation.lastMessage.createdAt).toLocaleTimeString([], {
                             hour: '2-digit',
                             minute: '2-digit',
@@ -195,7 +195,7 @@ export default function MessagesPage() {
                         </span>
                       </div>
                       <div className="mt-1 flex items-center justify-between gap-3">
-                        <p className="truncate text-sm text-ink-600">{lastMessagePreview}</p>
+                        <p className="truncate text-sm text-[var(--color-text-secondary)]">{lastMessagePreview}</p>
                         {conversation.unreadCount > 0 ? (
                           <span className="rounded-full bg-accent px-2 py-0.5 text-[11px] font-semibold text-white">
                             {conversation.unreadCount}
@@ -211,20 +211,20 @@ export default function MessagesPage() {
         </aside>
 
         <section className="card flex min-h-[760px] flex-col overflow-hidden">
-          <div className="flex items-center justify-between border-b border-sand-200 bg-white px-5 py-4">
+            <div className="flex items-center justify-between border-b border-border bg-surface px-5 py-4">
             <div>
-              <div className="flex items-center gap-2 text-xs uppercase tracking-[0.25em] text-ink-500">
+              <div className="flex items-center gap-2 text-xs uppercase tracking-[0.25em] text-[var(--color-text-secondary)]">
                 <ShieldIcon className="h-3.5 w-3.5" />
                 Secure chat
               </div>
-              <div className="mt-1 text-lg font-semibold text-ink-900">
+              <div className="mt-1 text-lg font-semibold text-[var(--color-text-primary)]">
                 {selectedConversation ? selectedConversation.guestName : 'Select a conversation'}
               </div>
-              <div className="text-sm text-ink-600">
+              <div className="text-sm text-[var(--color-text-secondary)]">
                 {selectedConversation ? `Guest ID ${selectedConversation.guestId}` : 'Choose a guest to continue the conversation.'}
               </div>
             </div>
-            <div className="inline-flex items-center gap-2 rounded-full bg-sand-50 px-3 py-1 text-xs font-medium text-ink-600">
+            <div className="inline-flex items-center gap-2 rounded-full bg-surface-secondary px-3 py-1 text-xs font-medium text-[var(--color-text-secondary)]">
               <MessageSquareIcon className="h-4 w-4" />
               {rows.length} total messages
             </div>
@@ -232,7 +232,7 @@ export default function MessagesPage() {
 
           <div className="flex-1 overflow-y-auto bg-[linear-gradient(180deg,#f8f5ef_0%,#fffdf8_100%)] p-5">
             {!selectedConversation ? (
-              <div className="flex h-full min-h-[420px] items-center justify-center text-center text-ink-600">
+              <div className="flex h-full min-h-[420px] items-center justify-center text-center text-[var(--color-text-secondary)]">
                 Pick a guest from the inbox to view the thread.
               </div>
             ) : (
@@ -242,14 +242,14 @@ export default function MessagesPage() {
 
                   return (
                     <div key={message.id} className={`flex ${isReceptionist ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`max-w-[82%] rounded-[24px] px-4 py-3 shadow-sm ${isReceptionist ? 'rounded-br-md bg-primary text-white' : 'rounded-bl-md bg-white text-ink-900'}`}>
+                      <div className={`max-w-[82%] rounded-[24px] px-4 py-3 shadow-sm ${isReceptionist ? 'rounded-br-md bg-primary text-white' : 'rounded-bl-md bg-surface text-[var(--color-text-primary)]'}`}>
                         {message.subject ? (
-                          <div className={`mb-1 text-xs uppercase tracking-[0.2em] ${isReceptionist ? 'text-white/65' : 'text-ink-500'}`}>
+                          <div className={`mb-1 text-xs uppercase tracking-[0.2em] ${isReceptionist ? 'text-white/65' : 'text-[var(--color-text-secondary)]'}`}>
                             {message.subject}
                           </div>
                         ) : null}
                         <p className="text-sm leading-6">{message.content}</p>
-                        <div className={`mt-2 text-[11px] ${isReceptionist ? 'text-white/65' : 'text-ink-500'}`}>
+                        <div className={`mt-2 text-[11px] ${isReceptionist ? 'text-white/65' : 'text-[var(--color-text-secondary)]'}`}>
                           {new Date(message.createdAt).toLocaleString([], {
                             hour: '2-digit',
                             minute: '2-digit',
@@ -265,7 +265,7 @@ export default function MessagesPage() {
             )}
           </div>
 
-          <form onSubmit={handleSend} className="border-t border-sand-200 bg-white p-5">
+          <form onSubmit={handleSend} className="border-t border-border bg-surface p-5">
             <div className="grid gap-3 md:grid-cols-[1.1fr_0.9fr]">
               <input
                 className="input-field"

@@ -53,12 +53,12 @@ export default function DataTablePage({
       <PageHeader title={title} subtitle={subtitle} />
 
       <div className="card">
-        <div className="border-b border-sand-200 bg-white p-4">
+        <div className="px-4 py-4 border-b border-border">
           <label htmlFor={`${title}-search`} className="sr-only">
             Search {rowLabel}
           </label>
           <div className="relative w-full sm:w-96">
-            <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" />
+            <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-secondary)]" />
             <input
               id={`${title}-search`}
               type="search"
@@ -81,7 +81,7 @@ export default function DataTablePage({
             }
           >
             <thead>
-              <tr className="border-b border-sand-200 bg-sand-50 text-xs uppercase tracking-wider text-ink-600">
+              <tr className="bg-surface-secondary text-xs uppercase tracking-wider text-[var(--color-text-secondary)]">
                 {columns.map((column) => (
                   <th key={column.key} scope="col" className="px-6 py-4 font-medium">
                     {column.label}
@@ -89,31 +89,31 @@ export default function DataTablePage({
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-sand-200">
+            <tbody className="divide-y divide-border">
               {!isLoading && rows.length === 0 && (
                 <tr>
-                  <td colSpan={columns.length} className="px-6 py-12 text-center text-sm text-ink-500">
+                  <td colSpan={columns.length} className="px-6 py-12 text-center text-sm text-[var(--color-text-secondary)]">
                     {emptyText}
                   </td>
                 </tr>
               )}
               {rows.map((row, index) => (
-                <tr key={String(row.id ?? index)} className="transition-colors hover:bg-sand-50/50">
+                <tr key={String(row.id ?? index)} className="transition-colors hover:bg-surface-secondary">
                   {columns.map((column) => {
                     const value = getTableValue(row, column.key);
                     return (
-                      <td key={column.key} className="px-6 py-4 text-sm text-ink-700">
+                      <td key={column.key} className="px-6 py-4 text-sm text-[var(--color-text-primary)]">
                         {column.type === 'image' ? (
                           value ? (
                             <div className="flex items-center gap-3">
                               <img
                                 src={String(value)}
                                 alt={column.label}
-                                className="h-12 w-12 rounded-xl border border-sand-200 object-cover"
+                                className="h-12 w-12 rounded-xl border border-border object-cover"
                               />
                             </div>
                           ) : (
-                            <span className="text-ink-400">-</span>
+                            <span className="text-[var(--color-text-secondary)]">-</span>
                           )
                         ) : column.type === 'status' ? (
                           <StatusBadge status={String(value ?? '')} />

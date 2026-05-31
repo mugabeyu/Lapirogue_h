@@ -85,17 +85,17 @@ export default function AssignRoomPage() {
         subtitle="Choose a guest, stay dates, and an available room. Only free rooms for those dates are listed."
       />
 
-      <form onSubmit={handleSubmit} className="space-y-6 rounded-[24px] border border-sand-200 bg-white p-6 shadow-sm md:p-8">
+      <form onSubmit={handleSubmit} className="space-y-6 rounded-[24px] border border-border bg-surface p-6 shadow-sm md:p-8">
         <section>
-          <h2 className="mb-4 font-display text-xl text-ink-900">Select Guest</h2>
+          <h2 className="mb-4 font-display text-xl text-[var(--color-text-primary)]">Select Guest</h2>
           <GuestSearchPicker selectedId={guest?.id ?? ''} onSelect={setGuest} />
         </section>
 
-        <section className="border-t border-sand-200 pt-6">
-          <h2 className="mb-4 font-display text-xl text-ink-900">Stay Dates</h2>
+        <section className="border-t border-border pt-6">
+          <h2 className="mb-4 font-display text-xl text-[var(--color-text-primary)]">Stay Dates</h2>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="mb-1 block text-sm font-medium text-ink-700">Check-in</label>
+              <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Check-in</label>
               <input
                 type="date"
                 required
@@ -108,7 +108,7 @@ export default function AssignRoomPage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-ink-700">Check-out</label>
+              <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Check-out</label>
               <input
                 type="date"
                 required
@@ -122,7 +122,7 @@ export default function AssignRoomPage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-ink-700">Adults</label>
+              <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Adults</label>
               <input
                 type="number"
                 min={1}
@@ -132,7 +132,7 @@ export default function AssignRoomPage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-ink-700">Children</label>
+              <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Children</label>
               <input
                 type="number"
                 min={0}
@@ -144,9 +144,9 @@ export default function AssignRoomPage() {
           </div>
         </section>
 
-        <section className="border-t border-sand-200 pt-6">
-          <h2 className="mb-2 font-display text-xl text-ink-900">Available Rooms</h2>
-          <p className="mb-4 text-sm text-ink-500">
+        <section className="border-t border-border pt-6">
+          <h2 className="mb-2 font-display text-xl text-[var(--color-text-primary)]">Available Rooms</h2>
+          <p className="mb-4 text-sm text-[var(--color-text-secondary)]">
             {checkIn && checkOut
               ? 'Showing rooms free for the selected dates.'
               : 'Enter check-in and check-out dates to see available rooms.'}
@@ -159,15 +159,15 @@ export default function AssignRoomPage() {
               checkOut={checkOut}
             />
           ) : (
-            <p className="rounded-xl border border-dashed border-sand-200 bg-sand-50/50 px-4 py-6 text-center text-sm text-ink-500">
+            <p className="rounded-xl border border-dashed border-border bg-surface-secondary/50 px-4 py-6 text-center text-sm text-[var(--color-text-secondary)]">
               Select dates above to load available rooms.
             </p>
           )}
         </section>
 
         {room && checkIn && checkOut && (
-          <section className="border-t border-sand-200 pt-6">
-            <label className="mb-1 block text-sm font-medium text-ink-700">
+          <section className="border-t border-border pt-6">
+            <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">
               Total amount {autoTotal > 0 ? `(suggested: Rs ${autoTotal.toLocaleString()})` : ''}
             </label>
             <input
@@ -181,7 +181,7 @@ export default function AssignRoomPage() {
           </section>
         )}
 
-        <div className="flex flex-wrap justify-end gap-3 border-t border-sand-200 pt-6">
+        <div className="flex flex-wrap justify-end gap-3 border-t border-border pt-6">
           <Link href="/rooms" className="btn-secondary">
             Cancel
           </Link>
