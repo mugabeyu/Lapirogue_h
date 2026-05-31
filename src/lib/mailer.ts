@@ -15,7 +15,7 @@ export async function sendGuestRoomEmail(input: {
       html: `
         <div style="font-family: Arial, sans-serif; padding: 20px; color: #1f2937;">
           <h2 style="color: #0f766e;">La Pirogue Hotel</h2>
-          <p>Welcome! Here are your room details:</p>
+          <p>Welcome! Kindly use  these details to access the Guest Application. Here are your room details:</p>
           <table style="margin: 16px 0; border-collapse: collapse;">
             <tr><td style="padding: 4px 0; color: #6b7280;">Last Name:</td><td style="padding: 4px 0; font-weight: bold;">${input.lastName}</td></tr>
             <tr><td style="padding: 4px 0; color: #6b7280;">Room Number:</td><td style="padding: 4px 0; font-weight: bold;">${input.roomNumber}</td></tr>

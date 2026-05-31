@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { loadGuestProfile } from '@/lib/guest-profile';
+import { loadGuestProfileData } from '@/lib/guest-profile';
 
 export async function GET(_request: NextRequest, context: { params: Promise<unknown> }) {
   try {
     const { id } = (await context.params) as { id: string };
-    const profile = await loadGuestProfile(id);
+    const profile = await loadGuestProfileData(id);
 
     if (!profile) {
       return NextResponse.json({ success: false, error: 'Guest not found' }, { status: 404 });

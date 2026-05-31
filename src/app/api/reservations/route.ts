@@ -162,6 +162,17 @@ export async function PUT(request: NextRequest) {
     const actor = await getAuditActor(request);
     const actorId = actor?.id ?? null;
 
+    // If setting status to CHECKED_IN, validate that today is between checkIn and checkOut (inclusive of checkIn, exclusive of checkOut)
+    if (status === 'CHECKED_IN') {
+      const today = new Date().toISOString().slice(0, 10);
+      if (today < checkIn || today >= checkOut) {
+        return NextResponse.json(
+          { success: false, error: 'Check-in is only allowed on or after the check-in date and before the check-out date' },
+          { status: 400 }
+        );
+      }
+    }
+
     const { data: previousReservation, error: previousReservationError } = await supabase
       .from('reservations')
       .select('id,reservation_id,guest_id,room_id,check_in,check_out,status,guests(first_name,last_name,email),rooms(room_number,type)')
@@ -204,6 +215,14 @@ export async function PUT(request: NextRequest) {
       .single();
 
     if (error) throw error;
+
+    // Update guest status to match reservation status if it's CHECKED_IN or CHECKED_OUT
+    if (status === 'CHECKED_IN' || status === 'CHECKED_OUT') {
+      await supabase
+        .from('guests')
+        .update({ status })
+        .eq('id', guestId);
+    }
 
     const [{ data: guestRow }, { data: roomRow }] = await Promise.all([
       supabase.from('guests').select('first_name,last_name,email').eq('id', guestId).maybeSingle(),
