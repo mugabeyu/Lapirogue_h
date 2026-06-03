@@ -1,7 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { User } from '@/types';
-import { appendFileSync } from 'fs';
 import { getSupabaseConfig } from './supabase-config';
 
 function normalizeRole(role?: string | null): User['role'] {
@@ -25,21 +24,7 @@ export async function getServerSession(): Promise<User | null> {
   });
 
   const { data: { user }, error } = await supabase.auth.getUser();
-  if (error) {
-    console.error('Error fetching user:', error);
-    try {
-      appendFileSync('debug.log', `Error fetching user: ${JSON.stringify(error)}\n`);
-    } catch (e) {
-      console.error('Failed to write to debug.log:', e);
-    }
-    return null;
-  }
-  if (!user) {
-    try {
-      appendFileSync('debug.log', 'User is null\n');
-    } catch (e) {
-      console.error('Failed to write to debug.log:', e);
-    }
+  if (error || !user) {
     return null;
   }
 
@@ -66,12 +51,6 @@ export async function getServerSession(): Promise<User | null> {
     createdAt: profileRow?.created_at ?? '',
     updatedAt: profileRow?.updated_at ?? '',
   };
-
-  try {
-    appendFileSync('debug.log', `User from supabase: ${JSON.stringify(sessionUser)}\n`);
-  } catch (e) {
-    console.error('Failed to write to debug.log:', e);
-  }
 
   return sessionUser;
 }

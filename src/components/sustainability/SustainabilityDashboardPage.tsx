@@ -50,7 +50,7 @@ function TrendBadge({ value }: { value: number | null }) {
   const Icon = positive ? ArrowUp : ArrowDown;
   return (
     <span className={`inline-flex items-center gap-0.5 text-xs font-medium ${positive ? 'text-emerald-600' : 'text-rose-600'}`}>
-      <Icon className="h-3 w-3" />
+      <Icon className="h-3 w-3" strokeWidth={2} />
       {Math.abs(Math.round(value))}%
     </span>
   );
@@ -74,21 +74,18 @@ export default function SustainabilityDashboardPage() {
     unit?: string;
     trend: number | null;
     icon: typeof Leaf;
-    iconClass: string;
   }> = [
     {
       label: 'Total Eco-Points Issued',
       value: summary ? formatPoints(summary.totalEcoPoints) : '—',
       trend: summary?.totalEcoPointsTrend ?? null,
       icon: Leaf,
-      iconClass: 'bg-emerald-100 text-emerald-700',
     },
     {
       label: 'Active Participants',
       value: summary ? formatPoints(summary.activeParticipants) : '—',
       trend: summary?.activeParticipantsTrend ?? null,
       icon: Award,
-      iconClass: 'bg-sky-100 text-sky-700',
     },
     {
       label: 'Carbon Offset',
@@ -96,7 +93,6 @@ export default function SustainabilityDashboardPage() {
       unit: 'kg',
       trend: summary?.carbonOffsetTrend ?? null,
       icon: TrendingUp,
-      iconClass: 'bg-emerald-100 text-emerald-700',
     },
   ];
 
@@ -116,9 +112,7 @@ export default function SustainabilityDashboardPage() {
           return (
             <div key={card.label} className="rounded-2xl border border-border bg-surface p-5 shadow-sm">
               <div className="flex items-start justify-between gap-3">
-                <div className={`flex h-10 w-10 items-center justify-center rounded-full ${card.iconClass}`}>
-                  <Icon className="h-5 w-5" />
-                </div>
+                <Icon className="h-5 w-5 text-[var(--color-text-primary)]" strokeWidth={2} />
                 <TrendBadge value={card.trend} />
               </div>
               <p className="mt-4 text-sm text-[var(--color-text-secondary)]">{card.label}</p>

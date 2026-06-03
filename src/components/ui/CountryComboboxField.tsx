@@ -59,7 +59,7 @@ export function CountryComboboxField({
       <input
         type="hidden"
         name={name}
-        value={COUNTRY_LABELS.has(selectedValue.toLowerCase()) ? selectedValue : ''}
+        value={query}
       />
       {isOpen && matches.length > 0 && (
         <div className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-xl border border-border bg-surface shadow-lg">

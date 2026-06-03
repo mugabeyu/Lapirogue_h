@@ -130,7 +130,7 @@ export default function GuestFeedbackPage() {
   const url = useMemo(() => {
     const params = new URLSearchParams({
       page: String(page),
-      limit: '8',
+      limit: '15',
       sort,
       order,
     });
@@ -228,14 +228,14 @@ export default function GuestFeedbackPage() {
         </div>
       </div>
 
-      <div className="card overflow-hidden">
+      <div className="card rounded-none overflow-hidden">
         <div className="px-6 py-4 border-b border-border">
           <h2 className="font-display text-lg font-semibold text-[var(--color-text-primary)]">Recent Feedback</h2>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[720px] text-left text-sm" aria-label="Recent guest feedback">
             <thead>
-              <tr className="bg-surface-secondary text-xs text-[var(--color-text-secondary)]">
+              <tr className="border-b border-border text-xs text-[var(--color-text-secondary)]">
                 <th scope="col" className="px-5 py-3 font-medium">
                   <SortableHeader label="Guest" column="guest" sort={sort} order={order} onSort={handleSort} />
                 </th>
@@ -266,7 +266,7 @@ export default function GuestFeedbackPage() {
               )}
               {!isLoading &&
                 reviews.map((row) => (
-                  <tr key={row.id} className="hover:bg-surface-secondary">
+                  <tr key={row.id} className="hover:bg-surface-secondary/50">
                     <td className="px-5 py-4 font-medium text-[var(--color-text-primary)]">{row.guest}</td>
                     <td className="px-5 py-4">
                       <StarRating value={row.rating} />

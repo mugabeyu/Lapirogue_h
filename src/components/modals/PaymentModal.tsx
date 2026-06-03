@@ -162,14 +162,15 @@ export function PaymentModal({ isOpen, onClose, onSaved, editRow }: PaymentModal
     });
 
     setIsSaving(false);
-    toast[response.ok ? 'success' : 'error'](
-      response.ok ? (isEdit ? 'Payment updated' : 'Payment recorded') : 'Unable to save payment',
-    );
-
-    if (response.ok) {
-      if (onSaved) await onSaved();
-      onClose();
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      toast.error(errorData.error || errorData.details || 'Unable to save payment');
+      return;
     }
+
+    toast.success(isEdit ? 'Payment updated' : 'Payment recorded');
+    if (onSaved) await onSaved();
+    onClose();
   }
 
   return (

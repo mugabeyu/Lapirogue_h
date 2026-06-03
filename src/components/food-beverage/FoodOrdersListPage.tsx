@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import useSWR from 'swr';
 import { Filter, Plus, Search } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
@@ -49,8 +49,10 @@ async function fetchOrders(url: string) {
 }
 
 export default function FoodOrdersListPage() {
+  const PAGE_SIZE = 15;
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [page, setPage] = useState(1);
 
   const url = useMemo(() => {
     const params = new URLSearchParams();
@@ -61,7 +63,20 @@ export default function FoodOrdersListPage() {
 
   const { data, isLoading } = useSWR(url, fetchOrders);
   const orders = data?.data ?? [];
+  const totalPages = Math.max(1, Math.ceil(orders.length / PAGE_SIZE));
+  const start = (page - 1) * PAGE_SIZE;
+  const paginatedOrders = orders.slice(start, start + PAGE_SIZE);
   const stats = data?.stats;
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, statusFilter]);
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
 
   const statCards = [
     { label: 'New orders', value: stats?.newOrders ?? 0, hint: 'Pending' },
@@ -122,7 +137,7 @@ export default function FoodOrdersListPage() {
         </button>
       </div>
 
-      <section className="card" aria-labelledby="food-orders-table-heading">
+      <section className="card rounded-none" aria-labelledby="food-orders-table-heading">
         <div className="px-5 py-4 border-b border-border">
           <h2 id="food-orders-table-heading" className="font-display text-lg font-semibold text-[var(--color-text-primary)]">
             Order list
@@ -132,7 +147,7 @@ export default function FoodOrdersListPage() {
         <div className="overflow-x-auto">
           <table className="w-full min-w-[800px] text-left text-sm" aria-label="Food and beverage orders">
             <thead>
-              <tr className="bg-surface-secondary text-xs uppercase tracking-wider text-[var(--color-text-secondary)]">
+              <tr className="border-b border-border text-xs uppercase tracking-wider text-[var(--color-text-secondary)]">
                 <th scope="col" className="px-5 py-4 font-medium">Order ID</th>
                 <th scope="col" className="px-5 py-4 font-medium">Guest & room</th>
                 <th scope="col" className="px-5 py-4 font-medium">Items ordered</th>
@@ -152,10 +167,10 @@ export default function FoodOrdersListPage() {
                   <td colSpan={6} className="px-5 py-12 text-center text-[var(--color-text-secondary)]">No orders found.</td>
                 </tr>
               )}
-              {orders.map((order) => {
+              {paginatedOrders.map((order) => {
                 const statusKey = order.status ?? 'PENDING';
                 return (
-                  <tr key={order.id} className="hover:bg-surface-secondary">
+                  <tr key={order.id} className="hover:bg-surface-secondary/50">
                     <td className="px-5 py-4 font-medium text-[var(--color-text-primary)]">{order.orderId ?? order.id.slice(0, 8)}</td>
                     <td className="px-5 py-4">
                       <p className="font-medium text-[var(--color-text-primary)]">{order.guest ?? 'Walk-in'}</p>
@@ -179,6 +194,19 @@ export default function FoodOrdersListPage() {
             </tbody>
           </table>
         </div>
+        {!isLoading && orders.length > PAGE_SIZE ? (
+          <div className="flex items-center justify-between border-t border-border px-5 py-3 text-sm text-[var(--color-text-secondary)]">
+            <span>Page {page} of {totalPages}</span>
+            <div className="flex items-center gap-2">
+              <button type="button" className="btn-secondary" disabled={page <= 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>
+                Previous
+              </button>
+              <button type="button" className="btn-secondary" disabled={page >= totalPages} onClick={() => setPage((current) => Math.min(totalPages, current + 1))}>
+                Next
+              </button>
+            </div>
+          </div>
+        ) : null}
       </section>
     </div>
   );

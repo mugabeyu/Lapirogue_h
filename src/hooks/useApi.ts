@@ -2,7 +2,7 @@ import useSWR from 'swr';
 import { ApiResponse } from '@/types';
 
 const fetcher = async (url: string) => {
-  const response = await fetch(url, { cache: 'no-store', credentials: 'include' });
+  const response = await fetch(url, { credentials: 'include' });
   const data = await response.json();
   return data;
 };
@@ -10,7 +10,13 @@ const fetcher = async (url: string) => {
 export function useApi<T>(url: string | null) {
   const { data, error, isLoading, mutate } = useSWR<ApiResponse<T>>(
     url,
-    fetcher
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      dedupingInterval: 30_000,
+      keepPreviousData: true,
+    },
   );
 
   return {

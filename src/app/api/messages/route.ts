@@ -19,7 +19,7 @@ type MessageRow = {
 
 const messageSchema = z.object({
   guestId: z.string().uuid(),
-  messageType: z.enum(['guest', 'receptionist']).default('receptionist'),
+  messageType: z.enum(['guest', 'receptionist', 'admin']).default('admin'),
   subject: z.string().optional().nullable(),
   content: z.string().min(1),
   attachmentUrl: z.string().optional().nullable(),
@@ -83,9 +83,9 @@ export async function POST(request: NextRequest) {
         guest_id: body.guestId,
         message_type: body.messageType,
         subject: body.subject ?? null,
-        content: body.content,
+        content: body.content.trim(),
         attachment_url: body.attachmentUrl ?? null,
-        is_read: false,
+        is_read: body.messageType === 'receptionist',
       })
       .select('id, guest_id, message_type, subject, content, is_read, attachment_url, created_at')
       .single();
@@ -95,7 +95,19 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const validationResponse = validationErrorResponse(error);
     if (validationResponse) return validationResponse;
-    return NextResponse.json({ success: false, error: 'Failed to create message' }, { status: 500 });
+    console.error('POST /api/messages failed', error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Failed to create message',
+        details: process.env.NODE_ENV === 'production'
+          ? undefined
+          : error instanceof Error
+            ? error.message
+            : JSON.stringify(error),
+      },
+      { status: 500 },
+    );
   }
 }
 
@@ -108,10 +120,23 @@ export async function PATCH(request: NextRequest) {
   try {
     const { searchParams } = request.nextUrl;
     const id = searchParams.get('id');
+    const guestId = searchParams.get('guestId');
     const all = searchParams.get('all') === 'true';
 
     if (all) {
-      const { error } = await getSupabaseAdmin().from('messages').update({ is_read: true }).eq('is_read', false);
+      const { error } = await getSupabaseAdmin()
+        .from('messages')
+        .update({ is_read: true })
+        .eq('is_read', false)
+        .eq('message_type', 'guest');
+      if (error) throw error;
+    } else if (guestId) {
+      const { error } = await getSupabaseAdmin()
+        .from('messages')
+        .update({ is_read: true })
+        .eq('guest_id', guestId)
+        .eq('is_read', false)
+        .eq('message_type', 'guest');
       if (error) throw error;
     } else if (id) {
       const { error } = await getSupabaseAdmin().from('messages').update({ is_read: true }).eq('id', id);

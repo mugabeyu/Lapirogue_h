@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Grid3X3, LayoutList, Plus, SearchIcon, BedDouble, Users, Pen, Trash2 } from 'lucide-react';
 import { useApi } from '@/hooks/useApi';
 import { PageHeader } from '@/components/PageHeader';
@@ -25,10 +25,12 @@ function roomTypeLabel(type: Room['type']) {
 }
 
 export default function RoomsPage() {
+  const PAGE_SIZE = 15;
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
   const [type, setType] = useState('');
   const [view, setView] = useState<ViewMode>('grid');
+  const [page, setPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editRow, setEditRow] = useState<Record<string, unknown> | null>(null);
   const [deleteRow, setDeleteRow] = useState<Record<string, unknown> | null>(null);
@@ -50,6 +52,20 @@ export default function RoomsPage() {
       return matchesSearch && matchesType && matchesStatus;
     });
   }, [rows, search, status, type]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
+  const start = (page - 1) * PAGE_SIZE;
+  const paginatedRows = filteredRows.slice(start, start + PAGE_SIZE);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, status, type, view]);
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
 
   async function handleDelete() {
     if (!deleteRow?.id) return;
@@ -76,7 +92,7 @@ export default function RoomsPage() {
         )}
       />
 
-      <div className="card">
+      <div className={`card ${view === 'list' ? 'rounded-none' : ''}`}>
         <div className="flex flex-col gap-4 px-4 py-4 border-b border-border lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-1 flex-wrap items-center gap-3">
             <div className="relative w-full min-w-[220px] max-w-md">
@@ -134,7 +150,7 @@ export default function RoomsPage() {
                 No rooms found.
               </div>
             ) : null}
-            {filteredRows.map((room) => {
+            {paginatedRows.map((room) => {
               const image = roomImage(room);
               return (
                 <article
@@ -195,7 +211,7 @@ export default function RoomsPage() {
                       </button>
                       <button
                         type="button"
-                        className="rounded-lg p-2 text-[var(--color-text-secondary)] hover:bg-danger/10 hover:text-danger"
+                        className="rounded-lg p-2 text-[var(--color-text-secondary)] hover:bg-danger/10 hover:text-[var(--color-danger)]"
                         onClick={() => setDeleteRow(room as unknown as Record<string, unknown>)}
                         aria-label={`Delete room ${room.roomNumber}`}
                       >
@@ -211,7 +227,7 @@ export default function RoomsPage() {
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-left">
               <thead>
-                <tr className="border-b border-border bg-surface-secondary text-xs uppercase tracking-wider text-[var(--color-text-secondary)]">
+                <tr className="border-b border-border text-xs uppercase tracking-wider text-[var(--color-text-secondary)]">
                   <th className="px-6 py-4 font-medium">Photo</th>
                   <th className="px-6 py-4 font-medium">Room</th>
                   <th className="px-6 py-4 font-medium">Type</th>
@@ -230,7 +246,7 @@ export default function RoomsPage() {
                     </td>
                   </tr>
                 ) : null}
-                {filteredRows.map((room) => {
+                {paginatedRows.map((room) => {
                   const image = roomImage(room);
                   return (
                     <tr key={room.id} className="hover:bg-surface-secondary/50">
@@ -253,7 +269,7 @@ export default function RoomsPage() {
                         <div className="inline-flex gap-1">
                           <button
                             type="button"
-                            className="rounded-lg p-2 text-[var(--color-text-secondary)] hover:bg-surface-secondary hover:text-primary"
+                            className="rounded-lg p-2 text-[var(--color-text-secondary)] hover:bg-surface-secondary hover:text-[var(--color-primary)]"
                             onClick={() => {
                               setEditRow(room as unknown as Record<string, unknown>);
                               setIsModalOpen(true);
@@ -264,7 +280,7 @@ export default function RoomsPage() {
                           </button>
                           <button
                             type="button"
-                            className="rounded-lg p-2 text-[var(--color-text-secondary)] hover:bg-danger/10 hover:text-danger"
+                            className="rounded-lg p-2 text-[var(--color-text-secondary)] hover:bg-danger/10 hover:text-[var(--color-danger)]"
                             onClick={() => setDeleteRow(room as unknown as Record<string, unknown>)}
                             aria-label={`Delete room ${room.roomNumber}`}
                           >
@@ -279,6 +295,20 @@ export default function RoomsPage() {
             </table>
           </div>
         )}
+
+        {!isLoading && filteredRows.length > PAGE_SIZE ? (
+          <div className="flex items-center justify-between border-t border-border px-4 py-3 text-sm text-[var(--color-text-secondary)]">
+            <span>Page {page} of {totalPages}</span>
+            <div className="flex items-center gap-2">
+              <button type="button" className="btn-secondary" disabled={page <= 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>
+                Previous
+              </button>
+              <button type="button" className="btn-secondary" disabled={page >= totalPages} onClick={() => setPage((current) => Math.min(totalPages, current + 1))}>
+                Next
+              </button>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       <RoomModal

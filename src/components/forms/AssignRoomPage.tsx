@@ -79,7 +79,7 @@ export default function AssignRoomPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 animate-in fade-in duration-500">
+    <div className="max-w-3xl space-y-6 animate-in fade-in duration-500">
       <PageHeader
         title="Assign Room"
         subtitle="Choose a guest, stay dates, and an available room. Only free rooms for those dates are listed."

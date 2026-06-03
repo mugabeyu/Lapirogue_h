@@ -43,6 +43,20 @@ type PaymentDetailResponse = {
   invoiceReference: string;
 };
 
+type PdfHtmlOptions = {
+  margin: [number, number, number, number];
+  autoPaging: 'text';
+  html2canvas: {
+    scale: number;
+    useCORS: boolean;
+    backgroundColor: string;
+  };
+};
+
+type HtmlCapablePdf = jsPDF & {
+  html: (element: HTMLElement, options: PdfHtmlOptions) => Promise<jsPDF>;
+};
+
 export function PaymentDetailsPage() {
   const params = useParams<{ id: string }>();
   const { data, isLoading } = useApi<PaymentDetailResponse>(`/api/payments/${params.id}`);
@@ -65,7 +79,7 @@ export function PaymentDetailsPage() {
 
       // Generate PDF from the exact visible invoice layout so email attachment matches UI.
       const pdf = new jsPDF({ unit: 'pt', format: 'a4' });
-      await (pdf as any).html(invoiceElement, {
+      await (pdf as unknown as HtmlCapablePdf).html(invoiceElement, {
         margin: [16, 16, 16, 16],
         autoPaging: 'text',
         html2canvas: {

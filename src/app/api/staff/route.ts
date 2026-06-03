@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { getAuditActor, recordAuditLog } from '@/lib/audit';
 import { z } from 'zod';
-import { INTERNATIONAL_PHONE_DISPLAY_PATTERN } from '@/lib/phone';
+import { createApiResponse } from '@/lib/api-response';
 import { buildRegisterRedirect } from '@/lib/supabase-email';
 import { sendStaffInvitationEmail } from '@/lib/mailer';
 import { SignJWT } from 'jose';
@@ -20,10 +20,7 @@ const staffSchema = z.object({
   department: z.string().min(1),
   position: z.string().min(1),
   email: z.string().email(),
-  phone: z.preprocess(
-    emptyToUndefined,
-    z.string().regex(INTERNATIONAL_PHONE_DISPLAY_PATTERN, 'Use Mauritian format like (+230) 1234 5678').optional().nullable(),
-  ),
+  phone: z.string().optional().nullable(),
   status: z.enum(['ACTIVE', 'INACTIVE']).optional(),
   isMain: z.boolean().optional(),
 });
@@ -123,7 +120,7 @@ export async function GET(request: NextRequest) {
       }),
     });
   } catch {
-    return NextResponse.json({ success: false, error: 'Failed to fetch staff' }, { status: 500 });
+    return createApiResponse(false, 'Failed to fetch staff');
   }
 }
 

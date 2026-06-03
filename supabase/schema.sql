@@ -114,6 +114,49 @@ begin
 end;
 $$ language plpgsql;
 
+create or replace function validate_reservation_status_dates()
+returns trigger as $$
+begin
+  if new.status = 'CHECKED_IN' and (new.check_in > current_date or new.check_out <= current_date) then
+    raise exception 'Check-in is only allowed on or after check-in date and before check-out date';
+  end if;
+
+  if new.status = 'CHECKED_OUT' and new.check_out > current_date then
+    raise exception 'Check-out is only allowed on or after the check-out date';
+  end if;
+
+  return new;
+end;
+$$ language plpgsql;
+
+create or replace function validate_guest_status_dates()
+returns trigger as $$
+declare
+  has_active_stay boolean;
+begin
+  if new.status = 'CHECKED_IN' then
+    execute $q$
+      select exists (
+        select 1
+        from public.reservations r
+        where r.guest_id = $1
+          and r.status <> 'CANCELLED'
+          and r.check_in <= current_date
+          and r.check_out > current_date
+      )
+    $q$
+    into has_active_stay
+    using new.id;
+
+    if not has_active_stay then
+      raise exception 'Guest can only be checked in when there is an active stay for today';
+    end if;
+  end if;
+
+  return new;
+end;
+$$ language plpgsql;
+
 create table if not exists profiles (
   auth_id uuid primary key,
   full_name text,
@@ -146,13 +189,6 @@ create index if not exists audit_logs_table_name_idx on audit_logs (table_name);
 create index if not exists audit_logs_record_id_idx on audit_logs (record_id);
 create index if not exists audit_logs_actor_id_idx on audit_logs (actor_id);
 create index if not exists audit_logs_created_at_idx on audit_logs (created_at desc);
-
-do $$ begin
-  if exists (select 1 from profiles where lower(email) = 'mugabeyunusu@gmail.com') then
-    update profiles set is_main = false;
-    update profiles set is_main = true where lower(email) = 'mugabeyunusu@gmail.com';
-  end if;
-end $$;
 
 with ranked_main as (
   select auth_id, row_number() over (order by created_at asc, auth_id asc) as rn
@@ -451,6 +487,9 @@ create table if not exists messages (
   updated_at timestamptz not null default now()
 );
 
+comment on table messages is 'Admin and guest direct chat messages grouped by guest_id conversation.';
+comment on column messages.message_type is 'guest = guest sender, receptionist/admin = staff sender.';
+
 create table if not exists itinerary_events (
   id uuid primary key default gen_random_uuid(),
   guest_id uuid references guests(id) on delete cascade,
@@ -675,6 +714,8 @@ create index if not exists guest_schedule_items_guest_id_idx on guest_schedule_i
 create index if not exists guest_schedule_items_start_at_idx on guest_schedule_items (start_at);
 create index if not exists messages_guest_id_idx on messages (guest_id);
 create index if not exists messages_created_at_idx on messages (created_at desc);
+create index if not exists messages_guest_id_is_read_idx on messages (guest_id, is_read);
+create index if not exists messages_guest_id_created_at_idx on messages (guest_id, created_at desc);
 create index if not exists notifications_is_read_idx on notifications (is_read);
 create index if not exists itinerary_events_guest_id_idx on itinerary_events (guest_id);
 create index if not exists storage_files_bucket_idx on storage_files (bucket);
@@ -745,6 +786,8 @@ create trigger profiles_audit_log after insert or update or delete on profiles f
 
 drop trigger if exists guests_set_audit_fields on guests;
 create trigger guests_set_audit_fields before insert or update on guests for each row execute function set_created_by_and_updated_by();
+drop trigger if exists guests_validate_status_dates on guests;
+create trigger guests_validate_status_dates before insert or update on guests for each row execute function validate_guest_status_dates();
 drop trigger if exists guests_audit_log on guests;
 create trigger guests_audit_log after insert or update or delete on guests for each row execute function log_audit_event();
 
@@ -755,6 +798,8 @@ create trigger rooms_audit_log after insert or update or delete on rooms for eac
 
 drop trigger if exists reservations_set_audit_fields on reservations;
 create trigger reservations_set_audit_fields before insert or update on reservations for each row execute function set_created_by_and_updated_by();
+drop trigger if exists reservations_validate_status_dates on reservations;
+create trigger reservations_validate_status_dates before insert or update on reservations for each row execute function validate_reservation_status_dates();
 drop trigger if exists reservations_audit_log on reservations;
 create trigger reservations_audit_log after insert or update or delete on reservations for each row execute function log_audit_event();
 
@@ -817,6 +862,17 @@ drop trigger if exists messages_set_audit_fields on messages;
 create trigger messages_set_audit_fields before insert or update on messages for each row execute function set_created_by_and_updated_by();
 drop trigger if exists messages_audit_log on messages;
 create trigger messages_audit_log after insert or update or delete on messages for each row execute function log_audit_event();
+
+do $$
+begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
+    begin
+      alter publication supabase_realtime add table public.messages;
+    exception when duplicate_object then
+      null;
+    end;
+  end if;
+end $$;
 
 drop trigger if exists itinerary_events_set_audit_fields on itinerary_events;
 create trigger itinerary_events_set_audit_fields before insert or update on itinerary_events for each row execute function set_created_by_and_updated_by();
@@ -994,8 +1050,8 @@ create policy "Public guest photos are readable" on storage.objects for select u
 drop policy if exists "Private guest documents readable by authenticated users" on storage.objects;
 create policy "Private guest documents readable by authenticated users" on storage.objects for select using (bucket_id = 'guest-documents' and auth.uid() is not null);
 drop policy if exists "Authenticated uploads to allowed buckets" on storage.objects;
-create policy "Authenticated uploads to allowed buckets" on storage.objects for insert with check (auth.uid() is not null and bucket_id in ('room-images', 'activity-images', 'menu-images', 'chat_uploads', 'content-images', 'staff-avatars', 'guest-photos', 'guest-documents'));
+create policy "Authenticated uploads to allowed buckets" on storage.objects for insert with check (auth.uid() is not null and bucket_id in ('room-images', 'activity-images', 'menu-images', 'chat_uploads', 'content-images', 'staff-avatars', 'guest-documents'));
 drop policy if exists "Authenticated updates to allowed buckets" on storage.objects;
-create policy "Authenticated updates to allowed buckets" on storage.objects for update using (auth.uid() is not null and bucket_id in ('room-images', 'activity-images', 'menu-images', 'chat_uploads', 'content-images', 'staff-avatars', 'guest-photos', 'guest-documents')) with check (auth.uid() is not null and bucket_id in ('room-images', 'activity-images', 'menu-images', 'chat_uploads', 'content-images', 'staff-avatars', 'guest-photos', 'guest-documents'));
+create policy "Authenticated updates to allowed buckets" on storage.objects for update using (auth.uid() is not null and bucket_id in ('room-images', 'activity-images', 'menu-images', 'chat_uploads', 'content-images', 'staff-avatars', 'guest-documents')) with check (auth.uid() is not null and bucket_id in ('room-images', 'activity-images', 'menu-images', 'chat_uploads', 'content-images', 'staff-avatars', 'guest-documents'));
 drop policy if exists "Authenticated deletes in allowed buckets" on storage.objects;
-create policy "Authenticated deletes in allowed buckets" on storage.objects for delete using (auth.uid() is not null and bucket_id in ('room-images', 'activity-images', 'menu-images', 'chat_uploads', 'content-images', 'staff-avatars', 'guest-photos', 'guest-documents'));
+create policy "Authenticated deletes in allowed buckets" on storage.objects for delete using (auth.uid() is not null and bucket_id in ('room-images', 'activity-images', 'menu-images', 'chat_uploads', 'content-images', 'staff-avatars', 'guest-documents'));

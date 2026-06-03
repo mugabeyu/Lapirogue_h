@@ -59,12 +59,27 @@ export async function loadGuestProfileData(guestId: string): Promise<GuestProfil
 
   if (guestError || !guest) return null;
 
-  // Fetch reservations
-  const { data: reservationsData } = await supabase
-    .from('reservations')
-    .select('id,room_id,check_in,check_out,status,total_amount,rooms(room_number,type),reservation_id,created_at,updated_at')
-    .eq('guest_id', guestId)
-    .order('check_in', { ascending: false });
+  const [reservationsResult, activityBookingsResult, foodOrdersResult, paymentsResult] = await Promise.all([
+    supabase
+      .from('reservations')
+      .select('id,room_id,check_in,check_out,status,total_amount,rooms(room_number,type),reservation_id,created_at,updated_at')
+      .eq('guest_id', guestId)
+      .order('check_in', { ascending: false }),
+    supabase
+      .from('activity_bookings')
+      .select('id,booking_date,participants,status,notes,activities(name,price)')
+      .eq('guest_id', guestId),
+    supabase
+      .from('food_orders')
+      .select('id,order_id,subtotal,service_charge,tax_amount,total,status,notes,created_at,updated_at')
+      .eq('guest_id', guestId),
+    supabase
+      .from('payments')
+      .select('id,payment_id,amount,method,status,reference,created_at,updated_at')
+      .eq('guest_id', guestId),
+  ]);
+
+  const reservationsData = reservationsResult.data;
 
   const reservations: GuestStay[] = (reservationsData ?? []).map((r) => ({
     id: r.id,
@@ -83,27 +98,19 @@ export async function loadGuestProfileData(guestId: string): Promise<GuestProfil
   // Determine current stay (active or most recent)
   const activeStay = reservations.find((s) => s.status !== 'CANCELLED' && s.status !== 'CHECKED_OUT') ?? reservations[0] ?? null;
 
-  // Fetch activity bookings
-  const { data: activityBookingsData } = await supabase
-    .from('activity_bookings')
-    .select('id,activity,amount,date,participants,status,notes,created_at,updated_at')
-    .eq('guest_id', guestId);
+  const activityBookingsData = activityBookingsResult.data;
 
   const activityBookings = (activityBookingsData ?? []).map((ab) => ({
     id: ab.id,
-    activity: ab.activity ?? null,
-    amount: ab.amount ?? undefined,
-    date: ab.date,
+    activity: (ab.activities as { name?: string | null } | null)?.name ?? null,
+    amount: ((ab.activities as { price?: number | null } | null)?.price ?? 0) * (ab.participants ?? 1),
+    date: ab.booking_date,
     participants: ab.participants,
     status: ab.status,
     notes: ab.notes ?? null,
   }));
 
-  // Fetch food orders
-  const { data: foodOrdersData } = await supabase
-    .from('food_orders')
-    .select('id,order_id,subtotal,service_charge,tax_amount,total,status,notes,created_at,updated_at')
-    .eq('guest_id', guestId);
+  const foodOrdersData = foodOrdersResult.data;
 
   const foodOrders = (foodOrdersData ?? []).map((fo) => ({
     id: fo.id,
@@ -117,11 +124,7 @@ export async function loadGuestProfileData(guestId: string): Promise<GuestProfil
     createdAt: fo.created_at,
   }));
 
-  // Fetch payments
-  const { data: paymentsData } = await supabase
-    .from('payments')
-    .select('id,payment_id,amount,method,status,reference,created_at,updated_at')
-    .eq('guest_id', guestId);
+  const paymentsData = paymentsResult.data;
 
   const payments = (paymentsData ?? []).map((p) => ({
     id: p.id,

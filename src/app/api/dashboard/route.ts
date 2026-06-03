@@ -12,11 +12,10 @@ export async function GET() {
       activeReservationsResult,
       availableRoomsResult,
       totalRoomsResult,
-      todayPaymentsResult,
+      paymentsResult,
       todaysArrivalsResult,
       totalActivitiesResult,
       pendingFoodOrdersResult,
-      pendingPaymentsResult,
     ] = await Promise.all([
       supabase.from('guests').select('id', { count: 'exact', head: true }),
       supabase
@@ -30,9 +29,7 @@ export async function GET() {
       supabase.from('rooms').select('id', { count: 'exact', head: true }),
       supabase
         .from('payments')
-        .select('amount')
-        .in('status', ['PAID', 'PARTIALLY_PAID'])
-        .gte('created_at', today.toISOString()),
+        .select('amount,status,created_at'),
       supabase
         .from('reservations')
         .select('*, guests(first_name,last_name), rooms(room_number,type)')
@@ -45,13 +42,23 @@ export async function GET() {
         .from('food_orders')
         .select('id', { count: 'exact', head: true })
         .eq('status', 'PENDING'),
-      supabase
-        .from('payments')
-        .select('id', { count: 'exact', head: true })
-        .eq('status', 'PENDING'),
     ]);
 
-    const todayRevenue = (todayPaymentsResult.data ?? []).reduce(
+    const paymentRows = paymentsResult.data ?? [];
+    const recordedStatuses = new Set(['PENDING', 'PARTIALLY_PAID', 'PAID']);
+
+    const recordedPayments = paymentRows.filter((payment) => recordedStatuses.has(String(payment.status ?? '').toUpperCase()));
+    const pendingPayments = paymentRows.filter((payment) => String(payment.status ?? '').toUpperCase() === 'PENDING');
+    const todaysRecordedPayments = recordedPayments.filter((payment) => {
+      if (!payment.created_at) return false;
+      return new Date(payment.created_at) >= today;
+    });
+
+    const totalRevenue = recordedPayments.reduce(
+      (sum, payment) => sum + Number(payment.amount ?? 0),
+      0,
+    );
+    const todayRevenue = todaysRecordedPayments.reduce(
       (sum, payment) => sum + Number(payment.amount ?? 0),
       0,
     );
@@ -67,11 +74,12 @@ export async function GET() {
           total: totalRooms,
           percentage: totalRooms ? Math.round((availableRooms / totalRooms) * 100) : 0,
         },
+        totalRevenue,
         todayRevenue,
         todaysArrivals: todaysArrivalsResult.data?.length ?? 0,
         totalActivities: totalActivitiesResult.count ?? 0,
         pendingFoodOrders: pendingFoodOrdersResult.count ?? 0,
-        pendingPayments: pendingPaymentsResult.count ?? 0,
+        pendingPayments: pendingPayments.length,
       },
       todaysArrivals: todaysArrivalsResult.data ?? [],
     };

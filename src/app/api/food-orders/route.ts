@@ -24,6 +24,7 @@ type FoodOrderRow = {
   id: string;
   order_id?: string | null;
   guest_id?: string | null;
+  room_id?: string | null;
   items?: Array<{ name?: string; quantity?: number }> | null;
   subtotal?: number | string | null;
   service_charge?: number | string | null;
@@ -32,8 +33,6 @@ type FoodOrderRow = {
   status?: string | null;
   notes?: string | null;
   created_at?: string | null;
-  guests?: { first_name?: string | null; last_name?: string | null } | null;
-  rooms?: { room_number?: string | null } | null;
 };
 
 function itemsSummary(items: FoodOrderRow['items']) {
@@ -54,9 +53,10 @@ export async function GET(request: NextRequest) {
     const search = request.nextUrl.searchParams.get('search') ?? '';
     const statusFilter = request.nextUrl.searchParams.get('status') ?? '';
 
-    let query = getSupabaseAdmin()
+    const supabase = getSupabaseAdmin();
+    let query = supabase
       .from('food_orders')
-      .select('id,order_id,guest_id,items,subtotal,service_charge,tax_amount,total,status,notes,created_at,guests(first_name,last_name),rooms(room_number)')
+      .select('id,order_id,guest_id,room_id,items,subtotal,service_charge,tax_amount,total,status,notes,created_at')
       .order('created_at', { ascending: false });
 
     if (statusFilter) {
@@ -68,11 +68,33 @@ export async function GET(request: NextRequest) {
     if (error) throw error;
 
     const orders = (data ?? []) as FoodOrderRow[];
+    const guestIds = Array.from(new Set(orders.map((order) => order.guest_id).filter((id): id is string => Boolean(id))));
+    const roomIds = Array.from(new Set(orders.map((order) => order.room_id).filter((id): id is string => Boolean(id))));
+    const [guestsResult, roomsResult] = await Promise.all([
+      guestIds.length > 0
+        ? supabase.from('guests').select('id,first_name,last_name').in('id', guestIds)
+        : Promise.resolve({ data: [] }),
+      roomIds.length > 0
+        ? supabase.from('rooms').select('id,room_number').in('id', roomIds)
+        : Promise.resolve({ data: [] }),
+    ]);
+    const guestById = new Map(
+      ((guestsResult.data ?? []) as Array<{ id: string; first_name?: string | null; last_name?: string | null }>).map((guest) => [
+        guest.id,
+        `${guest.first_name ?? ''} ${guest.last_name ?? ''}`.trim() || null,
+      ]),
+    );
+    const roomById = new Map(
+      ((roomsResult.data ?? []) as Array<{ id: string; room_number?: string | null }>).map((room) => [
+        room.id,
+        room.room_number ?? null,
+      ]),
+    );
     const mapped = orders.map((order) => ({
       id: order.id,
       orderId: order.order_id ?? null,
-      guest: order.guests ? `${order.guests.first_name ?? ''} ${order.guests.last_name ?? ''}`.trim() || null : null,
-      room: order.rooms?.room_number ?? null,
+      guest: order.guest_id ? guestById.get(order.guest_id) ?? null : null,
+      room: order.room_id ? roomById.get(order.room_id) ?? null : null,
       itemsSummary: itemsSummary(order.items),
       subtotal: order.subtotal === undefined || order.subtotal === null ? 0 : Number(order.subtotal),
       serviceCharge: order.service_charge === undefined || order.service_charge === null ? 0 : Number(order.service_charge),
@@ -109,7 +131,8 @@ export async function GET(request: NextRequest) {
       data: filtered,
       stats,
     });
-  } catch {
+  } catch (error) {
+    console.error('Food orders fetch failed:', error);
     return NextResponse.json({ success: false, error: 'Failed to fetch food orders' }, { status: 500 });
   }
 }

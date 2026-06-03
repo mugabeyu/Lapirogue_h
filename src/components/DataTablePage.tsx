@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { SearchIcon } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { StatusBadge } from '@/components/StatusBadge';
@@ -35,7 +35,9 @@ export default function DataTablePage({
   entityName,
   emptyMessage,
 }: DataTablePageProps) {
+  const PAGE_SIZE = 15;
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
   const url = useMemo(() => {
     const [path, query = ''] = endpoint.split('?');
     const params = new URLSearchParams(query);
@@ -44,15 +46,28 @@ export default function DataTablePage({
   }, [endpoint, search]);
   const { data, isLoading } = useApi<Record<string, unknown>[]>(url);
   const rows = data ?? [];
+  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  const start = (page - 1) * PAGE_SIZE;
+  const paginatedRows = rows.slice(start, start + PAGE_SIZE);
   const rowLabel = entityName ?? title.toLowerCase();
   const caption = tableCaption ?? `${title} listing`;
   const emptyText = emptyMessage ?? `No ${rowLabel} found.`;
+
+  useEffect(() => {
+    setPage(1);
+  }, [search]);
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <PageHeader title={title} subtitle={subtitle} />
 
-      <div className="card">
+      <div className="card rounded-none">
         <div className="px-4 py-4 border-b border-border">
           <label htmlFor={`${title}-search`} className="sr-only">
             Search {rowLabel}
@@ -73,15 +88,14 @@ export default function DataTablePage({
         <div className="overflow-x-auto">
           <LabeledTable
             caption={caption}
-            summary={`${title} — ${columns.map((column) => column.label).join(', ')}`}
             footer={
               isLoading
                 ? `Loading ${rowLabel}...`
-                : `Showing ${rows.length} ${rows.length === 1 ? rowLabel.replace(/s$/, '') : rowLabel}`
+                : `Showing ${rows.length === 0 ? 0 : start + 1}-${Math.min(start + PAGE_SIZE, rows.length)} of ${rows.length} ${rows.length === 1 ? rowLabel.replace(/s$/, '') : rowLabel}`
             }
           >
             <thead>
-              <tr className="bg-surface-secondary text-xs uppercase tracking-wider text-[var(--color-text-secondary)]">
+              <tr className="border-b border-border text-xs uppercase tracking-wider text-[var(--color-text-secondary)]">
                 {columns.map((column) => (
                   <th key={column.key} scope="col" className="px-6 py-4 font-medium">
                     {column.label}
@@ -97,8 +111,8 @@ export default function DataTablePage({
                   </td>
                 </tr>
               )}
-              {rows.map((row, index) => (
-                <tr key={String(row.id ?? index)} className="transition-colors hover:bg-surface-secondary">
+              {paginatedRows.map((row, index) => (
+                <tr key={String(row.id ?? index)} className="transition-colors hover:bg-surface-secondary/50">
                   {columns.map((column) => {
                     const value = getTableValue(row, column.key);
                     return (
@@ -128,6 +142,19 @@ export default function DataTablePage({
             </tbody>
           </LabeledTable>
         </div>
+        {!isLoading && rows.length > PAGE_SIZE ? (
+          <div className="flex items-center justify-between border-t border-border px-4 py-3 text-sm text-[var(--color-text-secondary)]">
+            <span>Page {page} of {totalPages}</span>
+            <div className="flex items-center gap-2">
+              <button type="button" className="btn-secondary" disabled={page <= 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>
+                Previous
+              </button>
+              <button type="button" className="btn-secondary" disabled={page >= totalPages} onClick={() => setPage((current) => Math.min(totalPages, current + 1))}>
+                Next
+              </button>
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );

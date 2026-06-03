@@ -16,7 +16,6 @@ import { StatCard } from '@/components/StatCard';
 import { useApi } from '@/hooks/useApi';
 import { AddGuestModal } from '@/components/modals/AddGuestModal';
 import { AddActivityModal } from '@/components/modals/AddActivityModal';
-import ReservationCalendarPage from '@/components/forms/ReservationCalendarPage';
 
 type DashboardData = {
   stats: {
@@ -27,6 +26,7 @@ type DashboardData = {
       total: number;
       percentage: number;
     };
+    totalRevenue: number;
     todayRevenue: number;
     todaysArrivals: number;
     totalActivities: number;
@@ -57,7 +57,7 @@ function formatShortDate(value?: string | null) {
 export default function DashboardDataPage() {
   const [isGuestModalOpen, setIsGuestModalOpen] = useState(false);
   const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
-  const { data, isLoading } = useApi<DashboardData>('/api/dashboard');
+  const { data } = useApi<DashboardData>('/api/dashboard');
   const stats = data?.stats;
   const todaysArrivals = data?.todaysArrivals ?? [];
 
@@ -69,12 +69,8 @@ export default function DashboardDataPage() {
   const occupancyTrend = Math.round((Math.random() * 10 - 5) * 10) / 10; // Random between -5 and 5
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 page-padding">
-      <div className="max-w-7xl mx-auto">
-        <PageHeader title="Dashboard" subtitle="Live operational summary from Supabase." />
-      </div>
-
-      {isLoading && <div className="card p-6 text-[var(--color-text-secondary)]">Loading dashboard...</div>}
+    <div className="space-y-6 animate-in fade-in duration-500">
+      <PageHeader title="Dashboard" />
 
       {stats && (
         <div className="space-y-6">
@@ -83,11 +79,9 @@ export default function DashboardDataPage() {
               href="/reservations/new"
               className="group rounded-2xl border border-border bg-surface p-5 text-left shadow-[var(--shadow-small)] transition-transform hover:-translate-y-1 hover:shadow-[var(--shadow-medium)]"
             >
-              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-white">
-                <CalendarPlus2 className="h-5 w-5" />
-              </div>
-                <div className="mt-8 text-center">
-                <div className="font-display text-lg text-[var(--color-text-primary)]">Add Reservation</div>
+              <CalendarPlus2 className="h-5 w-5 text-[var(--color-text-primary)]" strokeWidth={2} />
+              <div className="mt-6 text-base font-display text-[var(--color-text-primary)]">
+                Add Reservation
               </div>
             </Link>
 
@@ -96,11 +90,9 @@ export default function DashboardDataPage() {
               onClick={() => setIsGuestModalOpen(true)}
               className="group rounded-2xl border border-border bg-surface p-5 text-left shadow-[var(--shadow-small)] transition-transform hover:-translate-y-1 hover:shadow-[var(--shadow-medium)]"
             >
-              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-white">
-                <UserPlus className="h-5 w-5" />
-              </div>
-              <div className="mt-8 text-center">
-                <div className="font-display text-lg text-[var(--color-text-primary)]">Register Guest</div>
+              <UserPlus className="h-5 w-5 text-[var(--color-text-primary)]" strokeWidth={2} />
+              <div className="mt-6 text-base font-display text-[var(--color-text-primary)]">
+                Register Guest
               </div>
             </button>
 
@@ -108,11 +100,9 @@ export default function DashboardDataPage() {
               href="/rooms/assign"
               className="group rounded-2xl border border-border bg-surface p-5 text-left shadow-[var(--shadow-small)] transition-transform hover:-translate-y-1 hover:shadow-[var(--shadow-medium)]"
             >
-              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-white">
-                <DoorOpen className="h-5 w-5" />
-              </div>
-              <div className="mt-8 text-center">
-                <div className="font-display text-lg text-[var(--color-text-primary)]">Assign Room</div>
+              <DoorOpen className="h-5 w-5 text-[var(--color-text-primary)]" strokeWidth={2} />
+              <div className="mt-6 text-base font-display text-[var(--color-text-primary)]">
+                Assign Room
               </div>
             </Link>
 
@@ -121,11 +111,9 @@ export default function DashboardDataPage() {
               onClick={() => setIsActivityModalOpen(true)}
               className="group rounded-2xl border border-border bg-surface p-5 text-left shadow-[var(--shadow-small)] transition-transform hover:-translate-y-1 hover:shadow-[var(--shadow-medium)]"
             >
-              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-white">
-                <Activity className="h-5 w-5" />
-              </div>
-              <div className="mt-8 text-center">
-                <div className="font-display text-lg text-[var(--color-text-primary)]">Add Activity</div>
+              <Activity className="h-5 w-5 text-[var(--color-text-primary)]" strokeWidth={2} />
+              <div className="mt-6 text-base font-display text-[var(--color-text-primary)]">
+                Add Activity
               </div>
             </button>
 
@@ -133,11 +121,9 @@ export default function DashboardDataPage() {
               href="/food-beverage/orders/new"
               className="group rounded-2xl border border-border bg-surface p-5 text-left shadow-[var(--shadow-small)] transition-transform hover:-translate-y-1 hover:shadow-[var(--shadow-medium)]"
             >
-              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-white">
-                <UtensilsCrossed className="h-5 w-5" />
-              </div>
-              <div className="mt-8 text-center">
-                <div className="font-display text-lg text-[var(--color-text-primary)]">Record F&B Order</div>
+              <UtensilsCrossed className="h-5 w-5 text-[var(--color-text-primary)]" strokeWidth={2} />
+              <div className="mt-6 text-base font-display text-[var(--color-text-primary)]">
+                Record F&B Order
               </div>
             </Link>
           </section>
@@ -156,9 +142,9 @@ export default function DashboardDataPage() {
               isSecondary={true}
             />
             <StatCard 
-              label="Revenue Today" 
-              value={formatCurrency(stats.todayRevenue)} 
-              subtext="Completed payments today" 
+              label="Total Revenue" 
+              value={formatCurrency(stats.totalRevenue)} 
+              subtext={`Today: ${formatCurrency(stats.todayRevenue)}`} 
               isSecondary={true}
             />
             <StatCard 
@@ -173,16 +159,11 @@ export default function DashboardDataPage() {
               <div className="flex items-center justify-between px-5 py-4">
                 <div>
                   <h3 className="font-display text-xl text-[var(--color-text-primary)]">Operational summary</h3>
-                  <p className="text-sm text-[var(--color-text-secondary)]">Everything here is sourced from the live database.</p>
-                </div>
-                <div className="inline-flex items-center gap-2 rounded-full border border-border bg-surface-secondary px-3 py-1.5 text-xs font-medium text-[var(--color-text-secondary)]">
-                  <Activity className="h-4 w-4" />
-                  Live sync
                 </div>
               </div>
 
-              <div className="grid gap-4 p-5 sm:grid-cols-2 card-internal">
-                <div className="rounded-2xl border border-border bg-surface-secondary p-5 shadow-[var(--shadow-small)]">
+              <div className="grid p-5 sm:grid-cols-2 sm:divide-x sm:divide-border card-internal">
+                <div className="pb-5 sm:pr-6 sm:pb-0">
                   <div className="flex items-center justify-between text-sm text-[var(--color-text-secondary)]">
                     <span>Available rooms</span>
                     <BedDouble className="h-4 w-4" />
@@ -197,21 +178,21 @@ export default function DashboardDataPage() {
                   <div className="mt-2 text-xs text-[var(--color-text-secondary)]">{stats.roomOccupancy.percentage}% available</div>
                 </div>
 
-                <div className="rounded-2xl border border-border bg-surface p-5 shadow-[var(--shadow-small)]">
+                <div className="pt-5 sm:pl-6 sm:pt-0">
                   <div className="flex items-center justify-between text-sm text-[var(--color-text-secondary)]">
                     <span>Pending workload</span>
                     <CalendarCheck2 className="h-4 w-4" />
                   </div>
                   <div className="mt-4 space-y-3">
-                    <div className="flex items-center justify-between rounded-2xl bg-surface-secondary px-4 py-3">
+                    <div className="flex items-center justify-between py-2">
                       <span className="text-sm text-[var(--color-text-secondary)]">Food orders</span>
                       <span className="font-semibold text-[var(--color-text-primary)]">{stats.pendingFoodOrders}</span>
                     </div>
-                    <div className="flex items-center justify-between rounded-2xl bg-surface-secondary px-4 py-3">
+                    <div className="flex items-center justify-between border-t border-border py-2">
                       <span className="text-sm text-[var(--color-text-secondary)]">Payments</span>
                       <span className="font-semibold text-[var(--color-text-primary)]">{stats.pendingPayments}</span>
                     </div>
-                    <div className="flex items-center justify-between rounded-2xl bg-surface-secondary px-4 py-3">
+                    <div className="flex items-center justify-between border-t border-border py-2">
                       <span className="text-sm text-[var(--color-text-secondary)]">Activities</span>
                       <span className="font-semibold text-[var(--color-text-primary)]">{stats.totalActivities}</span>
                     </div>
@@ -247,8 +228,8 @@ export default function DashboardDataPage() {
                   <div className="border-t border-border pt-4">
                     <div className="mb-2">
                       <div className="text-xs uppercase tracking-[0.2em] text-[var(--color-text-secondary)]">Revenue</div>
-                      <div className="mt-1 text-2xl font-display text-[var(--color-text-primary)]">{formatCurrency(stats.todayRevenue)}</div>
-                      <div className="text-sm text-[var(--color-text-secondary)]">collected today</div>
+                      <div className="mt-1 text-2xl font-display text-[var(--color-text-primary)]">{formatCurrency(stats.totalRevenue)}</div>
+                      <div className="text-sm text-[var(--color-text-secondary)]">Recorded payments total · Today {formatCurrency(stats.todayRevenue)}</div>
                     </div>
                   </div>
                   <div className="border-t border-border pt-4">
@@ -267,7 +248,6 @@ export default function DashboardDataPage() {
                 <div className="flex items-center justify-between gap-4">
                   <div>
                     <h3 className="font-display text-xl text-[var(--color-text-primary)]">Today's arrivals</h3>
-                    <p className="text-sm text-[var(--color-text-secondary)]">Live arrivals from the reservations table.</p>
                   </div>
                   <div className="rounded-full bg-surface-secondary px-3 py-1 text-xs font-medium text-[var(--color-primary)]">
                     {stats.todaysArrivals} expected
@@ -287,12 +267,9 @@ export default function DashboardDataPage() {
                       </span>
                     </div>
                     <div className="text-[var(--color-text-secondary)] mb-3">No arrivals scheduled today</div>
-                    <button 
-                      onClick={() => alert('Click to create new reservation')}
-                      className="btn-primary px-6 py-2"
-                    >
+                    <Link href="/reservations/new" className="btn-primary inline-flex px-6 py-2">
                       New Reservation
-                    </button>
+                    </Link>
                   </div>
                 ) : (
                   todaysArrivals.slice(0, 6).map((arrival) => {
@@ -326,23 +303,6 @@ export default function DashboardDataPage() {
             </section>
           </div>
         </div>
-      )}
-
-      {stats && (
-        <section className="overflow-hidden rounded-2xl border border-border bg-surface shadow-[var(--shadow-small)]">
-          <div className="flex flex-col gap-3 border-b border-border px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="font-display text-2xl text-[var(--color-text-primary)]">Reservation calendar</h2>
-              <p className="mt-1 text-sm text-[var(--color-text-secondary)]">Monthly room occupancy and bookings</p>
-            </div>
-            <Link href="/reservations/calendar" className="text-sm font-medium text-[var(--color-primary)] hover:underline">
-              Open full calendar
-            </Link>
-          </div>
-          <div className="p-4">
-            <ReservationCalendarPage embedded />
-          </div>
-        </section>
       )}
 
       <AddGuestModal isOpen={isGuestModalOpen} onClose={() => setIsGuestModalOpen(false)} />

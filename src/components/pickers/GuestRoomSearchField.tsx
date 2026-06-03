@@ -38,9 +38,7 @@ export function GuestRoomSearchField({ selectedGuest, onSelect }: GuestRoomSearc
       <div className="rounded-xl border border-primary/20 bg-primary/5 p-3">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-[var(--color-text-primary)]">
-              <User className="h-5 w-5" />
-            </div>
+            <User className="h-5 w-5 shrink-0 text-[var(--color-text-primary)]" strokeWidth={2} />
             <div className="min-w-0">
               <p className="truncate font-medium text-[var(--color-text-primary)]">
                 {selectedGuest.firstName} {selectedGuest.lastName}

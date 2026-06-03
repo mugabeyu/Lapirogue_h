@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { getAuditActor, recordAuditLog } from '@/lib/audit';
 import { z } from 'zod';
+import { createApiResponse, validationErrorResponse } from '@/lib/api-response';
 import { sendGuestRoomEmail } from '@/lib/mailer';
 
 const reservationSchema = z.object({
@@ -29,17 +30,11 @@ type ReservationRow = {
   rooms?: { room_number?: string | null; type?: string | null } | null;
 };
 
-function reservationErrorResponse(error: unknown, fallbackMessage: string) {
-  const message = error instanceof Error ? error.message : fallbackMessage;
-
-  return NextResponse.json(
-    {
-      success: false,
-      error: process.env.NODE_ENV === 'production' ? fallbackMessage : message,
-      details: process.env.NODE_ENV === 'production' || !(error instanceof Error) ? undefined : error.stack ?? error.message,
-    },
-    { status: 500 },
-  );
+function toDateKey(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 export async function GET(request: NextRequest) {
@@ -80,9 +75,9 @@ export async function GET(request: NextRequest) {
       totalAmount: reservation.total_amount === undefined || reservation.total_amount === null ? 0 : Number(reservation.total_amount),
     }));
 
-    return NextResponse.json({ success: true, data: mapped });
+    return createApiResponse(true, mapped);
   } catch {
-    return reservationErrorResponse(new Error('Failed to fetch reservations'), 'Failed to fetch reservations');
+    return createApiResponse(false, 'Failed to fetch reservations');
   }
 }
 
@@ -90,9 +85,8 @@ export async function POST(request: NextRequest) {
   try {
     const body = reservationSchema.parse(await request.json());
     const supabase = getSupabaseAdmin();
-    const actor = await getAuditActor(request);
-    const actorId = actor?.id ?? null;
-
+    await getAuditActor(request);
+    
     const { data: conflicting, error: conflictError } = await supabase
       .from('reservations')
       .select('id')
@@ -101,25 +95,13 @@ export async function POST(request: NextRequest) {
       .neq('status', 'CANCELLED');
 
     if (conflictError) throw conflictError;
-
     if (conflicting && conflicting.length > 0) {
-      return NextResponse.json(
-        { success: false, error: 'Room is not available for the selected dates' },
-        { status: 409 }
-      );
+      return createApiResponse(false, 'Room is not available for the selected dates', { status: 409 });
     }
 
     const { data, error } = await supabase
       .from('reservations')
-      .insert({
-        guest_id: body.guestId,
-        room_id: body.roomId,
-        check_in: body.checkIn,
-        check_out: body.checkOut,
-        adults: body.adults,
-        children: body.children,
-        total_amount: body.totalAmount,
-      })
+      .insert({ ...body })
       .select('*')
       .single();
 
@@ -131,25 +113,14 @@ export async function POST(request: NextRequest) {
     ]);
 
     if (guestRow?.email && roomRow?.room_number) {
-      try {
-        await sendGuestRoomEmail({
-          to: guestRow.email,
-          roomNumber: roomRow.room_number,
-          lastName: guestRow.last_name ?? 'Guest',
-          checkIn: body.checkIn,
-          checkOut: body.checkOut,
-        });
-      } catch (emailError) {
-        console.warn('Guest room email could not be sent', emailError);
-      }
+      sendGuestRoomEmail({ to: guestRow.email, roomNumber: roomRow.room_number, lastName: guestRow.last_name ?? 'Guest', checkIn: body.checkIn, checkOut: body.checkOut }).catch(() => {});
     }
 
-    return NextResponse.json({ success: true, data }, { status: 201 });
+    return createApiResponse(true, data, { status: 201 });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ success: false, error: 'Validation error', details: error.errors }, { status: 400 });
-    }
-    return reservationErrorResponse(error, 'Failed to create reservation');
+    const validationResponse = validationErrorResponse(error, 'Validation error');
+    if (validationResponse) return validationResponse;
+    return createApiResponse(false, 'Failed to create reservation');
   }
 }
 
@@ -162,14 +133,11 @@ export async function PUT(request: NextRequest) {
     const actor = await getAuditActor(request);
     const actorId = actor?.id ?? null;
 
-    // If setting status to CHECKED_IN, validate that today is between checkIn and checkOut (inclusive of checkIn, exclusive of checkOut)
+    // Prevent early/invalid check-ins. Guest can check in only on/after check_in and before check_out.
     if (status === 'CHECKED_IN') {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = toDateKey();
       if (today < checkIn || today >= checkOut) {
-        return NextResponse.json(
-          { success: false, error: 'Check-in is only allowed on or after the check-in date and before the check-out date' },
-          { status: 400 }
-        );
+        return createApiResponse(false, 'Check-in is only allowed on or after the check-in date and before the check-out date', { status: 400 });
       }
     }
 
@@ -192,10 +160,7 @@ export async function PUT(request: NextRequest) {
     if (conflictError) throw conflictError;
 
     if (conflicting && conflicting.length > 0) {
-      return NextResponse.json(
-        { success: false, error: 'Room is not available for the selected dates' },
-        { status: 409 }
-      );
+      return createApiResponse(false, 'Room is not available for the selected dates', { status: 409 });
     }
 
     const { data, error } = await supabase
@@ -252,12 +217,11 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ success: true, data });
+    return createApiResponse(true, data);
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ success: false, error: 'Validation error', details: error.errors }, { status: 400 });
-    }
-    return reservationErrorResponse(error, 'Failed to update reservation');
+    const validationResponse = validationErrorResponse(error, 'Validation error');
+    if (validationResponse) return validationResponse;
+    return createApiResponse(false, 'Failed to update reservation');
   }
 }
 
@@ -266,7 +230,7 @@ export async function DELETE(request: NextRequest) {
     const { searchParams } = request.nextUrl;
     const id = searchParams.get('id');
     if (!id) {
-      return NextResponse.json({ success: false, error: 'ID required' }, { status: 400 });
+      return createApiResponse(false, 'ID required', { status: 400 });
     }
     const supabase = getSupabaseAdmin();
     const actor = await getAuditActor(request);
@@ -289,8 +253,8 @@ export async function DELETE(request: NextRequest) {
 
     const { error } = await supabase.from('reservations').delete().eq('id', id);
     if (error) throw error;
-    return NextResponse.json({ success: true, message: 'Reservation deleted' });
+    return createApiResponse(true, { message: 'Reservation deleted' });
   } catch {
-    return reservationErrorResponse(new Error('Failed to delete reservation'), 'Failed to delete reservation');
+    return createApiResponse(false, 'Failed to delete reservation');
   }
 }

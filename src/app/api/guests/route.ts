@@ -2,20 +2,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { getAuditActor, recordAuditLog } from '@/lib/audit';
 import { z } from 'zod';
-import { validationErrorResponse } from '@/lib/api-response';
+import { validationErrorResponse, createApiResponse } from '@/lib/api-response';
 import { toGuest, type GuestRow } from '@/lib/guests';
-import { INTERNATIONAL_PHONE_DISPLAY_PATTERN } from '@/lib/phone';
 
 const guestSchema = z.object({
   id: z.string().uuid().optional(),
   firstName: z.string().min(1),
   lastName: z.string().min(1),
   email: z.string().email().optional(),
-  phone: z.preprocess(
+  phone: z.string().optional().nullable(),
+  nationality: z.preprocess(
     (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
-    z.string().regex(INTERNATIONAL_PHONE_DISPLAY_PATTERN, 'Use Mauritian format like (+230) 1234 5678').optional(),
+    z.string().optional(),
   ),
-  nationality: z.string().optional(),
   passport: z.string().optional(),
   dateOfBirth: z.string().optional(),
   vip: z.boolean().optional(),
@@ -124,21 +123,23 @@ export async function GET(request: NextRequest) {
         totalPages: Math.ceil(total / limit),
       },
     });
-  } catch {
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch guests' },
-      { status: 500 }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return createApiResponse(
+      false,
+      process.env.NODE_ENV === 'production' ? 'Failed to fetch guests' : `Failed to fetch guests: ${message}`,
+      { status: 500 },
     );
   }
 }
 
 export async function POST(request: NextRequest) {
+  const supabase = getSupabaseAdmin();
+  await getAuditActor(request);
+  
   try {
     const body = await request.json();
     const validatedData = guestSchema.parse(body);
-    const supabase = getSupabaseAdmin();
-    const actor = await getAuditActor(request);
-    const actorId = actor?.id ?? null;
     const guestId = await generateGuestId();
 
     const { data, error } = await supabase
@@ -159,27 +160,12 @@ export async function POST(request: NextRequest) {
       .select('*')
       .single();
 
-    if (error || !data) {
-      throw error;
-    }
-
-    return NextResponse.json({
-      success: true,
-      data: toGuest(data as GuestRow),
-    }, { status: 201 });
+    if (error || !data) throw error;
+    return createApiResponse(true, toGuest(data as GuestRow), { status: 201 });
   } catch (error) {
-    console.error('Guest create failed:', error);
     const validationResponse = validationErrorResponse(error);
     if (validationResponse) return validationResponse;
-
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to create guest',
-        details: error instanceof Error ? error.message : JSON.stringify(error),
-      },
-      { status: 500 }
-    );
+    return createApiResponse(false, 'Failed to create guest', { status: 500 });
   }
 }
 
@@ -188,8 +174,7 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
     const { id, ...updateData } = guestSchema.parse(body);
     const supabase = getSupabaseAdmin();
-    const actor = await getAuditActor(request);
-    const actorId = actor?.id ?? null;
+    await getAuditActor(request); // actor not currently used but reserved for future audit
 
     const { data, error } = await supabase
       .from('guests')
@@ -209,54 +194,31 @@ export async function PUT(request: NextRequest) {
       .select('*')
       .single();
 
-    if (error || !data) {
-      throw error;
-    }
-
-    return NextResponse.json({
-      success: true,
-      data: toGuest(data as GuestRow),
-    });
+    if (error || !data) throw error;
+    return createApiResponse(true, toGuest(data as GuestRow));
   } catch (error) {
     const validationResponse = validationErrorResponse(error);
     if (validationResponse) return validationResponse;
-    return NextResponse.json(
-      { success: false, error: 'Failed to update guest' },
-      { status: 500 }
-    );
+    return createApiResponse(false, 'Failed to update guest', { status: 500 });
   }
 }
 
 export async function DELETE(request: NextRequest) {
-  try {
-    const { searchParams } = request.nextUrl;
-    const id = searchParams.get('id');
-    if (!id) {
-      return NextResponse.json({ success: false, error: 'ID required' }, { status: 400 });
-    }
-    const supabase = getSupabaseAdmin();
-    const actor = await getAuditActor(request);
-    const actorId = actor?.id ?? null;
-    const { data: guest } = await supabase.from('guests').select('*').eq('id', id).maybeSingle();
+  const id = request.nextUrl.searchParams.get('id');
+  if (!id) return createApiResponse(false, 'ID required', { status: 400 });
 
-    if (guest) {
-      try {
-        await recordAuditLog({
-          tableName: 'guests',
-          recordId: id,
-          action: 'DELETE',
-          actorId,
-          before: guest as Record<string, unknown>,
-        });
-      } catch (auditError) {
-        console.warn('Guest audit log skipped', auditError);
-      }
-    }
+  const supabase = getSupabaseAdmin();
+  const actor = await getAuditActor(request);
+  const actorId = actor?.id ?? null;
 
-    const { error } = await supabase.from('guests').delete().eq('id', id);
-    if (error) throw error;
-    return NextResponse.json({ success: true, message: 'Guest deleted' });
-  } catch {
-    return NextResponse.json({ success: false, error: 'Failed to delete guest' }, { status: 500 });
+  const { data: guest } = await supabase.from('guests').select('*').eq('id', id).maybeSingle();
+  if (guest) {
+    try {
+      await recordAuditLog({ tableName: 'guests', recordId: id, action: 'DELETE', actorId, before: guest as Record<string, unknown> });
+    } catch { /* audit skipped */ }
   }
+
+  const { error } = await supabase.from('guests').delete().eq('id', id);
+  if (error) return createApiResponse(false, 'Failed to delete guest', { status: 500 });
+  return createApiResponse(true, { message: 'Guest deleted' });
 }

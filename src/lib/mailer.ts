@@ -135,3 +135,29 @@ export async function sendInvoiceEmail(input: {
     throw error;
   }
 }
+
+export async function sendPasswordResetEmail(input: {
+  to: string;
+  resetUrl: string;
+}) {
+  try {
+    const response = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: input.to,
+      subject: 'Reset your La Pirogue Hotel password',
+      html: `
+        <div style="font-family:Arial,sans-serif;color:#1f2937;line-height:1.6;padding:16px;">
+          <h2 style="margin:0 0 10px;color:#0f766e">Password Reset</h2>
+          <p>We received a request to reset your La Pirogue Hotel account password.</p>
+          <p><a href="${input.resetUrl}" style="display:inline-block;padding:12px 18px;border-radius:10px;background:#0f766e;color:#ffffff;text-decoration:none">Reset Password</a></p>
+          <p style="font-size:13px;color:#6b7280">If you did not request this, you can safely ignore this email.</p>
+        </div>
+      `,
+    });
+
+    return { success: true, data: response };
+  } catch (error) {
+    console.error('PASSWORD RESET EMAIL ERROR:', error);
+    throw error;
+  }
+}

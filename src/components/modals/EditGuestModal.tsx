@@ -1,11 +1,10 @@
 'use client';
 
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useState } from 'react';
+import { FormField } from '@/components/ui/FormSection';
 import { Modal } from '@/components/Modal';
 import { CountryComboboxField } from '@/components/ui/CountryComboboxField';
-import { ImageUploadField } from '@/components/ui/ImageUploadField';
 import { PhoneField } from '@/components/ui/PhoneField';
-import { uploadImage } from '@/lib/upload-image';
 import { toast } from 'sonner';
 import { Guest, GuestStay } from '@/types';
 
@@ -19,12 +18,6 @@ interface EditGuestModalProps {
 
 export function EditGuestModal({ isOpen, onClose, guest, currentStay, onSaved }: EditGuestModalProps) {
   const [isSaving, setIsSaving] = useState(false);
-  const [imagePath, setImagePath] = useState<string | null>(guest.imagePath ?? null);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    setImagePath(guest.imagePath ?? null);
-  }, [isOpen, guest.id, guest.imagePath]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -73,7 +66,8 @@ export function EditGuestModal({ isOpen, onClose, guest, currentStay, onSaved }:
     setIsSaving(false);
 
     if (!guestResponse.ok) {
-      toast.error('Unable to update guest');
+      const errorData = await guestResponse.json().catch(() => ({}));
+      toast.error(errorData.error || errorData.details || 'Unable to update guest');
       return;
     }
 
@@ -87,46 +81,41 @@ export function EditGuestModal({ isOpen, onClose, guest, currentStay, onSaved }:
     onClose();
   }
 
-  async function handlePhotoUpload(file: File) {
-    const url = await uploadImage({ file, bucket: 'guest-photos', id: guest.id, target: 'guest' });
-    if (!url) throw new Error('Upload failed');
-    setImagePath(url);
-    await fetch(`/api/guests/${guest.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ imagePath: url }),
-    });
-    toast.success('Guest photo updated');
-  }
-
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Edit Profile" size="lg">
-      <form key={guest.id} onSubmit={handleSubmit} className="space-y-4">
-        <ImageUploadField label="Guest photo" shape="circle" previewUrl={imagePath} onFileSelect={handlePhotoUpload} />
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="First Name" name="firstName" defaultValue={guest.firstName} required />
-          <Field label="Last Name" name="lastName" defaultValue={guest.lastName} required />
-          <Field label="Email" name="email" type="email" defaultValue={guest.email ?? ''} />
-          <div>
-            <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Phone</label>
+<form key={guest.id} onSubmit={handleSubmit} className="space-y-4">
+          <div className="rounded-xl border border-border bg-surface-secondary/30 px-4 py-3 text-sm text-[var(--color-text-secondary)]">
+            Guest profile photo uploads are disabled for admin users.
+          </div>
+          <FormField label="First Name" name="firstName" defaultValue={guest.firstName} required>
+            <input name="firstName" required className="input-field w-full" defaultValue={guest.firstName} />
+          </FormField>
+          <FormField label="Last Name" name="lastName" defaultValue={guest.lastName} required>
+            <input name="lastName" required className="input-field w-full" defaultValue={guest.lastName} />
+          </FormField>
+          <FormField label="Email" type="email" name="email" defaultValue={guest.email ?? ''} required>
+            <input name="email" type="email" required className="input-field w-full" defaultValue={guest.email ?? ''} />
+          </FormField>
+          <FormField label="Phone" name="phone">
             <PhoneField name="phone" defaultValue={guest.phone ?? ''} />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Nationality</label>
+          </FormField>
+          <FormField label="Nationality" name="nationality">
             <CountryComboboxField name="nationality" defaultValue={guest.nationality ?? ''} />
-          </div>
-          <Field label="Passport" name="passport" defaultValue={guest.passport ?? ''} />
-          <Field label="Date of Birth" name="dateOfBirth" type="date" defaultValue={guest.dateOfBirth ?? ''} />
-          <div>
-            <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Status</label>
+          </FormField>
+          <FormField label="Passport" name="passport" defaultValue={guest.passport ?? ''} required>
+            <input name="passport" required className="input-field w-full" defaultValue={guest.passport ?? ''} />
+          </FormField>
+          <FormField label="Date of Birth" type="date" name="dateOfBirth" defaultValue={guest.dateOfBirth ?? ''} required>
+            <input name="dateOfBirth" type="date" required className="input-field w-full" defaultValue={guest.dateOfBirth ?? ''} />
+          </FormField>
+          <FormField label="Status" name="status">
             <select name="status" defaultValue={guest.status} className="input-field w-full">
               <option value="RESERVED">Reserved</option>
               <option value="CHECKED_IN">Checked In</option>
               <option value="CHECKED_OUT">Checked Out</option>
               <option value="CANCELLED">Cancelled</option>
             </select>
-          </div>
-        </div>
+          </FormField>
 
         {currentStay && (
           <div className="rounded-xl border border-border bg-surface-secondary/50 p-4">
@@ -171,32 +160,5 @@ export function EditGuestModal({ isOpen, onClose, guest, currentStay, onSaved }:
         </div>
       </form>
     </Modal>
-  );
-}
-
-function Field({
-  label,
-  name,
-  defaultValue,
-  type = 'text',
-  required,
-}: {
-  label: string;
-  name: string;
-  defaultValue?: string;
-  type?: string;
-  required?: boolean;
-}) {
-  return (
-    <div>
-      <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">{label}</label>
-      <input
-        name={name}
-        type={type}
-        defaultValue={defaultValue}
-        required={required}
-        className="input-field w-full"
-      />
-    </div>
   );
 }

@@ -114,7 +114,7 @@ export default function Sidebar() {
 
   return (
     <aside
-      className={`fixed inset-y-0 left-0 z-20 flex flex-col bg-surface-secondary text-[var(--color-text-primary)] border-r border-border transition-[width] duration-200 ease-in-out ${
+      className={`fixed inset-y-0 left-0 z-20 flex flex-col bg-surface text-[var(--color-text-primary)] border-r border-border transition-[width] duration-200 ease-in-out ${
         collapsed ? 'w-[72px]' : 'w-[260px]'
       }`}
     >

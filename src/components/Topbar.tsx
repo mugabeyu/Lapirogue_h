@@ -1,5 +1,7 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { BellIcon, CalendarDaysIcon, SearchIcon, UserIcon } from 'lucide-react';
 import { useApi } from '@/hooks/useApi';
 import { User } from '@/types';
@@ -33,7 +35,18 @@ function formatTodayLabel(date: Date) {
 }
 
 export default function Topbar() {
+  const router = useRouter();
   const { data: user } = useApi<User>('/api/auth/me');
+  const [searchValue, setSearchValue] = useState('');
+
+  const handleSearch = () => {
+    const query = searchValue.trim();
+    if (!query) return;
+    // Navigate to guests page with search query
+    router.push(`/guests?search=${encodeURIComponent(query)}`);
+    setSearchValue('');
+  };
+
   const displayName = user?.name?.trim() || '';
   const displayRole = formatRole(user?.role);
   const todayLabel = formatTodayLabel(new Date());
@@ -48,7 +61,7 @@ export default function Topbar() {
     .slice(0, 2);
 
   return (
-    <header className="border-b border-border bg-surface px-8">
+    <header className="border-b border-border bg-surface px-6 lg:px-8">
       <div className="flex min-h-20 flex-col gap-3 py-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="max-w-xl flex-1">
           <div className="relative">
@@ -58,6 +71,14 @@ export default function Topbar() {
               placeholder="Search guests, rooms, reservations..."
               className="input-field w-full pl-10 text-sm"
               aria-label="Search"
+              value={searchValue}
+              onChange={(event) => setSearchValue(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  handleSearch();
+                }
+              }}
             />
           </div>
         </div>
@@ -68,10 +89,7 @@ export default function Topbar() {
             <span>{todayLabel}</span>
           </div>
 
-          <button className="relative rounded-lg p-2 text-[var(--color-text-secondary)] transition-colors hover:bg-surface-secondary hover:text-[var(--color-text-primary)]" aria-label="Notifications">
-            <BellIcon className="h-5 w-5" />
-            <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-accent" />
-          </button>
+          
 
           <div className="flex items-center gap-3 border-l border-border pl-4">
             <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border border-[rgba(11,93,87,0.08)] bg-[rgba(11,93,87,0.04)] text-sm font-semibold text-[var(--color-primary)] shadow-sm">

@@ -106,7 +106,36 @@ export async function GET(request: NextRequest) {
       .from('guest_feedback')
       .select('rating, staff_response, responded_at, created_at');
 
-    if (statError) throw statError;
+    if (statError) {
+      const missingFeedbackTable =
+        (statError as { code?: string; message?: string }).code === 'PGRST205' &&
+        String((statError as { message?: string }).message ?? '').includes("'public.guest_feedback'");
+
+      if (missingFeedbackTable) {
+        return NextResponse.json({
+          success: true,
+          data: {
+            summary: {
+              averageRating: 0,
+              averageRatingTrend: null,
+              totalReviews: 0,
+              totalReviewsTrend: null,
+              responseRate: 0,
+              responseRateTrend: null,
+            },
+            distribution: [5, 4, 3, 2, 1].map((stars) => ({ stars, count: 0, percent: 0 })),
+            reviews: [],
+            pagination: {
+              page,
+              limit,
+              total: 0,
+              totalPages: 1,
+            },
+          },
+        });
+      }
+      throw statError;
+    }
 
     const allStats = (statRows ?? []) as StatRow[];
     const { current: recentStats, previous: priorStats } = splitByPeriod(allStats);

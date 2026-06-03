@@ -88,7 +88,32 @@ export async function GET() {
       admin.from('sustainability_activities').select('id, name, color').eq('is_active', true),
     ]);
 
-    if (eventsResult.error) throw eventsResult.error;
+    if (eventsResult.error) {
+      const missingEventsTable =
+        (eventsResult.error as { code?: string; message?: string }).code === 'PGRST205' &&
+        String((eventsResult.error as { message?: string }).message ?? '').includes("'public.guest_eco_point_events'");
+
+      if (missingEventsTable) {
+        return NextResponse.json({
+          success: true,
+          data: {
+            summary: {
+              totalEcoPoints: 0,
+              totalEcoPointsTrend: null,
+              activeParticipants: 0,
+              activeParticipantsTrend: null,
+              carbonOffsetKg: 0,
+              carbonOffsetTrend: null,
+            },
+            leaderboard: [],
+            activityDistribution: [],
+            monthlyTrend: lastSixMonths().map((month) => ({ month: month.label, points: 0 })),
+          },
+        });
+      }
+
+      throw eventsResult.error;
+    }
     if (tiersResult.error) throw tiersResult.error;
     if (activitiesResult.error) throw activitiesResult.error;
 

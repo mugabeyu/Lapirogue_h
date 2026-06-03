@@ -54,6 +54,11 @@
   }
 }
 @layer components {
+  .btn-primary,
+  .btn-secondary {
+    border-radius: var(--radius-12);
+  }
+
   .btn-primary {
     @apply bg-primary text-white px-4 py-2 rounded-lg font-medium transition-colors hover:bg-primary-hover focus:outline-none;
   }
@@ -74,6 +79,14 @@
     outline: none;
     box-shadow: 0 0 0 4px rgba(11,93,87,0.06);
   }
+
+  /* Normalize any capsule-style utility accidentally applied to button-like controls. */
+  button.rounded-full,
+  a.btn-primary.rounded-full,
+  a.btn-secondary.rounded-full {
+    border-radius: var(--radius-12) !important;
+  }
+
   .btn {
     @apply px-4 py-2 rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-sand-50;
   }
@@ -120,4 +133,27 @@
 .inline-element {
   margin-right: 8px;
   margin-left: 8px;
+}
+
+/* Auth page background styles */
+.auth-page-bg {
+  background-image: url('/images/forgotpasswordimage.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.auth-login-bg {
+  background-image: url('/images/homeimage.jpeg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.auth-dark-overlay {
+  background-color: rgba(15, 23, 42, 0.35);
+}
+
+svg.lucide {
+  stroke-width: 2;
 }

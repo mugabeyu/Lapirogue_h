@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { formatInternationalPhoneDisplay, isInternationalPhoneDisplayValid } from '@/lib/phone';
+import { formatInternationalPhoneDisplay } from '@/lib/phone';
 
 type PhoneFieldProps = {
   name: string;
@@ -32,15 +32,6 @@ export function PhoneField({
       autoComplete="tel"
       value={value}
       onChange={(event) => setValue(formatInternationalPhoneDisplay(event.target.value))}
-      onBlur={(event) => {
-        if (event.target.value && !isInternationalPhoneDisplayValid(event.target.value)) {
-          event.target.setCustomValidity('Use Mauritian format like (+230) 1234 5678');
-        } else {
-          event.target.setCustomValidity('');
-        }
-      }}
-      pattern="^\(\+230\)(?: \d{4}){2}$"
-      title="Use Mauritian format like (+230) 1234 5678"
       placeholder={placeholder}
       required={required}
       className={className}

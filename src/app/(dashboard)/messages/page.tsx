@@ -1,16 +1,17 @@
 'use client';
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { MessageSquareIcon, RefreshCwIcon, SearchIcon, SendIcon, ShieldIcon } from 'lucide-react';
-import { useApi, useApiMutation } from '@/hooks/useApi';
+import { CheckCheckIcon, MessageSquareIcon, RefreshCwIcon, SearchIcon, SendIcon } from 'lucide-react';
+import { useApi } from '@/hooks/useApi';
 import { PageHeader } from '@/components/PageHeader';
+import { getSupabaseBrowserClient } from '@/lib/supabase-browser';
 import { toast } from 'sonner';
 
 type MessageRow = {
   id: string;
   guestId: string;
   guestName?: string;
-  messageType: 'guest' | 'receptionist';
+  messageType: 'guest' | 'receptionist' | 'admin';
   subject?: string | null;
   content: string;
   attachmentUrl?: string | null;
@@ -18,22 +19,38 @@ type MessageRow = {
   createdAt: string;
 };
 
+type ConversationSummary = {
+  guestId: string;
+  guestName: string;
+  lastMessage: MessageRow;
+  unreadCount: number;
+  messages: MessageRow[];
+};
+
+function formatTime(value: string) {
+  return new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function formatDayTime(value: string) {
+  return new Date(value).toLocaleString([], {
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
 export default function MessagesPage() {
   const { data, mutate, isLoading } = useApi<MessageRow[]>('/api/messages');
-  const { mutate: sendMessage } = useApiMutation('/api/messages');
   const [isSending, setIsSending] = useState(false);
   const [selectedGuestId, setSelectedGuestId] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  const [form, setForm] = useState({
-    guestId: '',
-    subject: '',
-    content: '',
-  });
+  const [tab, setTab] = useState<'all' | 'unread'>('all');
+  const [draft, setDraft] = useState('');
 
   const rows = useMemo(() => data ?? [], [data]);
-  const unreadCount = rows.filter((row) => !row.isRead).length;
+  const unreadCount = rows.filter((row) => row.messageType === 'guest' && !row.isRead).length;
 
-  const conversations = useMemo(() => {
+  const conversations = useMemo<ConversationSummary[]>(() => {
     const map = new Map<
       string,
       { guestId: string; guestName: string; lastMessage: MessageRow; unreadCount: number; messages: MessageRow[] }
@@ -43,7 +60,9 @@ export default function MessagesPage() {
       const current = map.get(row.guestId);
       if (current) {
         current.messages.push(row);
-        current.unreadCount += row.isRead ? 0 : 1;
+        if (row.messageType === 'guest' && !row.isRead) {
+          current.unreadCount += 1;
+        }
 
         if (new Date(row.createdAt).getTime() > new Date(current.lastMessage.createdAt).getTime()) {
           current.lastMessage = row;
@@ -57,19 +76,28 @@ export default function MessagesPage() {
         guestId: row.guestId,
         guestName: row.guestName || row.guestId,
         lastMessage: row,
-        unreadCount: row.isRead ? 0 : 1,
+        unreadCount: row.messageType === 'guest' && !row.isRead ? 1 : 0,
         messages: [row],
       });
     });
 
-    return [...map.values()].sort(
+    return [...map.values()]
+      .map((conversation) => ({
+        ...conversation,
+        messages: [...conversation.messages].sort(
+          (left, right) => new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime(),
+        ),
+      }))
+      .sort(
       (left, right) => new Date(right.lastMessage.createdAt).getTime() - new Date(left.lastMessage.createdAt).getTime(),
-    );
+      );
   }, [rows]);
 
   const visibleConversations = conversations.filter((conversation) => {
     const haystack = `${conversation.guestName} ${conversation.guestId} ${conversation.lastMessage.content}`.toLowerCase();
-    return haystack.includes(searchTerm.toLowerCase());
+    const matchesSearch = haystack.includes(searchTerm.toLowerCase());
+    const matchesTab = tab === 'all' ? true : conversation.unreadCount > 0;
+    return matchesSearch && matchesTab;
   });
 
   const selectedConversation =
@@ -79,34 +107,74 @@ export default function MessagesPage() {
   useEffect(() => {
     if (!selectedGuestId && conversations[0]) {
       setSelectedGuestId(conversations[0].guestId);
-      setForm((current) => ({ ...current, guestId: conversations[0].guestId }));
     }
   }, [conversations, selectedGuestId]);
 
+  useEffect(() => {
+    const supabase = getSupabaseBrowserClient();
+    if (!supabase) return;
+
+    const channel = supabase
+      .channel('messages-realtime-admin')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, () => {
+        mutate();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [mutate]);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      mutate();
+    }, 3000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [mutate]);
+
+  useEffect(() => {
+    if (!selectedConversation) return;
+    if (selectedConversation.unreadCount === 0) return;
+
+    fetch(`/api/messages?guestId=${selectedConversation.guestId}`, { method: 'PATCH' })
+      .then(() => mutate())
+      .catch(() => null);
+  }, [mutate, selectedConversation]);
+
   async function handleSend(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const guestId = form.guestId || selectedGuestId;
+    const guestId = selectedGuestId;
 
-    if (!guestId) {
-      toast.error('Select a conversation or enter a guest ID first.');
+    if (!guestId || !draft.trim()) {
+      toast.error('Select a conversation and enter a message first.');
       return;
     }
 
     setIsSending(true);
 
-    await sendMessage({
-      guestId,
-      messageType: 'receptionist',
-      subject: form.subject,
-      content: form.content,
+    const response = await fetch('/api/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        guestId,
+        messageType: 'admin',
+        content: draft.trim(),
+      }),
     });
 
     setIsSending(false);
-    setForm((current) => ({
-      guestId: current.guestId || selectedGuestId,
-      subject: '',
-      content: '',
-    }));
+
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}));
+      toast.error(payload.error || 'Failed to send message');
+      return;
+    }
+
+    setDraft('');
     mutate();
   }
 
@@ -119,7 +187,7 @@ export default function MessagesPage() {
     <div className="space-y-6 animate-in fade-in duration-500">
       <PageHeader
         title="Messages"
-        subtitle="WhatsApp-style guest chat synced with Supabase."
+        subtitle="Real-time admin and guest messaging."
         action={
           <button type="button" className="btn-secondary inline-flex items-center gap-2" onClick={() => mutate()}>
             <RefreshCwIcon className="h-4 w-4" />
@@ -131,10 +199,10 @@ export default function MessagesPage() {
       <div className="grid gap-6 xl:grid-cols-[340px_1fr]">
         <aside className="card overflow-hidden">
           <div className="border-b border-border bg-surface p-5">
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center justify-between gap-3 pb-4">
               <div>
-                <div className="text-xs uppercase tracking-[0.25em] text-[var(--color-text-secondary)]">Inbox</div>
-                <div className="mt-1 font-display text-2xl text-[var(--color-text-primary)]">{unreadCount} unread</div>
+                <div className="text-xs uppercase tracking-[0.25em] text-[var(--color-text-secondary)]">Messages</div>
+                <div className="mt-1 font-display text-2xl text-[var(--color-text-primary)]">{rows.length}</div>
               </div>
               <button
                 type="button"
@@ -145,7 +213,24 @@ export default function MessagesPage() {
               </button>
             </div>
 
-            <div className="relative mt-4">
+            <div className="mb-4 inline-flex rounded-xl bg-surface-secondary p-1 text-sm">
+              <button
+                type="button"
+                onClick={() => setTab('all')}
+                className={`rounded-lg px-3 py-1.5 ${tab === 'all' ? 'bg-surface text-[var(--color-text-primary)] shadow-sm' : 'text-[var(--color-text-secondary)]'}`}
+              >
+                All ({conversations.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setTab('unread')}
+                className={`rounded-lg px-3 py-1.5 ${tab === 'unread' ? 'bg-surface text-[var(--color-text-primary)] shadow-sm' : 'text-[var(--color-text-secondary)]'}`}
+              >
+                Unread ({unreadCount})
+              </button>
+            </div>
+
+            <div className="relative">
               <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--color-text-secondary)]" />
               <input
                 className="input-field w-full pl-10"
@@ -177,7 +262,6 @@ export default function MessagesPage() {
                     type="button"
                     onClick={() => {
                       setSelectedGuestId(conversation.guestId);
-                      setForm((current) => ({ ...current, guestId: conversation.guestId }));
                     }}
                     className={`flex w-full items-start gap-3 border-b border-border px-5 py-4 text-left transition-colors ${selected ? 'bg-primary/5' : 'hover:bg-surface-secondary'}`}
                   >
@@ -187,12 +271,7 @@ export default function MessagesPage() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-3">
                         <div className="truncate font-medium text-[var(--color-text-primary)]">{conversation.guestName}</div>
-                          <span className="text-[11px] text-[var(--color-text-secondary)]">
-                          {new Date(conversation.lastMessage.createdAt).toLocaleTimeString([], {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </span>
+                        <span className="text-[11px] text-[var(--color-text-secondary)]">{formatTime(conversation.lastMessage.createdAt)}</span>
                       </div>
                       <div className="mt-1 flex items-center justify-between gap-3">
                         <p className="truncate text-sm text-[var(--color-text-secondary)]">{lastMessagePreview}</p>
@@ -211,22 +290,20 @@ export default function MessagesPage() {
         </aside>
 
         <section className="card flex min-h-[760px] flex-col overflow-hidden">
-            <div className="flex items-center justify-between border-b border-border bg-surface px-5 py-4">
+          <div className="flex items-center justify-between border-b border-border bg-surface px-5 py-4">
             <div>
-              <div className="flex items-center gap-2 text-xs uppercase tracking-[0.25em] text-[var(--color-text-secondary)]">
-                <ShieldIcon className="h-3.5 w-3.5" />
-                Secure chat
-              </div>
               <div className="mt-1 text-lg font-semibold text-[var(--color-text-primary)]">
                 {selectedConversation ? selectedConversation.guestName : 'Select a conversation'}
               </div>
               <div className="text-sm text-[var(--color-text-secondary)]">
-                {selectedConversation ? `Guest ID ${selectedConversation.guestId}` : 'Choose a guest to continue the conversation.'}
+                {selectedConversation
+                  ? `${formatDayTime(selectedConversation.lastMessage.createdAt)} · Guest ID ${selectedConversation.guestId}`
+                  : 'Choose a guest to continue the conversation.'}
               </div>
             </div>
             <div className="inline-flex items-center gap-2 rounded-full bg-surface-secondary px-3 py-1 text-xs font-medium text-[var(--color-text-secondary)]">
-              <MessageSquareIcon className="h-4 w-4" />
-              {rows.length} total messages
+              <CheckCheckIcon className="h-4 w-4" />
+              Real time
             </div>
           </div>
 
@@ -238,7 +315,7 @@ export default function MessagesPage() {
             ) : (
               <div className="space-y-4">
                 {selectedMessages.map((message) => {
-                  const isReceptionist = message.messageType === 'receptionist';
+                  const isReceptionist = message.messageType !== 'guest';
 
                   return (
                     <div key={message.id} className={`flex ${isReceptionist ? 'justify-end' : 'justify-start'}`}>
@@ -250,12 +327,7 @@ export default function MessagesPage() {
                         ) : null}
                         <p className="text-sm leading-6">{message.content}</p>
                         <div className={`mt-2 text-[11px] ${isReceptionist ? 'text-white/65' : 'text-[var(--color-text-secondary)]'}`}>
-                          {new Date(message.createdAt).toLocaleString([], {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            month: 'short',
-                            day: 'numeric',
-                          })}
+                          {new Date(message.createdAt).toLocaleString([], { hour: '2-digit', minute: '2-digit', month: 'short', day: 'numeric' })}
                         </div>
                       </div>
                     </div>
@@ -266,29 +338,16 @@ export default function MessagesPage() {
           </div>
 
           <form onSubmit={handleSend} className="border-t border-border bg-surface p-5">
-            <div className="grid gap-3 md:grid-cols-[1.1fr_0.9fr]">
-              <input
-                className="input-field"
-                placeholder="Guest ID"
-                value={form.guestId || selectedGuestId}
-                onChange={(event) => setForm({ ...form, guestId: event.target.value })}
-              />
-              <input
-                className="input-field"
-                placeholder="Subject (optional)"
-                value={form.subject}
-                onChange={(event) => setForm({ ...form, subject: event.target.value })}
-              />
-            </div>
-            <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
               <textarea
                 className="input-field min-h-28 flex-1 resize-none"
-                placeholder="Type a message to the guest..."
-                value={form.content}
-                onChange={(event) => setForm({ ...form, content: event.target.value })}
+                placeholder={selectedConversation ? 'Type your message...' : 'Select a conversation to start messaging...'}
+                value={draft}
+                onChange={(event) => setDraft(event.target.value)}
+                disabled={!selectedConversation}
                 required
               />
-              <button type="submit" disabled={isSending} className="btn-primary inline-flex items-center justify-center gap-2 disabled:opacity-50 sm:min-w-36">
+              <button type="submit" disabled={isSending || !selectedConversation} className="btn-primary inline-flex items-center justify-center gap-2 disabled:opacity-50 sm:min-w-36">
                 <SendIcon className="h-4 w-4" />
                 {isSending ? 'Sending...' : 'Send'}
               </button>

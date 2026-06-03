@@ -20,19 +20,6 @@ const profileSchema = z.object({
   phone: z.string().regex(INTERNATIONAL_PHONE_DISPLAY_PATTERN, 'Use Mauritian format like (+230) 1234 5678').optional().nullable(),
 });
 
-type ProfileRow = {
-  auth_id: string;
-  email: string | null;
-  full_name: string | null;
-  phone: string | null;
-  avatar_url: string | null;
-  role: string | null;
-  is_main: boolean | null;
-  is_active: boolean | null;
-  created_at: string | null;
-  updated_at: string | null;
-};
-
 function normalizeVal(value: string | null | undefined): string | null {
   if (value === undefined || value === null) return null;
   if (typeof value === 'string' && value.trim() === '') return null;
@@ -49,48 +36,30 @@ export async function GET(request: NextRequest) {
     return response;
   }
 
-  // Try to read the profiles row using the request-scoped client first
-  // This improves read-after-write consistency for requests that just upserted the profile
-  const { data: profileRowFromAuth } = await authClient
-    .from('profiles')
-    .select('auth_id, email, full_name, phone, avatar_url, role, is_main, is_active, created_at, updated_at')
-    .eq('auth_id', user.id)
-    .maybeSingle();
+  const [profileResult, staffResult] = await Promise.all([
+    adminClient
+      .from('profiles')
+      .select('auth_id, email, full_name, phone, avatar_url, role, is_main, is_active, created_at, updated_at')
+      .eq('auth_id', user.id)
+      .maybeSingle(),
+    adminClient
+      .from('staff')
+      .select('auth_user_id, full_name, image_path, status')
+      .eq('auth_user_id', user.id)
+      .maybeSingle(),
+  ]);
 
-  // Still fetch staff via admin client (readonly); use admin for staff to avoid RLS surprises
-  const { data: staffRow } = await adminClient
-    .from('staff')
-    .select('auth_user_id, full_name, image_path, status')
-    .eq('auth_user_id', user.id)
-    .maybeSingle();
-
-  // Also read profiles via admin client so we can merge any fields that may be unavailable
-  // to the request-scoped client (helps when RLS or replication cause partial reads)
-  const { data: profileRowAdmin } = await adminClient
-    .from('profiles')
-    .select('auth_id, email, full_name, phone, avatar_url, role, is_main, is_active, created_at, updated_at')
-    .eq('auth_id', user.id)
-    .maybeSingle();
-
-  // Merge, preferring the admin row because it reflects the persisted database state
-  // even when the request-scoped client briefly returns stale data after a write.
-  const profileRow = (() => {
-    if (!profileRowFromAuth && !profileRowAdmin) return null;
-    if (!profileRowFromAuth) return profileRowAdmin;
-    if (!profileRowAdmin) return profileRowFromAuth;
-    return {
-      auth_id: profileRowAdmin.auth_id ?? profileRowFromAuth.auth_id,
-      email: normalizeVal(profileRowAdmin.email) ?? normalizeVal(profileRowFromAuth.email),
-      full_name: normalizeVal(profileRowAdmin.full_name) ?? normalizeVal(profileRowFromAuth.full_name),
-      phone: normalizeVal(profileRowAdmin.phone) ?? normalizeVal(profileRowFromAuth.phone),
-      avatar_url: normalizeVal(profileRowAdmin.avatar_url) ?? normalizeVal(profileRowFromAuth.avatar_url),
-      role: normalizeVal(profileRowAdmin.role) ?? normalizeVal(profileRowFromAuth.role),
-      is_main: profileRowAdmin.is_main ?? profileRowFromAuth.is_main,
-      is_active: profileRowAdmin.is_active ?? profileRowFromAuth.is_active,
-      created_at: profileRowAdmin.created_at ?? profileRowFromAuth.created_at,
-      updated_at: profileRowAdmin.updated_at ?? profileRowFromAuth.updated_at,
-    } satisfies ProfileRow;
-  })();
+  const profileRow = profileResult.data
+    ? {
+        ...profileResult.data,
+        email: normalizeVal(profileResult.data.email),
+        full_name: normalizeVal(profileResult.data.full_name),
+        phone: normalizeVal(profileResult.data.phone),
+        avatar_url: normalizeVal(profileResult.data.avatar_url),
+        role: normalizeVal(profileResult.data.role),
+      }
+    : null;
+  const staffRow = staffResult.data;
 
   if (profileRow?.is_active === false) {
     return NextResponse.json({ success: false, error: 'This staff account is blocked' }, { status: 403 });

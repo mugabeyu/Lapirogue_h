@@ -21,7 +21,7 @@ function LayoutShell({ children }: LayoutProps) {
         }`}
       >
         <Topbar />
-        <main className="flex-1 overflow-x-hidden p-8">{children}</main>
+        <main className="flex-1 overflow-x-hidden px-6 py-8 lg:px-8">{children}</main>
       </div>
     </div>
   );

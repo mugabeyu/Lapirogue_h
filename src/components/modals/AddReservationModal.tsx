@@ -51,14 +51,15 @@ export function AddReservationModal({ isOpen, onClose, onSaved, editRow }: AddRe
     });
 
     setIsSaving(false);
-    toast[response.ok ? 'success' : 'error'](
-      response.ok ? (isEdit ? 'Reservation updated' : 'Reservation saved') : 'Unable to save reservation',
-    );
-
-    if (response.ok) {
-      if (onSaved) await onSaved();
-      onClose();
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      toast.error(errorData.error || errorData.details || 'Unable to save reservation');
+      return;
     }
+
+    toast.success(isEdit ? 'Reservation updated' : 'Reservation saved');
+    if (onSaved) await onSaved();
+    onClose();
   }
 
   return (

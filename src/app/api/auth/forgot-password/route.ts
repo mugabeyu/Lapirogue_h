@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { sendPasswordResetEmail } from '@/lib/mailer';
 import { z } from 'zod';
 
 const forgotPasswordSchema = z.object({
@@ -12,14 +13,32 @@ export async function POST(request: NextRequest) {
     const validatedData = forgotPasswordSchema.parse(body);
     const redirectUrl = new URL('/reset-password', request.url).toString();
 
-    const { error: resetError } = await getSupabaseAdmin().auth.resetPasswordForEmail(validatedData.email, {
-      redirectTo: redirectUrl,
+    const { data, error: resetError } = await getSupabaseAdmin().auth.admin.generateLink({
+      type: 'recovery',
+      email: validatedData.email,
+      options: {
+        redirectTo: redirectUrl,
+      },
     });
 
     if (resetError) {
-      console.error('Forgot password reset failed', resetError.message, resetError);
+      if (/not found|does not exist|unable to validate/i.test(resetError.message)) {
+        return NextResponse.json({ success: true, message: 'If the email exists, a reset link has been sent' });
+      }
+
+      console.error('Forgot password reset link failed', resetError.message, resetError);
       throw resetError;
     }
+
+    const resetUrl = data.properties?.action_link;
+    if (!resetUrl) {
+      throw new Error('Supabase did not return a password recovery link');
+    }
+
+    await sendPasswordResetEmail({
+      to: validatedData.email,
+      resetUrl,
+    });
 
     return NextResponse.json({ success: true, message: 'If the email exists, a reset link has been sent' });
   } catch (error) {

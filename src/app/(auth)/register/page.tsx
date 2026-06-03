@@ -5,8 +5,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
-const PAGE_BG_IMAGE = '/images/forgotpasswordimage.jpg';
-
 type StaffOnboarding = {
   id: string;
   email: string;
@@ -109,11 +107,8 @@ export default function RegisterPage() {
   }
 
   return (
-    <div
-      className="min-h-screen flex items-center justify-center bg-cover bg-center bg-no-repeat px-4"
-      style={{ backgroundImage: `url('${PAGE_BG_IMAGE}')` }}
-    >
-      <div className="absolute inset-0 bg-slate-950/35 backdrop-blur-[1px]" />
+    <div className="min-h-screen flex items-center justify-center bg-cover bg-center bg-no-repeat px-4 auth-page-bg">
+      <div className="absolute inset-0 auth-dark-overlay backdrop-blur-[1px]" />
       <div className="card relative z-10 w-full max-w-md border border-border bg-surface p-8 shadow-2xl backdrop-blur-md">
         <h1 className="mb-2 text-center text-2xl font-bold text-[var(--color-text-primary)]">Complete Staff Registration</h1>
         <p className="mb-6 text-center text-sm text-[var(--color-text-secondary)]">Your invitation details are pre-filled below.</p>

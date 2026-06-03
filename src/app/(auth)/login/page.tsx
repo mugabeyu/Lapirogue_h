@@ -94,15 +94,9 @@ export default function LoginPage() {
     <>
       <div className="min-h-screen bg-surface text-[var(--color-text-primary)] lg:flex">
         <section
-          className="relative hidden min-h-screen overflow-hidden bg-slate-900 text-white lg:flex lg:w-1/2"
-          style={{
-            backgroundImage:
-              "linear-gradient(180deg, rgba(15, 23, 42, 0.35) 0%, rgba(15, 118, 110, 0.18) 18%, rgba(15, 118, 110, 0.32) 48%, rgba(15, 118, 110, 0.18) 82%, rgba(15, 23, 42, 0.35) 100%), url('/images/homeimage.jpeg')",
-            backgroundPosition: 'center',
-            backgroundSize: 'cover',
-          }}
+          className="relative hidden min-h-screen overflow-hidden bg-slate-900 text-white lg:flex lg:w-1/2 auth-login-bg"
         >
-          <div className="absolute inset-0 bg-slate-950/35" />
+          <div className="absolute inset-0 auth-dark-overlay" />
 
           <div className="relative z-10 flex w-full items-center px-14 xl:px-20">
             <div className="max-w-xl">

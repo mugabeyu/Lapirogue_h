@@ -24,6 +24,15 @@ function getRecoveryTokensFromHash() {
   return { accessToken, refreshToken };
 }
 
+function getRecoveryCodeFromUrl() {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  return params.get('code');
+}
+
 export default function ResetPasswordPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -52,6 +61,7 @@ export default function ResetPasswordPage() {
 
     async function initializeAuth() {
       const recoveryTokens = getRecoveryTokensFromHash();
+      const recoveryCode = getRecoveryCodeFromUrl();
 
       if (recoveryTokens) {
         const { error } = await client.auth.setSession({
@@ -68,6 +78,18 @@ export default function ResetPasswordPage() {
         }
 
         window.history.replaceState({}, document.title, `${window.location.pathname}${window.location.search}`);
+      } else if (recoveryCode) {
+        const { error } = await client.auth.exchangeCodeForSession(recoveryCode);
+
+        if (error) {
+          toast.error(error.message || 'Unable to initialize password recovery session');
+          if (isMounted) {
+            setIsReady(false);
+          }
+          return;
+        }
+
+        window.history.replaceState({}, document.title, window.location.pathname);
       }
 
       const { data } = await client.auth.getSession();

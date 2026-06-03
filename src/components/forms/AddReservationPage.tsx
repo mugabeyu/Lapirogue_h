@@ -82,7 +82,7 @@ export default function AddReservationPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-8 animate-in fade-in duration-500">
+    <div className="max-w-3xl space-y-8 animate-in fade-in duration-500">
       <Link
         href="/reservations"
         className="inline-flex items-center gap-2 text-sm font-medium text-[var(--color-text-secondary)] hover:text-primary"

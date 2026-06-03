@@ -4,7 +4,6 @@ import { FormEvent, useState } from 'react';
 import { toast } from 'sonner';
 import Link from 'next/link';
 
-const BACKGROUND_IMAGE = '/images/forgotpasswordimage.jpg';
 const DEFAULT_RESET_MESSAGE = 'If the email exists in the database, a reset link will be sent.';
 const DEFAULT_ERROR_MESSAGE = 'Unable to process request. Please try again.';
 
@@ -12,8 +11,8 @@ type StatusType = 'success' | 'error' | '';
 
 function PageShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-cover bg-center bg-no-repeat px-4" style={{ backgroundImage: `url('${BACKGROUND_IMAGE}')` }}>
-      <div className="absolute inset-0 bg-slate-950/35 backdrop-blur-[1px]" />
+    <div className="relative flex min-h-screen items-center justify-center bg-cover bg-center bg-no-repeat px-4 auth-page-bg">
+      <div className="absolute inset-0 auth-dark-overlay backdrop-blur-[1px]" />
       <div className="card relative z-10 w-full max-w-md p-8 shadow-2xl backdrop-blur-md">
         {children}
       </div>
@@ -130,3 +129,4 @@ export default function ForgotPasswordPage() {
     </PageShell>
   );
 }
+

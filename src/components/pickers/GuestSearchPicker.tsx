@@ -61,9 +61,7 @@ export function GuestSearchPicker({
                   : 'border-border bg-surface hover:border-border hover:bg-surface-secondary'
               }`}
             >
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <User className="h-5 w-5" />
-              </div>
+              <User className="h-5 w-5 shrink-0 text-[var(--color-text-primary)]" strokeWidth={2} />
               <div className="min-w-0 flex-1">
                 <p className="font-medium text-[var(--color-text-primary)]">
                   {guest.firstName} {guest.lastName}
