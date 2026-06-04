@@ -77,7 +77,7 @@ export default function DashboardDataPage() {
           <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
             <Link
               href="/reservations/new"
-              className="group rounded-2xl border border-border bg-surface p-5 text-left shadow-[var(--shadow-small)] transition-transform hover:-translate-y-1 hover:shadow-[var(--shadow-medium)]"
+              className="group rounded-2xl border border-border bg-surface p-5 text-left transition-transform hover:-translate-y-1"
             >
               <CalendarPlus2 className="h-5 w-5 text-[var(--color-text-primary)]" strokeWidth={2} />
               <div className="mt-6 text-base font-display text-[var(--color-text-primary)]">
@@ -88,7 +88,7 @@ export default function DashboardDataPage() {
             <button
               type="button"
               onClick={() => setIsGuestModalOpen(true)}
-              className="group rounded-2xl border border-border bg-surface p-5 text-left shadow-[var(--shadow-small)] transition-transform hover:-translate-y-1 hover:shadow-[var(--shadow-medium)]"
+              className="group rounded-2xl border border-border bg-surface p-5 text-left transition-transform hover:-translate-y-1"
             >
               <UserPlus className="h-5 w-5 text-[var(--color-text-primary)]" strokeWidth={2} />
               <div className="mt-6 text-base font-display text-[var(--color-text-primary)]">
@@ -98,7 +98,7 @@ export default function DashboardDataPage() {
 
             <Link
               href="/rooms/assign"
-              className="group rounded-2xl border border-border bg-surface p-5 text-left shadow-[var(--shadow-small)] transition-transform hover:-translate-y-1 hover:shadow-[var(--shadow-medium)]"
+              className="group rounded-2xl border border-border bg-surface p-5 text-left transition-transform hover:-translate-y-1"
             >
               <DoorOpen className="h-5 w-5 text-[var(--color-text-primary)]" strokeWidth={2} />
               <div className="mt-6 text-base font-display text-[var(--color-text-primary)]">
@@ -109,7 +109,7 @@ export default function DashboardDataPage() {
             <button
               type="button"
               onClick={() => setIsActivityModalOpen(true)}
-              className="group rounded-2xl border border-border bg-surface p-5 text-left shadow-[var(--shadow-small)] transition-transform hover:-translate-y-1 hover:shadow-[var(--shadow-medium)]"
+              className="group rounded-2xl border border-border bg-surface p-5 text-left transition-transform hover:-translate-y-1"
             >
               <Activity className="h-5 w-5 text-[var(--color-text-primary)]" strokeWidth={2} />
               <div className="mt-6 text-base font-display text-[var(--color-text-primary)]">
@@ -119,7 +119,7 @@ export default function DashboardDataPage() {
 
             <Link
               href="/food-beverage/orders/new"
-              className="group rounded-2xl border border-border bg-surface p-5 text-left shadow-[var(--shadow-small)] transition-transform hover:-translate-y-1 hover:shadow-[var(--shadow-medium)]"
+              className="group rounded-2xl border border-border bg-surface p-5 text-left transition-transform hover:-translate-y-1"
             >
               <UtensilsCrossed className="h-5 w-5 text-[var(--color-text-primary)]" strokeWidth={2} />
               <div className="mt-6 text-base font-display text-[var(--color-text-primary)]">
@@ -155,7 +155,7 @@ export default function DashboardDataPage() {
             />
           </div>
           <div className="grid gap-6 xl:grid-cols-[1.25fr_0.75fr] section-gap">
-            <section className="bg-surface border border-border rounded-2xl overflow-hidden shadow-[var(--shadow-small)]">
+            <section className="bg-surface border border-border rounded-2xl overflow-hidden">
               <div className="flex items-center justify-between px-5 py-4">
                 <div>
                   <h3 className="font-display text-xl text-[var(--color-text-primary)]">Operational summary</h3>
@@ -201,18 +201,18 @@ export default function DashboardDataPage() {
               </div>
 
               <div className="grid gap-4 border-t border-border p-5 md:grid-cols-3 card-internal">
-                <div className="rounded-2xl bg-primary p-6 hover:bg-primary-hover cursor-pointer transition-colors shadow-[var(--shadow-small)]">
+                <div className="rounded-xl border border-border bg-surface-secondary p-6 hover:bg-surface cursor-pointer transition-colors">
                   <div className="mb-3">
-                    <div className="text-xs uppercase tracking-[0.2em] text-[rgba(255,255,255,0.8)]">Occupancy Rate</div>
-                    <div className="mt-2 text-3xl font-display text-[var(--color-surface)]">{occupiedPercent}%</div>
-                    <div className="mt-1 text-xs text-[rgba(255,255,255,0.85)]">
+                    <div className="text-xs uppercase tracking-[0.2em] text-[var(--color-text-secondary)]">Occupancy Rate</div>
+                    <div className="mt-2 text-3xl font-display text-[var(--color-text-primary)]">{occupiedPercent}%</div>
+                    <div className="mt-1 text-xs text-[var(--color-text-secondary)]">
                       {occupancyTrend >= 0 ? '+' : ''}{occupancyTrend}% from last week
                     </div>
                   </div>
-                  <div className="h-1.5 mt-3 rounded-full bg-[rgba(255,255,255,0.12)]">
-                    <div className="h-full rounded-full bg-[rgba(255,255,255,0.9)]" style={{ width: `${occupiedPercent}%` }} />
+                  <div className="h-1.5 mt-3 rounded-full bg-border">
+                    <div className="h-full rounded-full bg-primary" style={{ width: `${occupiedPercent}%` }} />
                   </div>
-                  <div className="mt-2 text-xs text-[rgba(255,255,255,0.8)]">
+                  <div className="mt-2 text-xs text-[var(--color-text-secondary)]">
                     {stats.roomOccupancy.total - stats.roomOccupancy.available} of {stats.roomOccupancy.total} rooms occupied
                   </div>
                 </div>
@@ -249,7 +249,7 @@ export default function DashboardDataPage() {
                   <div>
                     <h3 className="font-display text-xl text-[var(--color-text-primary)]">Today's arrivals</h3>
                   </div>
-                  <div className="rounded-full bg-surface-secondary px-3 py-1 text-xs font-medium text-[var(--color-primary)]">
+                  <div className="rounded-xl border border-border bg-surface-secondary px-3 py-1 text-xs font-medium text-[var(--color-text-primary)]">
                     {stats.todaysArrivals} expected
                   </div>
                 </div>
@@ -292,7 +292,7 @@ export default function DashboardDataPage() {
                             <span>Check-out {formatShortDate(arrival.check_out)}</span>
                           </div>
                         </div>
-                        <div className="rounded-full bg-accent/10 px-3 py-1 text-xs font-medium text-[var(--color-accent)]">
+                        <div className="rounded-xl border border-border bg-surface-secondary px-3 py-1 text-xs font-medium text-[var(--color-text-primary)]">
                           Arrival
                         </div>
                       </div>

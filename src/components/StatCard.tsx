@@ -29,7 +29,7 @@ export function StatCard({
   const isNegative = typeof trend === 'number' && trend < 0;
 
   const base = `rounded-2xl p-6 transition-transform duration-200 bg-surface border border-border`;
-  const interactive = onClick ? 'cursor-pointer hover:-translate-y-1 hover:shadow-[var(--shadow-medium)]' : 'shadow-[var(--shadow-small)]';
+  const interactive = onClick ? 'cursor-pointer hover:-translate-y-1' : '';
 
   if (isEmpty) {
     return (

@@ -92,7 +92,7 @@ export default function RoomsPage() {
         )}
       />
 
-      <div className={`card ${view === 'list' ? 'rounded-none' : ''}`}>
+      <div className="card">
         <div className="flex flex-col gap-4 px-4 py-4 border-b border-border lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-1 flex-wrap items-center gap-3">
             <div className="relative w-full min-w-[220px] max-w-md">
@@ -127,7 +127,7 @@ export default function RoomsPage() {
             <button
               type="button"
               onClick={() => setView('grid')}
-              className={`rounded-xl p-2 ${view === 'grid' ? 'bg-surface text-[var(--color-primary)] shadow-[var(--shadow-small)]' : 'text-[var(--color-text-secondary)]'}`}
+              className={`rounded-xl p-2 ${view === 'grid' ? 'bg-surface text-[var(--color-primary)]' : 'text-[var(--color-text-secondary)]'}`}
               aria-label="Grid view"
             >
               <Grid3X3 className="h-4 w-4" />
@@ -135,7 +135,7 @@ export default function RoomsPage() {
             <button
               type="button"
               onClick={() => setView('list')}
-              className={`rounded-xl p-2 ${view === 'list' ? 'bg-surface text-[var(--color-primary)] shadow-[var(--shadow-small)]' : 'text-[var(--color-text-secondary)]'}`}
+              className={`rounded-xl p-2 ${view === 'list' ? 'bg-surface text-[var(--color-primary)]' : 'text-[var(--color-text-secondary)]'}`}
               aria-label="List view"
             >
               <LayoutList className="h-4 w-4" />
@@ -155,7 +155,7 @@ export default function RoomsPage() {
               return (
                 <article
                   key={room.id}
-                  className="group overflow-hidden rounded-2xl border border-border bg-surface shadow-[var(--shadow-small)] transition-transform hover:-translate-y-1 hover:shadow-[var(--shadow-medium)]"
+                  className="group overflow-hidden rounded-2xl border border-border bg-surface transition-transform hover:-translate-y-1"
                 >
                   <button type="button" className="block w-full text-left" onClick={() => {
                     setEditRow(room as unknown as Record<string, unknown>);
@@ -172,7 +172,7 @@ export default function RoomsPage() {
                       <div className="absolute left-3 top-3 rounded-full bg-surface px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-[var(--color-text-primary)]">
                         {room.status}
                       </div>
-                      <div className="absolute bottom-3 left-3 rounded-full bg-[rgba(0,0,0,0.65)] px-3 py-1 text-sm font-semibold text-white">
+                      <div className="absolute bottom-3 left-3 rounded-xl border border-border bg-surface-secondary px-3 py-1 text-sm font-semibold text-[var(--color-text-primary)]">
                         Rs {Number(room.price).toLocaleString()} / night
                       </div>
                     </div>

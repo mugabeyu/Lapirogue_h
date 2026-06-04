@@ -135,7 +135,7 @@ export function RoomModal({ isOpen, onClose, onSaved, editRow }: RoomModalProps)
       <form key={room?.id ?? 'new'} onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="mb-2 block text-sm font-medium text-[var(--color-text-primary)]">Room photos</label>
-          <label className="flex min-h-40 cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-surface-secondary px-4 py-8 text-center transition-colors hover:border-primary/40 hover:bg-[rgba(11,93,87,0.04)]">
+          <label className="flex min-h-40 cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-surface-secondary px-4 py-8 text-center transition-colors hover:border-border hover:bg-surface">
             <CloudUpload className="h-8 w-8 text-[var(--color-text-secondary)]" />
             <div>
               <div className="text-sm font-medium text-[var(--color-text-primary)]">Upload one or more room photos</div>
@@ -160,7 +160,7 @@ export function RoomModal({ isOpen, onClose, onSaved, editRow }: RoomModalProps)
                   <button
                     type="button"
                     onClick={() => removePendingFile(entry.previewUrl)}
-                    className="absolute right-2 top-2 rounded-full bg-[rgba(0,0,0,0.65)] p-1 text-white opacity-100 transition-opacity group-hover:bg-[rgba(0,0,0,0.8)]"
+                    className="absolute right-2 top-2 rounded-xl border border-border bg-surface-secondary p-1 text-[var(--color-text-primary)] opacity-100 transition-colors group-hover:bg-surface"
                     aria-label="Remove photo"
                   >
                     <X className="h-3.5 w-3.5" />
@@ -170,7 +170,7 @@ export function RoomModal({ isOpen, onClose, onSaved, editRow }: RoomModalProps)
                   </span>
                 </div>
               ))}
-              <label className="flex min-h-28 items-center justify-center rounded-xl border border-dashed border-border bg-surface-secondary text-[var(--color-text-secondary)] transition-colors hover:border-primary/40 hover:bg-[rgba(11,93,87,0.04)]">
+              <label className="flex min-h-28 items-center justify-center rounded-xl border border-dashed border-border bg-surface-secondary text-[var(--color-text-secondary)] transition-colors hover:border-border hover:bg-surface">
                 <Plus className="h-5 w-5" />
                 <input type="file" accept="image/jpeg,image/png,image/webp" multiple className="hidden" onChange={handleFileSelect} disabled={isSaving} />
               </label>

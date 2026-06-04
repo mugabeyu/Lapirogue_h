@@ -49,7 +49,7 @@ function TrendBadge({ value }: { value: number | null }) {
   const positive = value > 0;
   const Icon = positive ? ArrowUp : ArrowDown;
   return (
-    <span className={`inline-flex items-center gap-0.5 text-xs font-medium ${positive ? 'text-emerald-600' : 'text-rose-600'}`}>
+    <span className="inline-flex items-center gap-0.5 text-xs font-medium text-[var(--color-text-secondary)]">
       <Icon className="h-3 w-3" strokeWidth={2} />
       {Math.abs(Math.round(value))}%
     </span>
@@ -199,7 +199,7 @@ export default function SustainabilityDashboardPage() {
           </section>
 
           <section className="rounded-2xl border border-border bg-surface p-6 shadow-sm" aria-labelledby="monthly-trend-heading">
-            <h2 id="monthly-trend-heading" className="font-display text-lg font-semibold text-ink-900">
+            <h2 id="monthly-trend-heading" className="font-display text-lg font-semibold text-[var(--color-text-primary)]">
               Monthly Eco-Points Trend
             </h2>
             {isLoading && <p className="mt-6 text-sm text-[var(--color-text-secondary)]">Loading trend...</p>}
@@ -210,21 +210,21 @@ export default function SustainabilityDashboardPage() {
               <div className="mt-4 h-72">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={monthlyTrend} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
-                    <XAxis dataKey="month" tickLine={false} axisLine={false} tick={{ fill: '#6b7280', fontSize: 12 }} />
+                    <XAxis dataKey="month" tickLine={false} axisLine={false} tick={{ fill: 'var(--color-text-secondary)', fontSize: 12 }} />
                     <YAxis
                       domain={[0, yAxisMax]}
                       tickLine={false}
                       axisLine={false}
-                      tick={{ fill: '#6b7280', fontSize: 12 }}
+                      tick={{ fill: 'var(--color-text-secondary)', fontSize: 12 }}
                       tickFormatter={(value) => formatPoints(Number(value))}
                     />
                     <Tooltip formatter={(value: number) => [`${formatPoints(value)} pts`, 'Eco-points']} />
                     <Line
                       type="monotone"
                       dataKey="points"
-                      stroke="#10b981"
+                      stroke="var(--color-primary)"
                       strokeWidth={2.5}
-                      dot={{ r: 4, fill: '#10b981', strokeWidth: 0 }}
+                      dot={{ r: 4, fill: 'var(--color-primary)', strokeWidth: 0 }}
                       activeDot={{ r: 5 }}
                     />
                   </LineChart>

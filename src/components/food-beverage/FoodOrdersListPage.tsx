@@ -30,10 +30,10 @@ type OrdersResponse = {
 };
 
 const STATUS_STYLES: Record<string, string> = {
-  PENDING: 'bg-blue-100 text-blue-800',
-  PREPARING: 'bg-orange-100 text-orange-800',
-  SERVED: 'bg-emerald-100 text-emerald-800',
-  CANCELLED: 'bg-surface-secondary text-[var(--color-text-secondary)]',
+  PENDING: 'bg-surface-secondary text-[var(--color-text-primary)] border border-border',
+  PREPARING: 'bg-surface-secondary text-[var(--color-text-primary)] border border-border',
+  SERVED: 'bg-surface-secondary text-[var(--color-text-primary)] border border-border',
+  CANCELLED: 'bg-surface-secondary text-[var(--color-text-secondary)] border border-border',
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -137,7 +137,7 @@ export default function FoodOrdersListPage() {
         </button>
       </div>
 
-      <section className="card rounded-none" aria-labelledby="food-orders-table-heading">
+      <section className="card" aria-labelledby="food-orders-table-heading">
         <div className="px-5 py-4 border-b border-border">
           <h2 id="food-orders-table-heading" className="font-display text-lg font-semibold text-[var(--color-text-primary)]">
             Order list
@@ -180,7 +180,7 @@ export default function FoodOrdersListPage() {
                     <td className="px-5 py-4 font-medium text-[var(--color-text-primary)]">{formatMenuPrice(order.total)}</td>
                     <td className="px-5 py-4">
                       <span
-                        className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold uppercase ${
+                        className={`inline-flex rounded-xl px-2.5 py-1 text-xs font-semibold uppercase ${
                           STATUS_STYLES[statusKey] ?? STATUS_STYLES.PENDING
                         }`}
                       >

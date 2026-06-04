@@ -12,8 +12,8 @@ type StatusType = 'success' | 'error' | '';
 function PageShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative flex min-h-screen items-center justify-center bg-cover bg-center bg-no-repeat px-4 auth-page-bg">
-      <div className="absolute inset-0 auth-dark-overlay backdrop-blur-[1px]" />
-      <div className="card relative z-10 w-full max-w-md p-8 shadow-2xl backdrop-blur-md">
+      <div className="absolute inset-0 auth-dark-overlay" />
+      <div className="card relative z-10 w-full max-w-md p-8">
         {children}
       </div>
     </div>
@@ -27,11 +27,11 @@ function StatusAlert({ message, type }: { message: string; type: StatusType }) {
 
   const variantClasses =
     type === 'success'
-      ? 'border-[rgba(22,163,74,0.12)] bg-[rgba(22,163,74,0.06)] text-[var(--color-success)]'
-      : 'border-[rgba(220,38,38,0.12)] bg-[rgba(220,38,38,0.06)] text-[var(--color-danger)]';
+      ? 'border-border bg-surface-secondary text-[var(--color-text-primary)]'
+      : 'border-border bg-surface-secondary text-[var(--color-text-primary)]';
 
   return (
-    <div className={`rounded-lg border px-4 py-3 text-sm ${variantClasses}`}>
+    <div className={`rounded-xl border px-4 py-3 text-sm ${variantClasses}`}>
       {message}
     </div>
   );
@@ -86,7 +86,7 @@ export default function ForgotPasswordPage() {
     return (
       <PageShell>
         <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4 text-[var(--color-text-primary)]">Check Your Email</h1>
+          <h1 className="text-2xl font-semibold mb-4 text-[var(--color-text-primary)]">Check Your Email</h1>
           <p className="text-[var(--color-text-secondary)] mb-6">
             If an account with that email exists, we've sent a password reset link.
           </p>
@@ -101,7 +101,7 @@ export default function ForgotPasswordPage() {
   return (
     <PageShell>
       <div>
-        <h1 className="text-2xl font-bold text-center mb-6 text-[var(--color-text-primary)]">Forgot Password</h1>
+        <h1 className="text-2xl font-semibold text-center mb-6 text-[var(--color-text-primary)]">Forgot Password</h1>
         <p className="text-[var(--color-text-secondary)] text-center mb-4">
           Enter your email address and we'll send you a reset link.
         </p>

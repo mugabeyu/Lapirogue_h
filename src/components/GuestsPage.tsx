@@ -83,7 +83,7 @@ export default function GuestsPage() {
         }
       />
 
-      <div className="card rounded-none mt-4 overflow-hidden">
+      <div className="card mt-4 overflow-hidden">
         <div className="px-4 py-4">
           <label htmlFor="guest-search" className="sr-only">Search guests</label>
           <div className="relative w-full sm:w-96">

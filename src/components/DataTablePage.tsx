@@ -67,7 +67,7 @@ export default function DataTablePage({
     <div className="space-y-6 animate-in fade-in duration-500">
       <PageHeader title={title} subtitle={subtitle} />
 
-      <div className="card rounded-none">
+      <div className="card">
         <div className="px-4 py-4 border-b border-border">
           <label htmlFor={`${title}-search`} className="sr-only">
             Search {rowLabel}

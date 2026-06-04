@@ -132,7 +132,7 @@ export default function ActivityCalendarPage() {
                 {calendar.days.map((day) => (
                   <div
                     key={day.date}
-                    className={`border-r border-border px-2 py-3 text-center last:border-r-0 ${day.date === today ? 'bg-blue-50/60' : ''}`}
+                    className={`border-r border-border px-2 py-3 text-center last:border-r-0 ${day.date === today ? 'bg-surface-secondary' : ''}`}
                   >
                     <p className="text-xs text-[var(--color-text-secondary)]">{day.weekday}</p>
                     <p className="text-sm font-semibold text-[var(--color-text-primary)]">{day.day}</p>
@@ -144,7 +144,7 @@ export default function ActivityCalendarPage() {
                 {calendar.days.map((day) => {
                   const sessions = calendar.sessionsByDay[day.date] ?? [];
                   return (
-                    <div key={day.date} className={`min-h-[420px] space-y-2 border-r border-border p-2 last:border-r-0 ${day.date === today ? 'bg-blue-50/30' : ''}`}>
+                    <div key={day.date} className={`min-h-[420px] space-y-2 border-r border-border p-2 last:border-r-0 ${day.date === today ? 'bg-surface-secondary/70' : ''}`}>
                       {sessions.map((session) => {
                         const colorClass = SESSION_COLOR_STYLES[session.colorKey] ?? SESSION_COLOR_STYLES.tours;
                         const fillPercent = Math.min(100, (session.participants / session.capacity) * 100);
@@ -162,7 +162,7 @@ export default function ActivityCalendarPage() {
                               Guide: {session.guideName}
                             </p>
                             <div className="mt-2">
-                              <p className={`text-[11px] font-medium ${session.isFull ? 'text-orange-700' : ''}`}>{session.isFull ? 'FULL' : session.bookedLabel}</p>
+                              <p className="text-[11px] font-medium text-[var(--color-text-secondary)]">{session.isFull ? 'FULL' : session.bookedLabel}</p>
                               <div className="mt-1 h-1 overflow-hidden rounded-full bg-surface/70">
                                 <div className="h-full rounded-full bg-current opacity-60" style={{ width: `${fillPercent}%` }} />
                               </div>

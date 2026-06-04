@@ -43,11 +43,11 @@ type CalendarData = {
 };
 
 const STATUS_STYLES: Record<CalendarBooking['displayStatus'], string> = {
-  confirmed: 'bg-primary text-white',
-  'checked-in': 'bg-success text-white',
-  pending: 'bg-warning text-[var(--color-text-primary)]',
-  departing: 'bg-[#3B82B6] text-white',
-  cancelled: 'bg-surface-secondary text-[var(--color-text-secondary)]',
+  confirmed: 'bg-surface-secondary text-[var(--color-text-primary)] border border-border',
+  'checked-in': 'bg-surface-secondary text-[var(--color-text-primary)] border border-border',
+  pending: 'bg-surface-secondary text-[var(--color-text-primary)] border border-border',
+  departing: 'bg-surface-secondary text-[var(--color-text-primary)] border border-border',
+  cancelled: 'bg-surface-secondary text-[var(--color-text-secondary)] border border-border',
 };
 
 const LEGEND = [

@@ -240,7 +240,7 @@ function ProfileHeaderCard({
           </button>
           <button
             type="button"
-            className="inline-flex items-center gap-2 rounded-lg border border-[rgba(220,38,38,0.12)] px-4 py-2 font-medium text-[var(--color-danger)] transition-colors hover:bg-[rgba(220,38,38,0.05)]"
+            className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-4 py-2 font-medium text-[var(--color-text-primary)] transition-colors hover:bg-surface-secondary"
             onClick={onDelete}
           >
             <Trash2 className="h-4 w-4" />

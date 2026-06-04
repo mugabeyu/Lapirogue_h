@@ -117,7 +117,7 @@ function calendarDateKey(value: string) {
 }
 
 function getColor(item: ScheduleItem) {
-  return item.color ?? '#D8C7A8';
+  return item.color ?? 'var(--color-primary)';
 }
 
 function shiftWeek(weekStart: string, direction: -1 | 1) {

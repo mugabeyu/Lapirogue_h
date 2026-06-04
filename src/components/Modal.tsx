@@ -54,7 +54,7 @@ export function Modal({
             opacity: 0
           }}
           onClick={onClose}
-          className="absolute inset-0 bg-[rgba(27,36,48,0.4)] backdrop-blur-sm" />
+          className="absolute inset-0 bg-primary/30 backdrop-blur-sm" />
         
           <motion.div
           initial={{
@@ -75,7 +75,7 @@ export function Modal({
           transition={{
             duration: 0.2
           }}
-          className={`relative w-full ${maxWidthClass} bg-surface rounded-2xl shadow-[var(--shadow-large)] flex flex-col max-h-[90vh] overflow-hidden`}>
+          className={`relative w-full ${maxWidthClass} bg-surface rounded-2xl flex flex-col max-h-[90vh] overflow-hidden`}>
           
             {/* Header */}
             <div className="flex items-start justify-between p-6 border-b border-border bg-surface z-10 shrink-0">
@@ -87,7 +87,7 @@ export function Modal({
               </div>
               <button
               onClick={onClose}
-              className="p-2 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-surface-secondary rounded-full transition-colors">
+              className="p-2 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-surface-secondary rounded-xl transition-colors">
               
                 <XIcon className="w-5 h-5" />
               </button>

@@ -94,7 +94,7 @@ export default function LoginPage() {
     <>
       <div className="min-h-screen bg-surface text-[var(--color-text-primary)] lg:flex">
         <section
-          className="relative hidden min-h-screen overflow-hidden bg-slate-900 text-white lg:flex lg:w-1/2 auth-login-bg"
+          className="relative hidden min-h-screen overflow-hidden bg-surface-secondary text-white lg:flex lg:w-1/2 auth-login-bg"
         >
           <div className="absolute inset-0 auth-dark-overlay" />
 
@@ -105,16 +105,16 @@ export default function LoginPage() {
                   <img src="/lapiroguelogo.jpg" alt="La Pirogue Resort" className="h-full w-full object-cover" />
                 </div>
                 <div>
-                  <h2 className="font-display text-3xl font-semibold leading-tight tracking-tight text-white xl:text-4xl">
+                  <h2 className="font-display text-4xl font-semibold leading-tight tracking-tight text-white xl:text-5xl">
                     Lapirogue Operations
                   </h2>
-                  <p className="mt-2 text-sm uppercase tracking-[0.32em] text-emerald-300/90">
+                  <p className="mt-3 text-base uppercase tracking-[0.24em] text-white/85">
                     Guest management control room
                   </p>
                 </div>
               </div>
 
-              <p className="max-w-lg text-lg leading-8 text-white/78 xl:text-xl">
+              <p className="max-w-lg text-2xl leading-10 text-white/90 xl:text-[30px] xl:leading-[1.45]">
                 A calm command center for guest stays, rooms, reservations, billing, service requests, and staff workflows.
               </p>
             </div>
@@ -123,17 +123,17 @@ export default function LoginPage() {
 
         <section className="flex w-full items-center justify-center px-6 py-8 sm:px-10 lg:w-1/2 lg:px-14 xl:px-16">
           <div className="w-full max-w-[420px]">
-            <h1 className="mb-5 text-center font-display text-3xl font-semibold leading-tight tracking-tight text-slate-950 sm:text-[32px]">
+            <h1 className="mb-5 text-center font-display text-3xl font-semibold leading-tight tracking-tight text-[var(--color-text-primary)] sm:text-[32px]">
               Sign in to your account
             </h1>
 
             {errorMessage ? (
               <div
-                className="mb-5 flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm leading-6 text-red-600 shadow-sm"
+                className="mb-5 flex items-start gap-3 rounded-xl border border-border bg-surface-secondary px-4 py-3 text-sm leading-6 text-[var(--color-text-primary)] shadow-sm"
                 role="alert"
                 aria-live="polite"
               >
-                <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-red-500 text-[12px] font-bold">
+                <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-xl border border-border text-[12px] font-bold">
                   !
                 </span>
                 <p>{errorMessage}</p>
@@ -159,7 +159,7 @@ export default function LoginPage() {
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between gap-4">
-                  <label className="block text-[15px] font-semibold text-slate-900" htmlFor="password">
+                  <label className="block text-[15px] font-semibold text-[var(--color-text-primary)]" htmlFor="password">
                     Password
                   </label>
                 </div>
@@ -170,7 +170,7 @@ export default function LoginPage() {
                     type={showPassword ? 'text' : 'password'}
                     autoComplete="current-password"
                     required
-                    className="h-12 w-full rounded-2xl border border-slate-200 bg-[#FFF7B8] px-4 pr-12 text-[16px] text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-4 focus:ring-slate-200/70 disabled:cursor-not-allowed disabled:bg-slate-100 [&::-ms-reveal]:hidden [&::-ms-clear]:hidden"
+                    className="h-12 w-full rounded-xl border border-border bg-surface px-4 pr-12 text-[16px] text-[var(--color-text-primary)] outline-none transition placeholder:text-[var(--color-text-secondary)] focus:border-border focus:ring-4 focus:ring-surface-secondary disabled:cursor-not-allowed disabled:bg-surface-secondary [&::-ms-reveal]:hidden [&::-ms-clear]:hidden"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     disabled={isLoading}
@@ -178,7 +178,7 @@ export default function LoginPage() {
                   <button
                     type="button"
                     onClick={() => setShowPassword((current) => !current)}
-                    className="absolute inset-y-0 right-0 flex items-center justify-center px-3 text-slate-600 transition hover:text-slate-900"
+                    className="absolute inset-y-0 right-0 flex items-center justify-center px-3 text-[var(--color-text-secondary)] transition hover:text-[var(--color-text-primary)]"
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
                     disabled={isLoading}
                   >
@@ -188,7 +188,7 @@ export default function LoginPage() {
               </div>
 
               <div className="flex items-center justify-between gap-4 pt-1">
-                <label className="flex cursor-pointer items-center gap-3 text-[15px] font-medium text-slate-900">
+                <label className="flex cursor-pointer items-center gap-3 text-[15px] font-medium text-[var(--color-text-primary)]">
                   <span className="relative flex h-6 w-6 items-center justify-center">
                     <input
                       type="checkbox"
@@ -197,7 +197,7 @@ export default function LoginPage() {
                       className="peer sr-only"
                       disabled={isLoading}
                     />
-                    <span className="absolute inset-0 rounded-md border border-border bg-surface transition peer-checked:border-emerald-600 peer-checked:bg-emerald-600" />
+                    <span className="absolute inset-0 rounded-xl border border-border bg-surface transition peer-checked:border-primary peer-checked:bg-primary" />
                     <svg
                       viewBox="0 0 24 24"
                       className="relative z-10 hidden h-4 w-4 text-white peer-checked:block"
@@ -213,14 +213,14 @@ export default function LoginPage() {
                   Remember me
                 </label>
 
-                <Link href="/forgot-password" className="text-[15px] font-medium text-slate-900 transition hover:text-slate-700">
+                <Link href="/forgot-password" className="text-[15px] font-medium text-[var(--color-text-primary)] transition hover:text-[var(--color-text-secondary)]">
                   Forgot Password?
                 </Link>
               </div>
 
               <button
                 type="submit"
-                className="flex h-12 w-full items-center justify-center rounded-2xl bg-emerald-950 px-6 text-[16px] font-semibold text-white transition hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-70"
+                className="btn-primary flex h-12 w-full items-center justify-center px-6 text-[16px] font-semibold disabled:cursor-not-allowed disabled:opacity-70"
                 disabled={isLoading}
               >
                 {isLoading ? (

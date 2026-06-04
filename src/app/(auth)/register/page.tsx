@@ -96,7 +96,7 @@ export default function RegisterPage() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-surface-secondary px-4">
         <div className="card w-full max-w-md p-8 text-center">
-          <h1 className="mb-4 text-2xl font-bold text-[var(--color-text-primary)]">Invalid Invitation</h1>
+          <h1 className="mb-4 text-2xl font-semibold text-[var(--color-text-primary)]">Invalid Invitation</h1>
           <p className="text-[var(--color-text-secondary)] mb-6">
             This invitation link is invalid or has expired. Please contact your administrator.
           </p>
@@ -108,13 +108,13 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-cover bg-center bg-no-repeat px-4 auth-page-bg">
-      <div className="absolute inset-0 auth-dark-overlay backdrop-blur-[1px]" />
-      <div className="card relative z-10 w-full max-w-md border border-border bg-surface p-8 shadow-2xl backdrop-blur-md">
-        <h1 className="mb-2 text-center text-2xl font-bold text-[var(--color-text-primary)]">Complete Staff Registration</h1>
+      <div className="absolute inset-0 auth-dark-overlay" />
+      <div className="card relative z-10 w-full max-w-md border border-border bg-surface p-8">
+        <h1 className="mb-2 text-center text-2xl font-semibold text-[var(--color-text-primary)]">Complete Staff Registration</h1>
         <p className="mb-6 text-center text-sm text-[var(--color-text-secondary)]">Your invitation details are pre-filled below.</p>
 
         {staff && (
-            <div className="mb-6 rounded-lg bg-slate-50 p-4 text-sm">
+            <div className="mb-6 rounded-xl border border-border bg-surface-secondary p-4 text-sm">
             <p><strong>Email:</strong> <span className="text-[var(--color-text-secondary)]">{staff.email}</span></p>
             <p><strong>Name:</strong> <span className="text-[var(--color-text-secondary)]">{staff.full_name}</span></p>
             <p><strong>Employee Code:</strong> <span className="text-[var(--color-text-secondary)]">{staff.employee_code}</span></p>

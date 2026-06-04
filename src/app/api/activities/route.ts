@@ -175,18 +175,55 @@ function buildInsertPayload(body: z.infer<typeof activitySchema>) {
   };
 }
 
+function buildLegacyPayload(body: z.infer<typeof activitySchema>) {
+  const durationLabel = body.durationLabel ?? '';
+  const duration = body.duration ?? (durationLabel ? parseDurationMinutes(durationLabel) : 60);
+  const capacity = body.capacity ?? 10;
+
+  return {
+    name: body.name,
+    category: body.category,
+    description: body.description,
+    price: body.price,
+    duration,
+    capacity,
+    status: body.status ?? 'ACTIVE',
+    image_path: body.imagePath,
+  };
+}
+
+function shouldRetryWithLegacyPayload(error: unknown) {
+  if (!error || typeof error !== 'object') return false;
+  const message = 'message' in error && typeof error.message === 'string' ? error.message.toLowerCase() : '';
+  return message.includes('column') && (message.includes('schema cache') || message.includes('does not exist'));
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = activitySchema.parse(await request.json());
     const actor = await getAuditActor(request);
     const actorId = actor?.id ?? null;
-    const { data, error } = await getSupabaseAdmin()
+    const supabase = getSupabaseAdmin();
+    const fullPayload = buildInsertPayload(body);
+    let { data, error } = await supabase
       .from('activities')
       .insert({
-        ...buildInsertPayload(body),
+        ...fullPayload,
       })
       .select('*')
       .single();
+
+    if (error && shouldRetryWithLegacyPayload(error)) {
+      const fallback = await supabase
+        .from('activities')
+        .insert({
+          ...buildLegacyPayload(body),
+        })
+        .select('*')
+        .single();
+      data = fallback.data;
+      error = fallback.error;
+    }
 
     if (error) throw error;
     return NextResponse.json({ success: true, data: mapActivity(data as ActivityRow) }, { status: 201 });
@@ -200,6 +237,11 @@ export async function POST(request: NextRequest) {
 
 function buildUpdatePayload(body: z.infer<typeof activitySchema>) {
   const full = buildInsertPayload(body);
+  return Object.fromEntries(Object.entries(full).filter(([, value]) => value !== undefined));
+}
+
+function buildLegacyUpdatePayload(body: z.infer<typeof activitySchema>) {
+  const full = buildLegacyPayload(body);
   return Object.fromEntries(Object.entries(full).filter(([, value]) => value !== undefined));
 }
 
@@ -236,7 +278,8 @@ export async function PUT(request: NextRequest) {
       status: rest.status ?? existing.status,
     };
 
-    const { data, error } = await getSupabaseAdmin()
+    const supabase = getSupabaseAdmin();
+    let { data, error } = await supabase
       .from('activities')
       .update({
         ...buildUpdatePayload(merged),
@@ -244,6 +287,19 @@ export async function PUT(request: NextRequest) {
       .eq('id', id)
       .select('*')
       .single();
+
+    if (error && shouldRetryWithLegacyPayload(error)) {
+      const fallback = await supabase
+        .from('activities')
+        .update({
+          ...buildLegacyUpdatePayload(merged),
+        })
+        .eq('id', id)
+        .select('*')
+        .single();
+      data = fallback.data;
+      error = fallback.error;
+    }
 
     if (error) throw error;
     return NextResponse.json({ success: true, data: mapActivity(data as ActivityRow) });

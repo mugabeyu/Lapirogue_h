@@ -286,7 +286,7 @@ export function PaymentModal({ isOpen, onClose, onSaved, editRow }: PaymentModal
                   />
                   <button
                     type="button"
-                    className="col-span-1 inline-flex items-center justify-center rounded-md border border-border bg-surface text-[var(--color-text-secondary)] hover:text-red-600"
+                    className="col-span-1 inline-flex items-center justify-center rounded-md border border-border bg-surface text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
                     onClick={() => removeExtraCharge(item.id)}
                     aria-label="Remove extra charge"
                   >
@@ -300,7 +300,7 @@ export function PaymentModal({ isOpen, onClose, onSaved, editRow }: PaymentModal
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-ink-700">Notes</label>
+          <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Notes</label>
           <textarea name="notes" className="input-field w-full" rows={2} defaultValue={String(editRow?.notes ?? '')} />
         </div>
 

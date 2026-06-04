@@ -43,7 +43,7 @@ function ActivityListCard({
   const scheduleLabel = activity.nextSession?.label ?? activity.meetingPoint ?? 'Schedule TBC';
 
   return (
-    <article className="overflow-hidden rounded-2xl border border-border bg-surface shadow-[var(--shadow-small)] transition-shadow hover:shadow-[var(--shadow-medium)]">
+    <article className="overflow-hidden rounded-2xl border border-border bg-surface transition-shadow">
       <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-stretch">
         <div className="relative h-40 w-full shrink-0 overflow-hidden rounded-xl bg-surface-secondary sm:h-auto sm:w-52">
           {activity.imagePath ? (
@@ -60,7 +60,7 @@ function ActivityListCard({
 
         <div className="flex min-w-0 flex-1 flex-col justify-between gap-4">
           <div>
-            <h3 className="font-display text-2xl font-semibold text-[var(--color-text-primary)]">{activity.name}</h3>
+            <h3 className="font-display text-2xl text-[var(--color-text-primary)]">{activity.name}</h3>
             <ul className="mt-3 space-y-1.5 text-sm text-[var(--color-text-secondary)]">
               <li className="flex items-center gap-2">
                 <Clock className="h-4 w-4 text-[var(--color-text-secondary)]" />
@@ -77,8 +77,8 @@ function ActivityListCard({
             </ul>
           </div>
           <div className="flex items-center justify-between border-t border-border pt-4">
-            <p className="font-display text-lg font-semibold text-[var(--color-text-primary)]">{formatRs(activity.price)}</p>
-            <button type="button" onClick={onBook} className="text-sm font-semibold text-[var(--color-primary)] hover:underline">
+            <p className="font-display text-lg text-[var(--color-text-primary)]">{formatRs(activity.price)}</p>
+            <button type="button" onClick={onBook} className="text-sm text-[var(--color-primary)] hover:underline">
               Book Now →
             </button>
           </div>
@@ -96,7 +96,7 @@ function ActivityGridCard({
   onBook: () => void;
 }) {
   return (
-    <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-[var(--shadow-small)]">
+    <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-surface">
       <div className="relative aspect-[16/10] bg-surface-secondary">
         {activity.imagePath ? (
           <img src={activity.imagePath} alt="" className="h-full w-full object-cover" />
@@ -108,11 +108,11 @@ function ActivityGridCard({
         </span>
       </div>
         <div className="flex flex-1 flex-col p-4">
-        <h3 className="font-display text-lg font-semibold text-[var(--color-text-primary)]">{activity.name}</h3>
+        <h3 className="font-display text-lg text-[var(--color-text-primary)]">{activity.name}</h3>
         <p className="mt-2 text-sm text-[var(--color-text-secondary)]">{activity.durationLabel}</p>
         <div className="mt-auto flex items-center justify-between border-t border-border pt-4">
           <p className="font-display font-semibold text-[var(--color-text-primary)]">{formatRs(activity.price)}</p>
-          <button type="button" onClick={onBook} className="text-sm font-semibold text-[var(--color-primary)]">
+          <button type="button" onClick={onBook} className="text-sm text-[var(--color-primary)]">
             Book Now →
           </button>
         </div>

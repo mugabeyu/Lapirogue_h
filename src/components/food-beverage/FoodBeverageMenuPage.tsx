@@ -36,7 +36,7 @@ function MenuItemCard({
   const prepLabel = formatPrepTime(item.preparationMinutes);
 
   return (
-    <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-[var(--shadow-small)] transition-shadow hover:shadow-[var(--shadow-medium)]">
+    <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-surface transition-shadow">
       <div className="relative aspect-[4/3] bg-surface-secondary">
         {item.imagePath ? (
           <img src={item.imagePath} alt="" className="h-full w-full object-cover" />

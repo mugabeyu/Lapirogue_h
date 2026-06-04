@@ -204,7 +204,7 @@ function InvoiceList({
                 </p>
               <p>
                   <span className="text-[var(--color-text-secondary)]">Status:</span>{' '}
-                <span className="rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700">
+                <span className="rounded-xl border border-border bg-surface-secondary px-2 py-1 text-xs font-semibold text-[var(--color-text-primary)]">
                   {detail.billingSummary.status.replace('_', ' ')}
                 </span>
               </p>

@@ -173,7 +173,7 @@ export default function CrudDataTablePage({
         }
       />
 
-      <div className="card rounded-none">
+      <div className="card">
         <div className="px-4 py-4 border-b border-border">
           <label htmlFor={`${title}-search`} className="sr-only">
             Search {rowLabel}

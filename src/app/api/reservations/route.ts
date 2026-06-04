@@ -101,7 +101,16 @@ export async function POST(request: NextRequest) {
 
     const { data, error } = await supabase
       .from('reservations')
-      .insert({ ...body })
+      .insert({
+        guest_id: body.guestId,
+        room_id: body.roomId,
+        check_in: body.checkIn,
+        check_out: body.checkOut,
+        adults: body.adults,
+        children: body.children,
+        total_amount: body.totalAmount,
+        status: body.status ?? 'CONFIRMED',
+      })
       .select('*')
       .single();
 

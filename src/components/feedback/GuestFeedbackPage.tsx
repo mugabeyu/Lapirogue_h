@@ -52,7 +52,7 @@ function StarRating({ value }: { value: number }) {
         return (
           <Star
             key={index}
-            className={`h-4 w-4 ${filled ? 'fill-amber-400 text-amber-400' : 'text-[var(--color-border)]'}`}
+            className={`h-4 w-4 ${filled ? 'fill-[var(--color-text-primary)] text-[var(--color-text-primary)]' : 'text-[var(--color-border)]'}`}
             strokeWidth={filled ? 0 : 1.5}
           />
         );
@@ -80,7 +80,7 @@ function TrendBadge({
         : `${positive ? '+' : ''}${Math.round(value)}%`;
 
   return (
-    <span className={`inline-flex items-center gap-0.5 text-xs font-medium ${positive ? 'text-[var(--color-success)]' : 'text-[var(--color-danger)]'}`}>
+    <span className="inline-flex items-center gap-0.5 text-xs font-medium text-[var(--color-text-secondary)]">
       <Icon className="h-3 w-3" />
       {formatted}
     </span>
@@ -161,7 +161,7 @@ export default function GuestFeedbackPage() {
       trend: summary?.averageRatingTrend ?? null,
       trendFormat: 'points' as const,
       icon: Star,
-      iconClass: 'bg-primary/10 text-primary',
+      iconClass: 'bg-surface-secondary text-[var(--color-text-primary)] border border-border',
     },
     {
       label: 'Total Reviews',
@@ -169,7 +169,7 @@ export default function GuestFeedbackPage() {
       trend: summary?.totalReviewsTrend ?? null,
       trendFormat: 'percent' as const,
       icon: Star,
-      iconClass: 'bg-emerald-100 text-emerald-700',
+      iconClass: 'bg-surface-secondary text-[var(--color-text-primary)] border border-border',
     },
     {
       label: 'Response Rate',
@@ -177,7 +177,7 @@ export default function GuestFeedbackPage() {
       trend: summary?.responseRateTrend ?? null,
       trendFormat: 'pp' as const,
       icon: Send,
-      iconClass: 'bg-emerald-100 text-emerald-700',
+      iconClass: 'bg-surface-secondary text-[var(--color-text-primary)] border border-border',
     },
   ];
 
@@ -228,7 +228,7 @@ export default function GuestFeedbackPage() {
         </div>
       </div>
 
-      <div className="card rounded-none overflow-hidden">
+      <div className="card overflow-hidden">
         <div className="px-6 py-4 border-b border-border">
           <h2 className="font-display text-lg font-semibold text-[var(--color-text-primary)]">Recent Feedback</h2>
         </div>

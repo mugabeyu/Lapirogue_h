@@ -28,11 +28,11 @@ export type ActivityListItem = {
 };
 
 export const SESSION_COLOR_STYLES: Record<string, string> = {
-  water: 'border-blue-200 bg-blue-50/90 text-blue-950',
-  tours: 'border-orange-200 bg-orange-50/90 text-orange-950',
-  spa: 'border-purple-200 bg-purple-50/90 text-purple-950',
-  cultural: 'border-pink-200 bg-pink-50/90 text-pink-950',
-  adventure: 'border-emerald-200 bg-emerald-50/90 text-emerald-950',
+  water: 'border border-border bg-surface-secondary text-[var(--color-text-primary)]',
+  tours: 'border border-border bg-surface-secondary text-[var(--color-text-primary)]',
+  spa: 'border border-border bg-surface-secondary text-[var(--color-text-primary)]',
+  cultural: 'border border-border bg-surface-secondary text-[var(--color-text-primary)]',
+  adventure: 'border border-border bg-surface-secondary text-[var(--color-text-primary)]',
 };
 
 export const TIME_SLOTS = [

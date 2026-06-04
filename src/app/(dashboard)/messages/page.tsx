@@ -6,6 +6,7 @@ import { useApi } from '@/hooks/useApi';
 import { PageHeader } from '@/components/PageHeader';
 import { getSupabaseBrowserClient } from '@/lib/supabase-browser';
 import { toast } from 'sonner';
+import { Guest } from '@/types';
 
 type MessageRow = {
   id: string;
@@ -41,6 +42,7 @@ function formatDayTime(value: string) {
 
 export default function MessagesPage() {
   const { data, mutate, isLoading } = useApi<MessageRow[]>('/api/messages');
+  const { data: guestsData } = useApi<Guest[]>('/api/guests?limit=100');
   const [isSending, setIsSending] = useState(false);
   const [selectedGuestId, setSelectedGuestId] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -48,6 +50,7 @@ export default function MessagesPage() {
   const [draft, setDraft] = useState('');
 
   const rows = useMemo(() => data ?? [], [data]);
+  const guests = useMemo(() => guestsData ?? [], [guestsData]);
   const unreadCount = rows.filter((row) => row.messageType === 'guest' && !row.isRead).length;
 
   const conversations = useMemo<ConversationSummary[]>(() => {
@@ -100,15 +103,43 @@ export default function MessagesPage() {
     return matchesSearch && matchesTab;
   });
 
+  const conversationGuestIds = useMemo(() => new Set(conversations.map((conversation) => conversation.guestId)), [conversations]);
+
+  const searchableGuests = useMemo(() => {
+    if (tab === 'unread') return [];
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+
+    return guests
+      .filter((guest) => !conversationGuestIds.has(guest.id))
+      .filter((guest) => {
+        if (!normalizedSearch) return true;
+        const guestName = `${guest.firstName} ${guest.lastName}`.trim().toLowerCase();
+        const haystack = `${guestName} ${guest.guestId} ${guest.email ?? ''} ${guest.phone ?? ''}`.toLowerCase();
+        return haystack.includes(normalizedSearch);
+      })
+      .map((guest) => ({
+        id: guest.id,
+        name: `${guest.firstName} ${guest.lastName}`.trim() || guest.guestId,
+      }));
+  }, [conversationGuestIds, guests, searchTerm, tab]);
+
   const selectedConversation =
     conversations.find((conversation) => conversation.guestId === selectedGuestId) ?? conversations[0] ?? null;
+  const selectedGuest = guests.find((guest) => guest.id === selectedGuestId) ?? null;
   const selectedMessages = selectedConversation?.messages ?? [];
 
   useEffect(() => {
-    if (!selectedGuestId && conversations[0]) {
-      setSelectedGuestId(conversations[0].guestId);
+    if (!selectedGuestId) {
+      if (conversations[0]) {
+        setSelectedGuestId(conversations[0].guestId);
+        return;
+      }
+
+      if (guests[0]) {
+        setSelectedGuestId(guests[0].id);
+      }
     }
-  }, [conversations, selectedGuestId]);
+  }, [conversations, guests, selectedGuestId]);
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
@@ -206,7 +237,7 @@ export default function MessagesPage() {
               </div>
               <button
                 type="button"
-                className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary"
+                className="rounded-xl border border-border bg-surface-secondary px-3 py-1 text-xs font-medium text-[var(--color-text-primary)]"
                 onClick={markAllAsRead}
               >
                 Mark all read
@@ -244,47 +275,78 @@ export default function MessagesPage() {
           <div className="max-h-[720px] overflow-y-auto">
             {isLoading ? (
               <div className="p-5 text-sm text-[var(--color-text-secondary)]">Loading messages...</div>
-            ) : visibleConversations.length === 0 ? (
-              <div className="p-5 text-sm text-[var(--color-text-secondary)]">No messages available.</div>
+              ) : visibleConversations.length === 0 && searchableGuests.length === 0 ? (
+                <div className="p-5 text-sm text-[var(--color-text-secondary)]">No messages or guests found.</div>
             ) : (
-              visibleConversations.map((conversation) => {
-                const selected = conversation.guestId === selectedGuestId;
-                const lastMessagePreview = conversation.lastMessage.content.slice(0, 70);
-                const initials = conversation.guestName
-                  .split(' ')
-                  .map((part) => part.charAt(0))
-                  .slice(0, 2)
-                  .join('');
+                <>
+                  {visibleConversations.map((conversation) => {
+                    const selected = conversation.guestId === selectedGuestId;
+                    const lastMessagePreview = conversation.lastMessage.content.slice(0, 70);
+                    const initials = conversation.guestName
+                      .split(' ')
+                      .map((part) => part.charAt(0))
+                      .slice(0, 2)
+                      .join('');
 
-                return (
-                  <button
-                    key={conversation.guestId}
-                    type="button"
-                    onClick={() => {
-                      setSelectedGuestId(conversation.guestId);
-                    }}
-                    className={`flex w-full items-start gap-3 border-b border-border px-5 py-4 text-left transition-colors ${selected ? 'bg-primary/5' : 'hover:bg-surface-secondary'}`}
-                  >
-                    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary text-sm font-semibold text-white">
-                      {initials || '?'}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="truncate font-medium text-[var(--color-text-primary)]">{conversation.guestName}</div>
-                        <span className="text-[11px] text-[var(--color-text-secondary)]">{formatTime(conversation.lastMessage.createdAt)}</span>
-                      </div>
-                      <div className="mt-1 flex items-center justify-between gap-3">
-                        <p className="truncate text-sm text-[var(--color-text-secondary)]">{lastMessagePreview}</p>
-                        {conversation.unreadCount > 0 ? (
-                          <span className="rounded-full bg-accent px-2 py-0.5 text-[11px] font-semibold text-white">
-                            {conversation.unreadCount}
-                          </span>
-                        ) : null}
-                      </div>
-                    </div>
-                  </button>
-                );
-              })
+                    return (
+                      <button
+                        key={conversation.guestId}
+                        type="button"
+                        onClick={() => {
+                          setSelectedGuestId(conversation.guestId);
+                        }}
+                        className={`flex w-full items-start gap-3 border-b border-border px-5 py-4 text-left transition-colors ${selected ? 'bg-primary/5' : 'hover:bg-surface-secondary'}`}
+                      >
+                        <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-border bg-surface-secondary text-sm font-semibold text-[var(--color-text-primary)]">
+                          {initials || '?'}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="truncate font-medium text-[var(--color-text-primary)]">{conversation.guestName}</div>
+                            <span className="text-[11px] text-[var(--color-text-secondary)]">{formatTime(conversation.lastMessage.createdAt)}</span>
+                          </div>
+                          <div className="mt-1 flex items-center justify-between gap-3">
+                            <p className="truncate text-sm text-[var(--color-text-secondary)]">{lastMessagePreview}</p>
+                            {conversation.unreadCount > 0 ? (
+                              <span className="rounded-xl border border-border bg-surface-secondary px-2 py-0.5 text-[11px] font-semibold text-[var(--color-text-primary)]">
+                                {conversation.unreadCount}
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+
+                  {searchableGuests.map((guest) => {
+                    const selected = guest.id === selectedGuestId;
+                    const initials = guest.name
+                      .split(' ')
+                      .map((part) => part.charAt(0))
+                      .slice(0, 2)
+                      .join('');
+
+                    return (
+                      <button
+                        key={guest.id}
+                        type="button"
+                        onClick={() => setSelectedGuestId(guest.id)}
+                        className={`flex w-full items-start gap-3 border-b border-border px-5 py-4 text-left transition-colors ${selected ? 'bg-primary/5' : 'hover:bg-surface-secondary'}`}
+                      >
+                        <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-border bg-surface-secondary text-sm font-semibold text-[var(--color-text-primary)]">
+                          {initials || '?'}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="truncate font-medium text-[var(--color-text-primary)]">{guest.name}</div>
+                            <span className="text-[11px] text-[var(--color-text-secondary)]">New</span>
+                          </div>
+                          <div className="mt-1 text-sm text-[var(--color-text-secondary)]">Start a new conversation</div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </>
             )}
           </div>
         </aside>
@@ -293,24 +355,26 @@ export default function MessagesPage() {
           <div className="flex items-center justify-between border-b border-border bg-surface px-5 py-4">
             <div>
               <div className="mt-1 text-lg font-semibold text-[var(--color-text-primary)]">
-                {selectedConversation ? selectedConversation.guestName : 'Select a conversation'}
+                {selectedConversation ? selectedConversation.guestName : selectedGuest ? `${selectedGuest.firstName} ${selectedGuest.lastName}`.trim() : 'Select a conversation'}
               </div>
               <div className="text-sm text-[var(--color-text-secondary)]">
                 {selectedConversation
                   ? `${formatDayTime(selectedConversation.lastMessage.createdAt)} · Guest ID ${selectedConversation.guestId}`
-                  : 'Choose a guest to continue the conversation.'}
+                  : selectedGuestId
+                    ? `Guest ID ${selectedGuestId}`
+                    : 'Choose a guest to continue the conversation.'}
               </div>
             </div>
-            <div className="inline-flex items-center gap-2 rounded-full bg-surface-secondary px-3 py-1 text-xs font-medium text-[var(--color-text-secondary)]">
+            <div className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface-secondary px-3 py-1 text-xs font-medium text-[var(--color-text-secondary)]">
               <CheckCheckIcon className="h-4 w-4" />
               Real time
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto bg-[linear-gradient(180deg,#f8f5ef_0%,#fffdf8_100%)] p-5">
+          <div className="flex-1 overflow-y-auto bg-surface p-5">
             {!selectedConversation ? (
               <div className="flex h-full min-h-[420px] items-center justify-center text-center text-[var(--color-text-secondary)]">
-                Pick a guest from the inbox to view the thread.
+                {selectedGuestId ? 'No messages yet. Send the first message to start this thread.' : 'Pick a guest from the inbox to view the thread.'}
               </div>
             ) : (
               <div className="space-y-4">
@@ -341,13 +405,13 @@ export default function MessagesPage() {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
               <textarea
                 className="input-field min-h-28 flex-1 resize-none"
-                placeholder={selectedConversation ? 'Type your message...' : 'Select a conversation to start messaging...'}
+                placeholder={selectedGuestId ? 'Type your message...' : 'Select a conversation to start messaging...'}
                 value={draft}
                 onChange={(event) => setDraft(event.target.value)}
-                disabled={!selectedConversation}
+                disabled={!selectedGuestId}
                 required
               />
-              <button type="submit" disabled={isSending || !selectedConversation} className="btn-primary inline-flex items-center justify-center gap-2 disabled:opacity-50 sm:min-w-36">
+              <button type="submit" disabled={isSending || !selectedGuestId} className="btn-primary inline-flex items-center justify-center gap-2 disabled:opacity-50 sm:min-w-36">
                 <SendIcon className="h-4 w-4" />
                 {isSending ? 'Sending...' : 'Send'}
               </button>
