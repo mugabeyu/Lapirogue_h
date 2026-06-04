@@ -47,7 +47,7 @@ const STATUS_STYLES: Record<CalendarBooking['displayStatus'], string> = {
   'checked-in': 'bg-surface-secondary text-[var(--color-text-primary)] border border-border',
   pending: 'bg-surface-secondary text-[var(--color-text-primary)] border border-border',
   departing: 'bg-surface-secondary text-[var(--color-text-primary)] border border-border',
-  cancelled: 'bg-surface-secondary text-[var(--color-text-secondary)] border border-border',
+  cancelled: 'bg-[var(--color-warning)] text-white border border-[var(--color-warning)]',
 };
 
 const LEGEND = [

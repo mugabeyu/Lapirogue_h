@@ -12,7 +12,7 @@ export function LabeledTable({ caption, summary, children, footer, className = '
   const tableId = caption.toLowerCase().replace(/\s+/g, '-');
 
   return (
-    <div className={className}>
+    <div className={`table-compact ${className}`}>
       {summary ? (
         <p id={`${tableId}-summary`} className="sr-only">
           {summary}

@@ -224,21 +224,20 @@ export default function RoomsPage() {
             })}
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-left">
+          <div className="table-wrap">
+            <table className="table-compact w-full border-collapse text-left">
               <thead>
                 <tr className="border-b border-border text-xs uppercase tracking-wider text-[var(--color-text-secondary)]">
-                  <th className="px-6 py-4 font-medium">Photo</th>
-                  <th className="px-6 py-4 font-medium">Room</th>
-                  <th className="px-6 py-4 font-medium">Type</th>
-                  <th className="px-6 py-4 font-medium">Floor</th>
-                  <th className="px-6 py-4 font-medium">Capacity</th>
-                  <th className="px-6 py-4 font-medium">Price/Night</th>
-                  <th className="px-6 py-4 font-medium">Status</th>
-                  <th className="px-6 py-4 text-right font-medium">Actions</th>
+                  <th scope="col" className="px-6 py-4 font-medium">Room</th>
+                  <th scope="col" className="px-6 py-4 font-medium">Type</th>
+                  <th scope="col" className="px-6 py-4 font-medium">Floor</th>
+                  <th scope="col" className="px-6 py-4 font-medium">Capacity</th>
+                  <th scope="col" className="px-6 py-4 font-medium">Price/Night</th>
+                  <th scope="col" className="px-6 py-4 font-medium">Status</th>
+                  <th scope="col" className="px-6 py-4 text-right font-medium">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-sand-200">
+              <tbody className="divide-y divide-border">
                 {!isLoading && filteredRows.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="px-6 py-12 text-center text-sm text-[var(--color-text-secondary)]">

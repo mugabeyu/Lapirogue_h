@@ -14,8 +14,8 @@ export default function StaffPage() {
         entityName="staff members"
         tableCaption="Staff directory"
         columns={[
+          { key: 'name', label: 'Full name', type: 'image' },
           { key: 'employeeCode', label: 'Employee ID' },
-          { key: 'name', label: 'Full name' },
           { key: 'department', label: 'Department' },
           { key: 'position', label: 'Job title' },
           { key: 'email', label: 'Work email' },

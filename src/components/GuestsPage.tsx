@@ -100,7 +100,7 @@ export default function GuestsPage() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="table-wrap">
           <LabeledTable
             caption="Registered guests"
             footer={
@@ -111,9 +111,8 @@ export default function GuestsPage() {
 
             <thead>
               <tr className="border-b border-border text-xs uppercase tracking-wider text-[var(--color-text-secondary)]">
-                <th scope="col" className="px-6 py-4 font-medium text-left">Photo</th>
+                <th scope="col" className="px-6 py-4 font-medium text-left">Guest</th>
                 <th scope="col" className="px-6 py-4 font-medium text-left">Guest ID</th>
-                <th scope="col" className="px-6 py-4 font-medium text-left">Full name</th>
                 <th scope="col" className="px-6 py-4 font-medium text-left">Email</th>
                 <th scope="col" className="px-6 py-4 font-medium text-left">Check-in</th>
                 <th scope="col" className="px-6 py-4 font-medium text-left">Check-out</th>
@@ -124,21 +123,23 @@ export default function GuestsPage() {
             <tbody className="divide-y divide-border">
               {!isLoading && filteredRows.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-sm text-[var(--color-text-secondary)]">No guests found. Register a guest to get started.</td>
+                  <td colSpan={6} className="px-6 py-12 text-center text-sm text-[var(--color-text-secondary)]">No guests found. Register a guest to get started.</td>
                 </tr>
               )}
 
               {paginatedRows.map((row) => (
                 <tr key={row.id} className="cursor-pointer transition-colors hover:bg-surface-secondary/50" onClick={() => router.push(`/guests/${row.id}`)}>
                   <td className="px-6 py-4 text-sm text-[var(--color-text-primary)]">
-                    {row.imagePath ? (
-                      <img src={row.imagePath} alt={`${row.firstName} ${row.lastName}`} className="h-12 w-12 rounded-full border border-border object-cover" />
-                    ) : (
-                      <div className="flex h-12 w-12 items-center justify-center rounded-full border border-border bg-surface-secondary text-xs font-semibold text-[var(--color-text-secondary)]">{(row.firstName?.[0] ?? '') + (row.lastName?.[0] ?? '')}</div>
-                    )}
+                    <div className="flex items-center gap-3">
+                      {row.imagePath ? (
+                        <img src={row.imagePath} alt={`${row.firstName} ${row.lastName}`} className="rounded-full border border-border object-cover" />
+                      ) : (
+                        <span className="flex items-center justify-center rounded-full border border-border bg-surface-secondary text-xs font-semibold text-[var(--color-text-secondary)]">{(row.firstName?.[0] ?? '') + (row.lastName?.[0] ?? '')}</span>
+                      )}
+                      <span className="font-medium text-[var(--color-text-primary)]">{row.firstName} {row.lastName}</span>
+                    </div>
                   </td>
                   <td className="px-6 py-4 text-sm font-medium text-[var(--color-primary)]">{row.guestId}</td>
-                  <td className="px-6 py-4 text-sm text-[var(--color-text-primary)]">{row.firstName} {row.lastName}</td>
                   <td className="px-6 py-4 text-sm text-[var(--color-text-primary)]">{row.email ?? '-'}</td>
                   <td className="px-6 py-4 text-sm text-[var(--color-text-primary)]">{formatDate(row.checkIn)}</td>
                   <td className="px-6 py-4 text-sm text-[var(--color-text-primary)]">{formatDate(row.checkOut)}</td>
@@ -149,7 +150,7 @@ export default function GuestsPage() {
           </LabeledTable>
         </div>
         {!isLoading && filteredRows.length > PAGE_SIZE ? (
-          <div className="flex items-center justify-between border-t border-border px-4 py-3 text-sm text-[var(--color-text-secondary)]">
+          <div className="table-footer">
             <span>Page {page} of {totalPages}</span>
             <div className="flex items-center gap-2">
               <button type="button" className="btn-secondary" disabled={page <= 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>

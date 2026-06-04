@@ -141,6 +141,57 @@
   .custom-scrollbar {
     scrollbar-width: thin;
   }
+  .table-wrap {
+    overflow-x: auto;
+    border-radius: var(--radius-12);
+  }
+  .table-compact th,
+  .table-compact td {
+    padding: 10px 14px !important;
+    vertical-align: middle;
+  }
+  .table-compact thead th {
+    font-weight: 500 !important;
+    font-size: 12px !important;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-text-secondary);
+  }
+  .table-compact tbody td {
+    font-size: 14px;
+  }
+  .table-compact .name-with-avatar {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .table-compact .name-with-avatar img,
+  .table-compact .name-with-avatar .avatar-fallback {
+    width: 40px;
+    height: 40px;
+    border-radius: 9999px;
+    border: 1px solid var(--color-border);
+    object-fit: cover;
+  }
+  .table-compact .name-with-avatar .avatar-fallback {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-surface-secondary);
+    color: var(--color-text-secondary);
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .table-footer {
+    border-top: 1px solid var(--color-border);
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 14px;
+    color: var(--color-text-secondary);
+  }
   .btn-accent {
     background-color: #fb6f92;
     color: #fff;

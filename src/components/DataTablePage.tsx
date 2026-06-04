@@ -68,7 +68,7 @@ export default function DataTablePage({
       <PageHeader title={title} subtitle={subtitle} />
 
       <div className="card">
-        <div className="px-4 py-4 border-b border-border">
+        <div className="px-4 py-4">
           <label htmlFor={`${title}-search`} className="sr-only">
             Search {rowLabel}
           </label>
@@ -85,7 +85,7 @@ export default function DataTablePage({
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="table-wrap">
           <LabeledTable
             caption={caption}
             footer={
@@ -119,12 +119,13 @@ export default function DataTablePage({
                       <td key={column.key} className="px-6 py-4 text-sm text-[var(--color-text-primary)]">
                         {column.type === 'image' ? (
                           value ? (
-                            <div className="flex items-center gap-3">
+                            <div className="name-with-avatar">
                               <img
                                 src={String(value)}
                                 alt={column.label}
-                                className="h-12 w-12 rounded-xl border border-border object-cover"
+                                className="rounded-full border border-border object-cover"
                               />
+                              <span className="font-medium text-[var(--color-text-primary)]">{String(row[column.key] ?? '')}</span>
                             </div>
                           ) : (
                             <span className="text-[var(--color-text-secondary)]">-</span>
@@ -143,7 +144,7 @@ export default function DataTablePage({
           </LabeledTable>
         </div>
         {!isLoading && rows.length > PAGE_SIZE ? (
-          <div className="flex items-center justify-between border-t border-border px-4 py-3 text-sm text-[var(--color-text-secondary)]">
+          <div className="table-footer">
             <span>Page {page} of {totalPages}</span>
             <div className="flex items-center gap-2">
               <button type="button" className="btn-secondary" disabled={page <= 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>

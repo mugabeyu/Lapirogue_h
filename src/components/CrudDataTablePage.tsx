@@ -174,7 +174,7 @@ export default function CrudDataTablePage({
       />
 
       <div className="card">
-        <div className="px-4 py-4 border-b border-border">
+        <div className="px-4 py-4">
           <label htmlFor={`${title}-search`} className="sr-only">
             Search {rowLabel}
           </label>
@@ -191,7 +191,7 @@ export default function CrudDataTablePage({
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="table-wrap">
           <LabeledTable
             caption={caption}
             footer={
@@ -234,16 +234,22 @@ export default function CrudDataTablePage({
                       <td key={column.key} className="px-6 py-4 text-sm text-[var(--color-text-primary)]">
                         {column.type === 'image' ? (
                           value ? (
-                            <div className="flex items-center gap-3">
-                              <img
-                                src={String(value)}
-                                alt={column.label}
-                                className="h-12 w-12 rounded-xl border border-border object-cover"
-                              />
+                            <div className="name-with-avatar">
+                              <img src={String(value)} alt={String(row[column.key] ?? '')} className="h-10 w-10 rounded-full border border-border object-cover" />
+                              <span className="font-medium text-[var(--color-text-primary)]">{String(row[column.key] ?? '')}</span>
                             </div>
                           ) : (
                             <span className="text-[var(--color-text-secondary)]">-</span>
                           )
+                        ) : column.key === 'name' ? (
+                          <div className="flex items-center gap-3">
+                            {(row as Record<string, unknown>).imagePath ? (
+                              <img src={String((row as Record<string, unknown>).imagePath)} alt={String(value)} className="rounded-full border border-border object-cover" />
+                            ) : (
+                              <span className="flex items-center justify-center rounded-full border border-border bg-surface-secondary text-xs font-semibold text-[var(--color-text-secondary)]">{String(value ?? '')[0]}</span>
+                            )}
+                            <span className="font-medium text-[var(--color-text-primary)]">{formatTableValue(value, column.type)}</span>
+                          </div>
                         ) : column.type === 'status' ? (
                           <StatusBadge status={String(value ?? '')} />
                         ) : (
@@ -291,7 +297,7 @@ export default function CrudDataTablePage({
           </LabeledTable>
         </div>
         {!isLoading && rows.length > PAGE_SIZE ? (
-          <div className="flex items-center justify-between border-t border-border px-4 py-3 text-sm text-[var(--color-text-secondary)]">
+          <div className="table-footer">
             <span>Page {page} of {totalPages}</span>
             <div className="flex items-center gap-2">
               <button type="button" className="btn-secondary" disabled={page <= 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>
