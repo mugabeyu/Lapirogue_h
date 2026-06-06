@@ -202,98 +202,96 @@ export default function CrudDataTablePage({
           >
               <thead>
               <tr className="border-b border-border text-xs uppercase tracking-wider text-[var(--color-text-secondary)]">
-                {columns.map((column) => (
-                  <th key={column.key} scope="col" className="px-6 py-4 font-medium">
+                {columns.map((column, index) => (
+                  <th key={column.key} scope="col" className={`${index > 0 ? 'border-l border-border' : ''} px-6 py-4 font-medium`}>
                     {column.label}
                   </th>
                 ))}
                 {!disableEdit || !disableDelete ? (
-                  <th scope="col" className="px-6 py-4 text-right font-medium">
-                    Actions
-                  </th>
+                  <th scope="col" className="border-l border-border px-6 py-4 text-right font-medium">Actions</th>
                 ) : null}
               </tr>
             </thead>
-            <tbody className="divide-y divide-border">
-              {!isLoading && rows.length === 0 && (
-                <tr>
-                  <td colSpan={columns.length + (disableEdit && disableDelete ? 0 : 1)} className="px-6 py-12 text-center text-sm text-[var(--color-text-secondary)]">
-                    {emptyText}
-                  </td>
-                </tr>
-              )}
-              {paginatedRows.map((row, index) => (
-                <tr
-                  key={String(row.id ?? index)}
-                  className={`hover:bg-surface-secondary/50 ${rowHrefBase ? 'cursor-pointer' : ''}`}
-                  onClick={rowHrefBase && row.id != null ? () => router.push(`${rowHrefBase}/${String(row.id)}`) : undefined}
-                >
-                  {columns.map((column) => {
-                    const value = getTableValue(row, column.key);
-                    return (
-                      <td key={column.key} className="px-6 py-4 text-sm text-[var(--color-text-primary)]">
-                        {column.type === 'image' ? (
-                          value ? (
-                            <div className="name-with-avatar">
-                              <img src={String(value)} alt={String(row[column.key] ?? '')} className="h-10 w-10 rounded-full border border-border object-cover" />
-                              <span className="font-medium text-[var(--color-text-primary)]">{String(row[column.key] ?? '')}</span>
-                            </div>
-                          ) : (
-                            <span className="text-[var(--color-text-secondary)]">-</span>
-                          )
-                        ) : column.key === 'name' ? (
-                          <div className="flex items-center gap-3">
-                            {(row as Record<string, unknown>).imagePath ? (
-                              <img src={String((row as Record<string, unknown>).imagePath)} alt={String(value)} className="rounded-full border border-border object-cover" />
-                            ) : (
-                              <span className="flex items-center justify-center rounded-full border border-border bg-surface-secondary text-xs font-semibold text-[var(--color-text-secondary)]">{String(value ?? '')[0]}</span>
-                            )}
-                            <span className="font-medium text-[var(--color-text-primary)]">{formatTableValue(value, column.type)}</span>
-                          </div>
-                        ) : column.type === 'status' ? (
-                          <StatusBadge status={String(value ?? '')} />
-                        ) : (
-                          formatTableValue(value, column.type)
-                        )}
-                      </td>
-                    );
-                  })}
-                  {!disableEdit || !disableDelete ? (
-                    <td className="px-6 py-4 text-right">
-                      <div className="inline-flex gap-2">
-                        {!disableEdit && (
-                          <button
-                            type="button"
-                            className="rounded-lg p-2 text-[var(--color-text-secondary)] hover:bg-surface-secondary hover:text-[var(--color-primary)]"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              setEditRow(row);
-                              setIsModalOpen(true);
-                            }}
-                            aria-label={`Edit ${rowLabel}`}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </button>
-                        )}
-                        {!disableDelete && entityType !== 'payment' && (
-                        <button
-                            type="button"
-                            className="rounded-lg p-2 text-[var(--color-text-secondary)] hover:bg-danger/10 hover:text-[var(--color-danger)]"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            setDeleteRow(row);
-                          }}
-                          aria-label={`Delete ${rowLabel}`}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                        )}
-                      </div>
+              <tbody>
+                {!isLoading && rows.length === 0 && (
+                  <tr className="border-b border-border">
+                    <td colSpan={columns.length + (disableEdit && disableDelete ? 0 : 1)} className="px-6 py-12 text-center text-sm text-[var(--color-text-secondary)]">
+                      {emptyText}
                     </td>
-                  ) : null}
-                </tr>
-              ))}
-            </tbody>
+                  </tr>
+                )}
+                {paginatedRows.map((row, index) => (
+                  <tr
+                    key={String(row.id ?? index)}
+                    className={`border-b border-border hover:bg-surface-secondary/50 ${rowHrefBase ? 'cursor-pointer' : ''}`}
+                    onClick={rowHrefBase && row.id != null ? () => router.push(`${rowHrefBase}/${String(row.id)}`) : undefined}
+                  >
+                    {columns.map((column, idx) => {
+                      const value = getTableValue(row, column.key);
+                      return (
+                        <td key={column.key} className={`${idx > 0 ? 'border-l border-border' : ''} px-6 py-4 text-sm text-[var(--color-text-primary)]`}>
+                          {column.key === 'name' ? (
+                            <div className="flex items-center gap-3">
+                              {(row as Record<string, unknown>).imagePath ? (
+                                <img src={String((row as Record<string, unknown>).imagePath)} alt={String(value)} className="rounded-full border border-border object-cover" />
+                              ) : (
+                                <span className="flex items-center justify-center rounded-full border border-border bg-surface-secondary text-xs font-semibold text-[var(--color-text-secondary)]">{String(value ?? '')[0]}</span>
+                              )}
+                              <span className="font-medium text-[var(--color-text-primary)]">{formatTableValue(value, column.type)}</span>
+                            </div>
+                          ) : column.type === 'image' ? (
+                            value ? (
+                              <div className="name-with-avatar">
+                                <img src={String(value)} alt={String(row[column.key] ?? '')} className="h-10 w-10 rounded-full border border-border object-cover" />
+                                <span className="font-medium text-[var(--color-text-primary)]">{String(row[column.key] ?? '')}</span>
+                              </div>
+                            ) : (
+                              <span className="text-[var(--color-text-secondary)]">-</span>
+                            )
+                          ) : column.type === 'status' ? (
+                            <StatusBadge status={String(value ?? '')} />
+                          ) : (
+                            formatTableValue(value, column.type)
+                          )}
+                        </td>
+                      );
+                    })}
+                    {!disableEdit || !disableDelete ? (
+                      <td className="border-l border-border px-6 py-4 text-right">
+                        <div className="inline-flex gap-2">
+                          {!disableEdit && (
+                            <button
+                              type="button"
+                              className="rounded-lg p-2 text-[var(--color-text-secondary)] hover:bg-surface-secondary hover:text-[var(--color-primary)]"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setEditRow(row);
+                                setIsModalOpen(true);
+                              }}
+                              aria-label={`Edit ${rowLabel}`}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </button>
+                          )}
+                            {!disableDelete && entityType !== 'payment' && (
+                            <button
+                              type="button"
+                              className="rounded-lg p-2 text-[var(--color-text-secondary)] hover:bg-danger/10 hover:text-[var(--color-danger)]"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setDeleteRow(row);
+                              }}
+                              aria-label={`Delete ${rowLabel}`}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    ) : null}
+                  </tr>
+                ))}
+              </tbody>
           </LabeledTable>
         </div>
         {!isLoading && rows.length > PAGE_SIZE ? (

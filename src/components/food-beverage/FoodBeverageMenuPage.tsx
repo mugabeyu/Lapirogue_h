@@ -36,7 +36,7 @@ function MenuItemCard({
   const prepLabel = formatPrepTime(item.preparationMinutes);
 
   return (
-    <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-surface transition-shadow">
+    <article className="flex h-full flex-col overflow-hidden rounded-xl border border-card-border bg-surface">
       <div className="relative aspect-[4/3] bg-surface-secondary">
         {item.imagePath ? (
           <img src={item.imagePath} alt="" className="h-full w-full object-cover" />
@@ -50,7 +50,7 @@ function MenuItemCard({
             </span>
           </div>
         )}
-        <span className="absolute left-3 top-3 rounded-full bg-surface px-2.5 py-1 text-xs font-medium text-[var(--color-text-primary)] shadow-sm">
+        <span className="absolute left-3 top-3 rounded-full bg-surface px-2.5 py-1 text-xs font-medium text-[var(--color-text-primary)]">
           {item.category}
         </span>
       </div>
@@ -72,11 +72,11 @@ function MenuItemCard({
           </p>
         )}
 
-        <div className="mt-auto flex items-center justify-between border-t border-border pt-3">
+        <div className="mt-auto flex items-center justify-between border-t border-card-border pt-3">
           <label className="flex cursor-pointer items-center gap-2 text-sm text-[var(--color-text-primary)]">
                 <span
                 className={`relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors ${
-                item.isAvailable ? 'bg-primary' : 'bg-surface-secondary'
+                item.isAvailable ? 'bg-[var(--color-button-primary)]' : 'bg-surface-secondary'
               }`}
             >
               <input
@@ -86,7 +86,7 @@ function MenuItemCard({
                 onChange={onToggleAvailability}
               />
               <span
-                className={`absolute top-0.5 h-5 w-5 rounded-full bg-surface shadow transition-transform ${
+                className={`absolute top-0.5 h-5 w-5 rounded-full bg-surface transition-transform ${
                   item.isAvailable ? 'left-[22px]' : 'left-0.5'
                 }`}
               />
@@ -96,7 +96,7 @@ function MenuItemCard({
           <button
             type="button"
             onClick={onEdit}
-            className="rounded-lg p-2 text-[var(--color-text-secondary)] transition-colors hover:bg-surface-secondary hover:text-[var(--color-primary)]"
+            className="rounded-xl p-2 text-[var(--color-text-secondary)] transition-colors hover:bg-surface-secondary hover:text-[var(--color-nav-active)]"
             aria-label={`Edit ${item.name}`}
           >
             <Pencil className="h-4 w-4" />
@@ -179,7 +179,7 @@ export default function FoodBeverageMenuPage() {
         />
       </div>
 
-      <div className="flex flex-wrap gap-6 border-b border-border">
+      <div className="flex flex-wrap gap-6 border-b border-card-border">
         {uniqueCategories.map((item) => {
           const active = item === category;
           return (
@@ -189,8 +189,8 @@ export default function FoodBeverageMenuPage() {
               onClick={() => setCategory(item)}
               className={`border-b-2 pb-3 text-sm font-medium transition-colors ${
                 active
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
+                  ? 'border-[var(--color-button-primary)] text-[var(--color-button-primary)]'
+                  : 'border-transparent text-[var(--color-text-secondary)] hover:text-[var(--color-nav-active)]'
               }`}
             >
               {item}
@@ -202,9 +202,9 @@ export default function FoodBeverageMenuPage() {
       {isLoading && <p className="text-sm text-[var(--color-text-secondary)]">Loading menu...</p>}
 
       {!isLoading && items.length === 0 && (
-        <div className="card rounded-2xl border-dashed border-border px-6 py-16 text-center">
+        <div className="card rounded-xl border-dashed border-card-border px-6 py-16 text-center">
           <p className="text-[var(--color-text-secondary)]">No menu items found.</p>
-          <button type="button" onClick={openCreate} className="mt-4 text-sm font-semibold text-[var(--color-primary)]">
+          <button type="button" onClick={openCreate} className="mt-4 text-sm font-semibold text-[var(--color-button-primary)]">
             Add your first item →
           </button>
         </div>

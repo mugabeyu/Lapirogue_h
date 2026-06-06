@@ -110,7 +110,7 @@ export default function SustainabilityDashboardPage() {
         {statCards.map((card) => {
           const Icon = card.icon;
           return (
-            <div key={card.label} className="rounded-2xl border border-border bg-surface p-5 shadow-sm">
+            <div key={card.label} className="rounded-xl border border-border bg-surface p-5 shadow-sm">
               <div className="flex items-start justify-between gap-3">
                 <Icon className="h-5 w-5 text-[var(--color-text-primary)]" strokeWidth={2} />
                 <TrendBadge value={card.trend} />
@@ -128,7 +128,7 @@ export default function SustainabilityDashboardPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(280px,1fr)_minmax(0,2fr)]">
-        <section className="rounded-2xl border border-border bg-surface p-6 shadow-sm" aria-labelledby="guest-leaderboard-heading">
+        <section className="rounded-xl border border-border bg-surface p-6 shadow-sm" aria-labelledby="guest-leaderboard-heading">
           <h2 id="guest-leaderboard-heading" className="font-display text-lg font-semibold text-ink-900">
             Guest Leaderboard
           </h2>
@@ -154,7 +154,7 @@ export default function SustainabilityDashboardPage() {
         </section>
 
         <div className="space-y-6">
-          <section className="rounded-2xl border border-border bg-surface p-6 shadow-sm" aria-labelledby="activity-distribution-heading">
+          <section className="rounded-xl border border-border bg-surface p-6 shadow-sm" aria-labelledby="activity-distribution-heading">
             <h2 id="activity-distribution-heading" className="font-display text-lg font-semibold text-ink-900">
               Points Distribution by Activity
             </h2>
@@ -198,7 +198,7 @@ export default function SustainabilityDashboardPage() {
             )}
           </section>
 
-          <section className="rounded-2xl border border-border bg-surface p-6 shadow-sm" aria-labelledby="monthly-trend-heading">
+          <section className="rounded-xl border border-border bg-surface p-6 shadow-sm" aria-labelledby="monthly-trend-heading">
             <h2 id="monthly-trend-heading" className="font-display text-lg font-semibold text-[var(--color-text-primary)]">
               Monthly Eco-Points Trend
             </h2>

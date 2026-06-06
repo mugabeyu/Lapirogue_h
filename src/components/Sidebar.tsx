@@ -110,14 +110,13 @@ export default function Sidebar() {
     }
   };
 
-  return (
+return (
     <aside
-      className={`fixed top-0 inset-y-0 left-0 z-20 flex flex-col bg-[var(--color-info)] text-[var(--color-text-primary)] border-r border-border transition-[width] duration-200 ease-in-out ${
+      className={`fixed top-0 inset-y-0 left-0 z-20 flex flex-col bg-[var(--color-sidebar-bg)] text-white border-r border-[var(--color-sidebar-border)] transition-[width] duration-200 ease-in-out ${
         collapsed ? 'w-[72px]' : 'w-[260px]'
       }`}
-      style={{ backgroundColor: 'var(--color-info)' }}
     >
-      <div className={`border-b border-border flex min-h-20 items-center py-4 ${collapsed ? 'px-3' : 'px-6'}`}>
+      <div className={`border-b border-[var(--color-sidebar-border)] flex min-h-20 items-center py-4 ${collapsed ? 'px-3' : 'px-6'}`}>
         <div className={`flex items-center gap-3 ${collapsed ? 'flex-col' : ''}`}>
           <img
             src="/lapiroguelogo.jpg"
@@ -126,8 +125,8 @@ export default function Sidebar() {
           />
           {!collapsed && (
             <div className="min-w-0 flex-1">
-               <h1 className="font-heading text-2xl tracking-wide text-[var(--color-primary)]">La Pirogue</h1>
-              <p className="mt-1 text-sm uppercase tracking-widest text-meta text-[var(--color-text-secondary)]">Hotel Operations</p>
+               <h1 className="font-heading text-2xl tracking-wide text-white">La Pirogue</h1>
+              <p className="mt-1 text-sm uppercase tracking-widest text-white/70">Hotel Operations</p>
             </div>
           )}
         </div>
@@ -140,22 +139,22 @@ export default function Sidebar() {
             const exactActive = pathname === item.path;
             return (
               <li key={item.path}>
-                <Link
-                  href={item.path}
-                  title={collapsed ? item.label : undefined}
-                  className={`flex items-center rounded-lg text-sm font-semibold transition-all duration-200 ${
-                    collapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2.5'
-                  } ${
-                     exactActive
-                        ? 'bg-active text-white'
+<Link
+                    href={item.path}
+                    title={collapsed ? item.label : undefined}
+                    className={`flex items-center rounded-xl text-sm font-semibold transition-all duration-200 ${
+                      collapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2.5'
+          } ${
+                      exactActive
+                         ? 'bg-[var(--color-nav-active)] text-white'
                       : sectionActive
-                        ? 'bg-white/20 shadow-sm text-white'
-                        : 'text-white/90 hover:bg-white/10 hover:text-white'
-                  }`}
-                >
-                  <item.icon className="h-5 w-5 shrink-0" strokeWidth={1.5} />
-                  {!collapsed && <span className="truncate">{item.label}</span>}
-                </Link>
+                         ? 'bg-[var(--color-nav-active)]/20 text-white'
+                      : 'text-white/80 hover:bg-[var(--color-nav-active)] hover:text-white'
+                      }`}
+                  >
+                    <item.icon className="h-5 w-5 shrink-0 text-icon-body" strokeWidth={1.5} />
+                    {!collapsed && <span className="truncate">{item.label}</span>}
+                  </Link>
 
                 {!collapsed && (
                   <AnimatePresence initial={false}>
@@ -169,15 +168,15 @@ export default function Sidebar() {
                       >
                         {item.children.map((child) => (
                           <li key={child.path}>
-                            <Link
-                              href={child.path}
-                              className={`flex items-center gap-3 rounded-lg py-2 pl-11 pr-3 text-xs font-medium transition-all duration-200 ${
-                                pathname === child.path
-                                  ? 'text-white font-semibold'
-                                  : 'text-white/80 hover:text-white'
-                              }`}
-                            >
-                              {child.label}
+<Link
+                                href={child.path}
+                                className={`flex items-center gap-3 rounded-xl py-2 pl-11 pr-3 text-xs font-medium transition-all duration-200 ${
+                                    pathname === child.path
+                                      ? 'text-[var(--color-nav-active)] font-semibold'
+                                      : 'text-white/70 hover:text-[var(--color-nav-active)]'
+                                }`}
+                              >
+                                {child.label}
                             </Link>
                           </li>
                         ))}
@@ -191,17 +190,17 @@ export default function Sidebar() {
         </ul>
       </nav>
 
-      <div className={`border-t border-border ${collapsed ? 'p-2' : 'p-4'}`}>
+      <div className={`border-t border-[var(--color-sidebar-border)] ${collapsed ? 'p-2' : 'p-4'}`}>
         <button
           type="button"
           onClick={handleLogout}
           disabled={isLoggingOut}
           title={collapsed ? 'Logout' : undefined}
-          className={`flex w-full items-center align-content-center rounded-lg text-bold font-medium  text-[var(--color-text-secondary)] ${
+          className={`flex w-full items-center align-content-center rounded-xl font-semibold text-white/90 ${
             collapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2.5'
-          } hover:bg-danger hover:text-[var(--color-text-primary)]`}
+          } hover:bg-[var(--color-danger)] hover:text-white transition-colors`}
         >
-          <LogOutIcon className="h-5 w-5 shrink-0" strokeWidth={1.5} />
+          <LogOutIcon className="h-5 w-5 shrink-0 text-icon-body" strokeWidth={1.5} />
           {!collapsed && <span>{isLoggingOut ? 'Logging out...' : 'Logout'}</span>}
         </button>
       </div>

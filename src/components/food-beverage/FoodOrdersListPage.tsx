@@ -149,36 +149,36 @@ export default function FoodOrdersListPage() {
             <thead>
               <tr className="border-b border-border text-xs uppercase tracking-wider text-[var(--color-text-secondary)]">
                 <th scope="col" className="px-5 py-4 font-medium">Order ID</th>
-                <th scope="col" className="px-5 py-4 font-medium">Guest & room</th>
-                <th scope="col" className="px-5 py-4 font-medium">Items ordered</th>
-                <th scope="col" className="px-5 py-4 font-medium">Order total</th>
-                <th scope="col" className="px-5 py-4 font-medium">Kitchen status</th>
-                <th scope="col" className="px-5 py-4 font-medium">Time placed</th>
+                <th scope="col" className="border-l border-border px-5 py-4 font-medium">Guest & room</th>
+                <th scope="col" className="border-l border-border px-5 py-4 font-medium">Items ordered</th>
+                <th scope="col" className="border-l border-border px-5 py-4 font-medium">Order total</th>
+                <th scope="col" className="border-l border-border px-5 py-4 font-medium">Kitchen status</th>
+                <th scope="col" className="border-l border-border px-5 py-4 font-medium">Time placed</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border">
+            <tbody>
               {isLoading && (
-                <tr>
+                <tr className="border-b border-border">
                   <td colSpan={6} className="px-5 py-12 text-center text-[var(--color-text-secondary)]">Loading orders...</td>
                 </tr>
               )}
               {!isLoading && orders.length === 0 && (
-                <tr>
+                <tr className="border-b border-border">
                   <td colSpan={6} className="px-5 py-12 text-center text-[var(--color-text-secondary)]">No orders found.</td>
                 </tr>
               )}
               {paginatedOrders.map((order) => {
                 const statusKey = order.status ?? 'PENDING';
                 return (
-                  <tr key={order.id} className="hover:bg-surface-secondary/50">
+                  <tr key={order.id} className="border-b border-border hover:bg-surface-secondary/50">
                     <td className="px-5 py-4 font-medium text-[var(--color-text-primary)]">{order.orderId ?? order.id.slice(0, 8)}</td>
-                    <td className="px-5 py-4">
+                    <td className="border-l border-border px-5 py-4">
                       <p className="font-medium text-[var(--color-text-primary)]">{order.guest ?? 'Walk-in'}</p>
                       <p className="text-xs text-[var(--color-text-secondary)]">{order.room ? `Room ${order.room}` : '—'}</p>
                     </td>
-                    <td className="px-5 py-4 text-[var(--color-text-primary)]">{order.itemsSummary}</td>
-                    <td className="px-5 py-4 font-medium text-[var(--color-text-primary)]">{formatMenuPrice(order.total)}</td>
-                    <td className="px-5 py-4">
+                    <td className="border-l border-border px-5 py-4 text-[var(--color-text-primary)]">{order.itemsSummary}</td>
+                    <td className="border-l border-border px-5 py-4 font-medium text-[var(--color-text-primary)]">{formatMenuPrice(order.total)}</td>
+                    <td className="border-l border-border px-5 py-4">
                       <span
                         className={`inline-flex rounded-xl px-2.5 py-1 text-xs font-semibold uppercase ${
                           STATUS_STYLES[statusKey] ?? STATUS_STYLES.PENDING
@@ -187,7 +187,7 @@ export default function FoodOrdersListPage() {
                         {STATUS_LABELS[statusKey] ?? statusKey}
                       </span>
                     </td>
-                    <td className="px-5 py-4 text-[var(--color-text-secondary)]">{order.time}</td>
+                    <td className="border-l border-border px-5 py-4 text-[var(--color-text-secondary)]">{order.time}</td>
                   </tr>
                 );
               })}

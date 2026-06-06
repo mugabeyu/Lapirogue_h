@@ -111,24 +111,24 @@ export default function GuestsPage() {
 
             <thead>
               <tr className="border-b border-border text-xs uppercase tracking-wider text-[var(--color-text-secondary)]">
-                <th scope="col" className="px-6 py-4 font-medium text-left">Guest</th>
-                <th scope="col" className="px-6 py-4 font-medium text-left">Guest ID</th>
-                <th scope="col" className="px-6 py-4 font-medium text-left">Email</th>
-                <th scope="col" className="px-6 py-4 font-medium text-left">Check-in</th>
-                <th scope="col" className="px-6 py-4 font-medium text-left">Check-out</th>
-                <th scope="col" className="px-6 py-4 font-medium text-left">Stay status</th>
+                <th scope="col" className="px-6 py-4 font-medium">Guest</th>
+                <th scope="col" className="border-l border-border px-6 py-4 font-medium">Guest ID</th>
+                <th scope="col" className="border-l border-border px-6 py-4 font-medium">Email</th>
+                <th scope="col" className="border-l border-border px-6 py-4 font-medium">Check-in</th>
+                <th scope="col" className="border-l border-border px-6 py-4 font-medium">Check-out</th>
+                <th scope="col" className="border-l border-border px-6 py-4 font-medium">Stay status</th>
               </tr>
             </thead>
 
-            <tbody className="divide-y divide-border">
+            <tbody>
               {!isLoading && filteredRows.length === 0 && (
-                <tr>
+                <tr className="border-b border-border">
                   <td colSpan={6} className="px-6 py-12 text-center text-sm text-[var(--color-text-secondary)]">No guests found. Register a guest to get started.</td>
                 </tr>
               )}
 
               {paginatedRows.map((row) => (
-                <tr key={row.id} className="cursor-pointer transition-colors hover:bg-surface-secondary/50" onClick={() => router.push(`/guests/${row.id}`)}>
+                <tr key={row.id} className="border-b border-border cursor-pointer transition-colors hover:bg-surface-secondary/50" onClick={() => router.push(`/guests/${row.id}`)}>
                   <td className="px-6 py-4 text-sm text-[var(--color-text-primary)]">
                     <div className="flex items-center gap-3">
                       {row.imagePath ? (
@@ -139,11 +139,11 @@ export default function GuestsPage() {
                       <span className="font-medium text-[var(--color-text-primary)]">{row.firstName} {row.lastName}</span>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-sm font-medium text-[var(--color-primary)]">{row.guestId}</td>
-                  <td className="px-6 py-4 text-sm text-[var(--color-text-primary)]">{row.email ?? '-'}</td>
-                  <td className="px-6 py-4 text-sm text-[var(--color-text-primary)]">{formatDate(row.checkIn)}</td>
-                  <td className="px-6 py-4 text-sm text-[var(--color-text-primary)]">{formatDate(row.checkOut)}</td>
-                  <td className="px-6 py-4 text-sm text-[var(--color-text-primary)]"><StatusBadge status={row.status} /></td>
+                  <td className="border-l border-border px-6 py-4 text-sm font-medium text-[var(--color-primary)]">{row.guestId}</td>
+                  <td className="border-l border-border px-6 py-4 text-sm text-[var(--color-text-primary)]">{row.email ?? '-'}</td>
+                  <td className="border-l border-border px-6 py-4 text-sm text-[var(--color-text-primary)]">{formatDate(row.checkIn)}</td>
+                  <td className="border-l border-border px-6 py-4 text-sm text-[var(--color-text-primary)]">{formatDate(row.checkOut)}</td>
+                  <td className="border-l border-border px-6 py-4 text-sm text-[var(--color-text-primary)]"><StatusBadge status={row.status} /></td>
                 </tr>
               ))}
             </tbody>

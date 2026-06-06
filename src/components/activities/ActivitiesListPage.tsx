@@ -43,7 +43,7 @@ function ActivityListCard({
   const scheduleLabel = activity.nextSession?.label ?? activity.meetingPoint ?? 'Schedule TBC';
 
   return (
-    <article className="overflow-hidden rounded-2xl border border-border bg-surface transition-shadow">
+    <article className="overflow-hidden rounded-xl border border-card-border bg-surface">
       <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-stretch">
         <div className="relative h-40 w-full shrink-0 overflow-hidden rounded-xl bg-surface-secondary sm:h-auto sm:w-52">
           {activity.imagePath ? (
@@ -53,7 +53,7 @@ function ActivityListCard({
               No image
             </div>
           )}
-          <span className="absolute left-3 top-3 rounded-full bg-surface px-3 py-1 text-xs font-medium text-[var(--color-text-primary)] shadow-sm">
+          <span className="absolute left-3 top-3 rounded-full bg-surface px-3 py-1 text-xs font-medium text-[var(--color-text-primary)]">
             {activity.category}
           </span>
         </div>
@@ -96,14 +96,14 @@ function ActivityGridCard({
   onBook: () => void;
 }) {
   return (
-    <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-surface">
+    <article className="flex h-full flex-col overflow-hidden rounded-xl border border-card-border bg-surface">
       <div className="relative aspect-[16/10] bg-surface-secondary">
         {activity.imagePath ? (
           <img src={activity.imagePath} alt="" className="h-full w-full object-cover" />
         ) : (
           <div className="flex h-full items-center justify-center text-sm text-[var(--color-text-secondary)]">No image</div>
         )}
-        <span className="absolute left-3 top-3 rounded-full bg-surface px-3 py-1 text-xs font-medium shadow-sm">
+        <span className="absolute left-3 top-3 rounded-full bg-surface px-3 py-1 text-xs font-medium text-[var(--color-text-primary)]">
           {activity.category}
         </span>
       </div>
@@ -164,10 +164,10 @@ export default function ActivitiesListPage() {
                 key={item}
                 type="button"
                 onClick={() => setCategory(item)}
-                className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+className={`rounded-xl px-4 py-2 text-sm font-medium transition-colors ${
                   active
-                    ? 'bg-primary text-white'
-                    : 'border border-border bg-surface text-[var(--color-text-primary)] hover:bg-surface-secondary'
+                    ? 'bg-[var(--color-button-primary)] text-[var(--color-text-primary)]'
+                    : 'border border-card-border bg-surface text-[var(--color-text-primary)] hover:bg-[var(--color-button-primary-hover)] hover:text-[var(--color-text-primary)]'
                 }`}
               >
                 {item}
@@ -176,11 +176,11 @@ export default function ActivitiesListPage() {
           })}
         </div>
 
-        <div className="flex items-center gap-1 rounded-lg border border-border bg-surface p-1">
+        <div className="flex items-center gap-1 rounded-xl border border-card-border bg-surface p-1">
           <button
             type="button"
             onClick={() => setView('grid')}
-            className={`rounded-md p-2 ${view === 'grid' ? 'bg-surface-secondary text-[var(--color-text-primary)]' : 'text-[var(--color-text-secondary)]'}`}
+            className={`rounded-xl p-2 ${view === 'grid' ? 'bg-[var(--color-button-primary)] text-[var(--color-text-primary)]' : 'text-[var(--color-text-secondary)]'}`}
             aria-label="Grid view"
           >
             <Grid3X3 className="h-4 w-4" />
@@ -188,7 +188,7 @@ export default function ActivitiesListPage() {
           <button
             type="button"
             onClick={() => setView('list')}
-            className={`rounded-md p-2 ${view === 'list' ? 'bg-surface-secondary text-[var(--color-text-primary)]' : 'text-[var(--color-text-secondary)]'}`}
+            className={`rounded-xl p-2 ${view === 'list' ? 'bg-[var(--color-button-primary)] text-[var(--color-text-primary)]' : 'text-[var(--color-text-secondary)]'}`}
             aria-label="List view"
           >
             <LayoutList className="h-4 w-4" />
@@ -199,7 +199,7 @@ export default function ActivitiesListPage() {
       {isLoading && <p className="text-sm text-[var(--color-text-secondary)]">Loading activities...</p>}
 
       {!isLoading && activities.length === 0 && (
-        <div className="card rounded-2xl border-dashed border-border px-6 py-16 text-center">
+        <div className="card rounded-xl border-dashed border-card-border px-6 py-16 text-center">
           <p className="text-[var(--color-text-secondary)]">No activities in this category yet.</p>
           <Link href="/activities/new" className="mt-4 inline-block">
             <Button variant="secondary">Add your first activity →</Button>

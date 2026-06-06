@@ -238,11 +238,11 @@ export default function SchedulePage() {
             {filteredGuests.map((guest) => {
               const active = guest.id === selectedGuestId;
               return (
-                <button
+<button
                   key={guest.id}
                   type="button"
                   onClick={() => setSelectedGuestId(guest.id)}
-                  className={`relative w-full rounded-2xl border px-3 py-3 text-left transition-colors ${
+                  className={`relative w-full rounded-xl border px-3 py-3 text-left transition-colors ${
                     active
                       ? 'border-border bg-surface-secondary shadow-sm before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:rounded-r-full before:bg-accent'
                       : 'border-border bg-surface hover:bg-surface-secondary'
@@ -292,7 +292,7 @@ export default function SchedulePage() {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-border bg-surface-secondary px-4 py-3 text-center shadow-sm">
+            <div className="rounded-xl border border-border bg-surface-secondary px-4 py-3 text-center shadow-sm">
               <div className="text-3xl font-display text-[var(--color-text-primary)]">{data?.totalActivities ?? 0}</div>
               <div className="text-xs font-medium uppercase tracking-[0.22em] text-[var(--color-text-secondary)]">Activities</div>
             </div>
@@ -303,7 +303,7 @@ export default function SchedulePage() {
               <div className="mb-2 text-xs font-semibold uppercase tracking-[0.22em] text-[var(--color-text-secondary)]">Stays</div>
                   <div className="flex flex-wrap gap-3">
                 {reservationItems.map((item) => (
-                  <div key={item.id} className="rounded-2xl border border-border bg-surface-secondary px-4 py-3 text-sm text-[var(--color-text-primary)] shadow-sm">
+                  <div key={item.id} className="rounded-xl border border-border bg-surface-secondary px-4 py-3 text-sm text-[var(--color-text-primary)] shadow-sm">
                     <div className="font-semibold text-[var(--color-text-primary)]">{item.title}</div>
                     <div className="mt-1 text-xs text-[var(--color-text-secondary)]">
                       {new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short' }).format(new Date(item.startAt))}
@@ -375,12 +375,11 @@ export default function SchedulePage() {
                         const top = ((startMinutes - TIME_SLOTS[0] * 60) / 60) * 72;
                         const height = Math.max(((endMinutes - startMinutes) / 60) * 72, 56);
                         return (
-                          <button
-                            key={item.id}
-                            type="button"
-                            className="absolute left-2 right-2 z-10 rounded-2xl border px-3 py-2 text-left shadow-sm transition-transform hover:-translate-y-0.5"
-                            style={{ top, height, backgroundColor: `${getColor(item)}22`, borderColor: getColor(item) }}
-                          >
+<button
+                    key={item.id}
+                    type="button"
+                    className={`absolute left-2 right-2 z-10 rounded-xl border border-card-border px-3 py-2 text-left transition-transform`}
+                  >
                             <div className="text-xs font-semibold text-[var(--color-text-primary)]">{item.title}</div>
                             <div className="mt-1 text-[11px] text-[var(--color-text-secondary)]">
                               {formatShortTime(item.startAt)} - {formatShortTime(item.endAt)}

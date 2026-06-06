@@ -151,12 +151,12 @@ export default function AddFoodOrderPage() {
 
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {availableItems.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => addToCart(item)}
-              className="overflow-hidden rounded-2xl border border-border bg-surface text-left shadow-sm transition-shadow hover:shadow-md"
-            >
+<button
+               key={item.id}
+               type="button"
+               onClick={() => addToCart(item)}
+               className="overflow-hidden rounded-xl border border-border bg-surface text-left shadow-sm transition-shadow hover:shadow-md"
+             >
               <div className="aspect-[4/3] bg-surface-secondary">
                 {item.imagePath ? (
                   <img src={item.imagePath} alt="" className="h-full w-full object-cover" />
@@ -173,7 +173,7 @@ export default function AddFoodOrderPage() {
         </div>
       </div>
 
-      <aside className="w-full shrink-0 rounded-2xl border border-border bg-surface p-5 shadow-sm lg:w-[360px]">
+      <aside className="w-full shrink-0 rounded-xl border border-border bg-surface p-5 shadow-sm lg:w-[360px]">
         <h2 className="font-display text-xl font-semibold text-[var(--color-text-primary)]">Order Details</h2>
 
         <div className="mt-4">

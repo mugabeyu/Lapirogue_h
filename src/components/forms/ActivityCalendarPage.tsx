@@ -123,7 +123,7 @@ export default function ActivityCalendarPage() {
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1fr_320px]">
-        <div className="overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
+        <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-sm">
           {isLoading && <p className="p-6 text-sm text-[var(--color-text-secondary)]">Loading calendar...</p>}
 
           {!isLoading && calendar && (
@@ -185,11 +185,11 @@ export default function ActivityCalendarPage() {
           </div>
 
           {sidebarSessions.length === 0 && (
-            <div className="rounded-2xl border border-dashed border-border bg-surface px-4 py-10 text-center text-sm text-[var(--color-text-secondary)]">No sessions scheduled for today.</div>
+            <div className="rounded-xl border border-dashed border-border bg-surface px-4 py-10 text-center text-sm text-[var(--color-text-secondary)]">No sessions scheduled for today.</div>
           )}
 
           {activeSession && (
-            <div className="rounded-2xl border border-border bg-surface p-4 shadow-sm">
+            <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
               <div className="mb-4 flex items-start justify-between gap-2">
                 <div>
                   <p className="text-lg font-semibold text-[var(--color-text-primary)]">{activeSession.timeLabel}</p>

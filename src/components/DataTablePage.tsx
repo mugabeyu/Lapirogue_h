@@ -95,35 +95,35 @@ export default function DataTablePage({
             }
           >
             <thead>
-              <tr className="border-b border-border text-xs uppercase tracking-wider text-[var(--color-text-secondary)]">
-                {columns.map((column) => (
-                  <th key={column.key} scope="col" className="px-6 py-4 font-medium">
+              <tr className="border-b border-card-border text-xs uppercase tracking-wider text-[var(--color-text-secondary)]">
+                {columns.map((column, index) => (
+                  <th key={column.key} scope="col" className={`${index > 0 ? 'border-l border-card-border' : ''} px-6 py-4 font-medium`}>
                     {column.label}
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-border">
+            <tbody>
               {!isLoading && rows.length === 0 && (
-                <tr>
+                <tr className="border-b border-card-border">
                   <td colSpan={columns.length} className="px-6 py-12 text-center text-sm text-[var(--color-text-secondary)]">
                     {emptyText}
                   </td>
                 </tr>
               )}
               {paginatedRows.map((row, index) => (
-                <tr key={String(row.id ?? index)} className="transition-colors hover:bg-surface-secondary/50">
-                  {columns.map((column) => {
+                <tr key={String(row.id ?? index)} className="border-b border-card-border transition-colors hover:bg-surface-secondary/50">
+                  {columns.map((column, idx) => {
                     const value = getTableValue(row, column.key);
                     return (
-                      <td key={column.key} className="px-6 py-4 text-sm text-[var(--color-text-primary)]">
+                      <td key={column.key} className={`${idx > 0 ? 'border-l border-card-border' : ''} px-6 py-4 text-sm text-[var(--color-text-primary)]`}>
                         {column.type === 'image' ? (
                           value ? (
                             <div className="name-with-avatar">
                               <img
                                 src={String(value)}
                                 alt={column.label}
-                                className="rounded-full border border-border object-cover"
+                                className="rounded-full border border-card-border object-cover"
                               />
                               <span className="font-medium text-[var(--color-text-primary)]">{String(row[column.key] ?? '')}</span>
                             </div>

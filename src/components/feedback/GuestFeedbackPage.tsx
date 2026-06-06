@@ -239,41 +239,41 @@ export default function GuestFeedbackPage() {
                 <th scope="col" className="px-5 py-3 font-medium">
                   <SortableHeader label="Guest" column="guest" sort={sort} order={order} onSort={handleSort} />
                 </th>
-                <th scope="col" className="px-5 py-3 font-medium">
+                <th scope="col" className="border-l border-border px-5 py-3 font-medium">
                   <SortableHeader label="Rating" column="rating" sort={sort} order={order} onSort={handleSort} />
                 </th>
-                <th scope="col" className="px-5 py-3 font-medium">
+                <th scope="col" className="border-l border-border px-5 py-3 font-medium">
                   <SortableHeader label="Category" column="category" sort={sort} order={order} onSort={handleSort} />
                 </th>
-                <th scope="col" className="px-5 py-3 font-medium">
+                <th scope="col" className="border-l border-border px-5 py-3 font-medium">
                   <SortableHeader label="Comment" column="comment" sort={sort} order={order} onSort={handleSort} />
                 </th>
-                <th scope="col" className="px-5 py-3 font-medium">
+                <th scope="col" className="border-l border-border px-5 py-3 font-medium">
                   <SortableHeader label="Date" column="date" sort={sort} order={order} onSort={handleSort} />
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border">
+            <tbody>
               {isLoading && (
-                <tr>
+                <tr className="border-b border-border">
                   <td colSpan={5} className="px-5 py-12 text-center text-[var(--color-text-secondary)]">Loading feedback...</td>
                 </tr>
               )}
               {!isLoading && reviews.length === 0 && (
-                <tr>
+                <tr className="border-b border-border">
                   <td colSpan={5} className="px-5 py-12 text-center text-[var(--color-text-secondary)]">No feedback recorded yet.</td>
                 </tr>
               )}
               {!isLoading &&
                 reviews.map((row) => (
-                  <tr key={row.id} className="hover:bg-surface-secondary/50">
+                  <tr key={row.id} className="border-b border-border hover:bg-surface-secondary/50">
                     <td className="px-5 py-4 font-medium text-[var(--color-text-primary)]">{row.guest}</td>
-                    <td className="px-5 py-4">
+                    <td className="border-l border-border px-5 py-4">
                       <StarRating value={row.rating} />
                     </td>
-                    <td className="px-5 py-4 text-[var(--color-text-primary)]">{row.category}</td>
-                    <td className="max-w-xs px-5 py-4 text-[var(--color-text-secondary)]">{truncateComment(row.comment)}</td>
-                    <td className="px-5 py-4 tabular-nums text-[var(--color-text-secondary)]">{row.date}</td>
+                    <td className="border-l border-border px-5 py-4 text-[var(--color-text-primary)]">{row.category}</td>
+                    <td className="max-w-xs border-l border-border px-5 py-4 text-[var(--color-text-secondary)]">{truncateComment(row.comment)}</td>
+                    <td className="border-l border-border px-5 py-4 tabular-nums text-[var(--color-text-secondary)]">{row.date}</td>
                   </tr>
                 ))}
             </tbody>

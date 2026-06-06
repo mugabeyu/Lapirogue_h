@@ -1,9 +1,14 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { BellIcon, UserIcon } from 'lucide-react';
-import { useApi } from '@/hooks/useApi';
+import { BellIcon, MenuIcon, PlusIcon, UserIcon, UsersIcon } from 'lucide-react';
+
 import { User } from '@/types';
+import { useSidebar } from '@/contexts/SidebarContext';
+import { useApi } from '@/hooks/useApi';
+import { AddGuestModal } from '@/components/modals/AddGuestModal';
+import { useState } from 'react';
+import Link from 'next/link';
+
 
 function formatRole(role?: string) {
   if (!role) return '';
@@ -34,8 +39,9 @@ function formatTodayLabel(date: Date) {
 }
 
 export default function Topbar() {
-  const router = useRouter();
   const { data: user } = useApi<User>('/api/auth/me');
+  const { collapsed, toggle } = useSidebar();
+  const [isGuestModalOpen, setIsGuestModalOpen] = useState(false);
 
   const displayName = user?.name?.trim() || '';
   const displayRole = formatRole(user?.role);
@@ -51,28 +57,60 @@ export default function Topbar() {
     .slice(0, 2);
 
   return (
-    <header className="border-b border-border bg-surface px-6 lg:px-8">
-      
-      <div className="flex min-h-20 items-center justify-between py-4">
-        
-        <div className="hidden items-center gap-2 text-sm text-[var(--color-text-secondary)] sm:flex">
-          <span>{todayLabel}</span>
+    <header className="border-b border-card-border bg-surface px-6 lg:px-8">
+      <div className="flex min-h-20 items-center justify-between gap-4 py-4">
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            onClick={toggle}
+            className="flex items-center justify-center rounded-xl p-2 hover:bg-surface-secondary transition-colors"
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            <MenuIcon className="h-5 w-5 text-icon-body" strokeWidth={1.5} />
+          </button>
+          <div className="hidden sm:flex items-center gap-2 text-sm text-[var(--color-black)]">
+            <span>{todayLabel}</span>
+          </div>
         </div>
 
-        <div className="flex items-center gap-3 ml-auto">
-          <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border border-border bg-surface-secondary text-base font-semibold text-[var(--color-text-primary)] shadow-sm">
+        <nav className="flex items-center gap-3">
+          <Link
+            href="/reservations/new"
+            className="inline-flex items-center gap-2 rounded-xl bg-[var(--color-button-primary)] px-4 py-2 text-sm font-medium text-[var(--color-black)] transition-colors hover:bg-[var(--color-button-primary-hover)] active:bg-[var(--color-button-primary-active)]"
+          >
+            <PlusIcon className="h-4 w-4" />
+            <span className="hidden sm:inline">Add Reservation</span>
+          </Link>
+          <button
+            type="button"
+            onClick={() => setIsGuestModalOpen(true)}
+            className="inline-flex items-center gap-2 rounded-xl border border-[var(--color-button-primary)] bg-transparent px-4 py-2 text-sm font-medium text-[var(--color-button-primary)] transition-colors hover:bg-[var(--color-button-primary)]/10 active:bg-[var(--color-button-primary)]/20"
+          >
+            <UsersIcon className="h-4 w-4" />
+            <span className="hidden sm:inline">Register Guest</span>
+          </button>
+        </nav>
+
+        <div className="flex items-center gap-4">
+          <button className="relative rounded-xl p-2 text-[var(--color-text-secondary)] transition-colors hover:bg-surface-secondary hover:text-[var(--color-nav-active)]">
+            <BellIcon className="h-5 w-5 text-icon-body" />
+            <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-[var(--color-button-primary)]"></span>
+          </button>
+          <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border border-card-border bg-surface-secondary text-base font-semibold text-[var(--color-text-primary)]">
             {avatarUrl ? (
               <img src={avatarUrl} alt={displayName || ''} className="h-full w-full object-cover" />
             ) : (
-              <span aria-hidden="true">{avatarInitials || <UserIcon className="h-6 w-6" />}</span>
+              <span aria-hidden="true">{avatarInitials || <UserIcon className="h-5 w-5 text-icon-body" />}</span>
             )}
           </div>
           <div className="hidden sm:block">
-            {displayName ? <div className="text-base leading-tight text-[var(--color-text-primary)]">{displayName}</div> : null}
-            {displayRole ? <div className="text-xs tracking-wide text-[var(--color-text-secondary)]">{displayRole}</div> : null}
+            {displayName && <div className="text-sm font-medium leading-tight text-[var(--color-text-primary)]">{displayName}</div>}
+            {displayRole && <div className="text-xs text-[var(--color-text-secondary)]">{displayRole}</div>}
           </div>
         </div>
       </div>
+      <AddGuestModal isOpen={isGuestModalOpen} onClose={() => setIsGuestModalOpen(false)} />
     </header>
   );
 }

@@ -75,10 +75,10 @@ export function Modal({
           transition={{
             duration: 0.2
           }}
-          className={`relative w-full ${maxWidthClass} bg-surface rounded-2xl flex flex-col max-h-[90vh] overflow-hidden`}>
-          
+className={`relative w-full ${maxWidthClass} bg-surface rounded-xl flex flex-col max-h-[90vh] overflow-hidden border border-card-border`}>
+           
             {/* Header */}
-            <div className="flex items-start justify-between p-6 border-b border-border bg-surface z-10 shrink-0">
+            <div className="flex items-start justify-between p-6 border-b border-card-border bg-surface z-10 shrink-0">
               <div>
                 <h2 className="text-2xl font-display text-[var(--color-text-primary)]">{title}</h2>
                 {subtitle &&
@@ -100,7 +100,7 @@ export function Modal({
 
             {/* Footer */}
             {footer &&
-          <div className="p-4 border-t border-border bg-surface-secondary flex justify-end gap-3 shrink-0">
+          <div className="p-4 border-t border-card-border bg-surface-secondary flex justify-end gap-3 shrink-0">
                 {footer}
               </div>
           }

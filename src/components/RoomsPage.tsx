@@ -123,7 +123,7 @@ export default function RoomsPage() {
             </select>
           </div>
 
-          <div className="inline-flex rounded-2xl border border-border bg-surface-secondary p-1">
+          <div className="inline-flex rounded-xl border border-card-border bg-surface-secondary p-1">
             <button
               type="button"
               onClick={() => setView('grid')}
@@ -146,17 +146,17 @@ export default function RoomsPage() {
         {view === 'grid' ? (
           <div className="grid gap-5 p-4 sm:grid-cols-2 xl:grid-cols-4">
             {!isLoading && filteredRows.length === 0 ? (
-              <div className="col-span-full rounded-2xl border border-dashed border-border p-10 text-center text-sm text-[var(--color-text-secondary)]">
-                No rooms found.
-              </div>
+<div className="col-span-full rounded-xl border border-dashed border-card-border p-10 text-center text-sm text-[var(--color-text-secondary)]">
+                    No rooms found.
+                  </div>
             ) : null}
             {paginatedRows.map((room) => {
               const image = roomImage(room);
               return (
-                <article
-                  key={room.id}
-                  className="group overflow-hidden rounded-2xl border border-border bg-surface transition-transform hover:-translate-y-1"
-                >
+<article
+                    key={room.id}
+                    className="group overflow-hidden rounded-xl border border-card-border bg-surface transition-colors"
+                  >
                   <button type="button" className="block w-full text-left" onClick={() => {
                     setEditRow(room as unknown as Record<string, unknown>);
                     setIsModalOpen(true);
@@ -172,9 +172,9 @@ export default function RoomsPage() {
                       <div className="absolute left-3 top-3 rounded-full bg-surface px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-[var(--color-text-primary)]">
                         {room.status}
                       </div>
-                      <div className="absolute bottom-3 left-3 rounded-xl border border-border bg-surface-secondary px-3 py-1 text-sm font-semibold text-[var(--color-text-primary)]">
-                        Rs {Number(room.price).toLocaleString()} / night
-                      </div>
+<div className="absolute bottom-3 left-3 rounded-xl border border-card-border bg-surface-secondary px-3 py-1 text-sm font-semibold text-[var(--color-text-primary)]">
+                         Rs {Number(room.price).toLocaleString()} / night
+                       </div>
                     </div>
 
                     <div className="space-y-3 p-4">
@@ -186,7 +186,7 @@ export default function RoomsPage() {
                         <p className="text-sm text-[var(--color-text-secondary)]">{room.floor ?? '-'}</p>
                       </div>
 
-                      <div className="flex items-center gap-4 border-t border-border pt-3 text-sm text-[var(--color-text-secondary)]">
+                      <div className="flex items-center gap-4 border-t border-card-border pt-3 text-sm text-[var(--color-text-secondary)]">
                         <span className="inline-flex items-center gap-1.5">
                           <Users className="h-4 w-4" /> Up to {room.capacity}
                         </span>
@@ -195,12 +195,12 @@ export default function RoomsPage() {
                     </div>
                   </button>
 
-                  <div className="flex items-center justify-between border-t border-border px-4 py-3">
+                  <div className="flex items-center justify-between gap-4 border-t border-card-border px-4 py-3">
                     <StatusBadge status={room.status} />
                     <div className="inline-flex gap-1">
                       <button
                         type="button"
-                        className="rounded-lg p-2 text-[var(--color-text-secondary)] hover:bg-surface-secondary hover:text-[var(--color-primary)]"
+                        className="rounded-xl p-2 text-[var(--color-text-secondary)] hover:bg-surface-secondary hover:text-[var(--color-nav-active)]"
                         onClick={() => {
                           setEditRow(room as unknown as Record<string, unknown>);
                           setIsModalOpen(true);
@@ -211,7 +211,7 @@ export default function RoomsPage() {
                       </button>
                       <button
                         type="button"
-                        className="rounded-lg p-2 text-[var(--color-text-secondary)] hover:bg-danger/10 hover:text-[var(--color-danger)]"
+                        className="rounded-xl p-2 text-[var(--color-text-secondary)] hover:bg-danger/10 hover:text-[var(--color-danger)]"
                         onClick={() => setDeleteRow(room as unknown as Record<string, unknown>)}
                         aria-label={`Delete room ${room.roomNumber}`}
                       >
@@ -226,21 +226,21 @@ export default function RoomsPage() {
         ) : (
           <div className="table-wrap">
             <table className="table-compact w-full border-collapse text-left">
-              <thead>
-                <tr className="border-b border-border text-xs uppercase tracking-wider text-[var(--color-text-secondary)]">
+<thead>
+                 <tr className="border-b border-card-border text-xs uppercase tracking-wider text-[var(--color-text-secondary)]">
                   <th scope="col" className="px-6 py-4 font-medium">Room</th>
-                  <th scope="col" className="px-6 py-4 font-medium">Type</th>
-                  <th scope="col" className="px-6 py-4 font-medium">Floor</th>
-                  <th scope="col" className="px-6 py-4 font-medium">Capacity</th>
-                  <th scope="col" className="px-6 py-4 font-medium">Price/Night</th>
-                  <th scope="col" className="px-6 py-4 font-medium">Status</th>
-                  <th scope="col" className="px-6 py-4 text-right font-medium">Actions</th>
+                  <th scope="col" className="border-l border-card-border px-6 py-4 font-medium">Type</th>
+                  <th scope="col" className="border-l border-card-border px-6 py-4 font-medium">Floor</th>
+                  <th scope="col" className="border-l border-card-border px-6 py-4 font-medium">Capacity</th>
+                  <th scope="col" className="border-l border-card-border px-6 py-4 font-medium">Price/Night</th>
+                  <th scope="col" className="border-l border-card-border px-6 py-4 font-medium">Status</th>
+                  <th scope="col" className="border-l border-card-border px-6 py-4 text-right font-medium">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border">
+              <tbody>
                 {!isLoading && filteredRows.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="px-6 py-12 text-center text-sm text-[var(--color-text-secondary)]">
+                  <tr className="border-b border-card-border">
+                    <td colSpan={7} className="px-6 py-12 text-center text-sm text-[var(--color-text-secondary)]">
                       No rooms found.
                     </td>
                   </tr>
@@ -248,44 +248,46 @@ export default function RoomsPage() {
                 {paginatedRows.map((room) => {
                   const image = roomImage(room);
                   return (
-                    <tr key={room.id} className="hover:bg-surface-secondary/50">
+                    <tr key={room.id} className="border-b border-card-border hover:bg-surface-secondary/50">
                       <td className="px-6 py-4">
-                        {image ? (
-                          <img src={image} alt={`Room ${room.roomNumber}`} className="h-12 w-12 rounded-xl border border-border object-cover" />
-                        ) : (
-                          <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-border bg-surface-secondary text-[var(--color-text-secondary)]">
-                            <BedDouble className="h-4 w-4" />
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 font-medium text-[var(--color-text-primary)]">{room.roomNumber}</td>
-                      <td className="px-6 py-4 text-[var(--color-text-secondary)]">{roomTypeLabel(room.type)}</td>
-                      <td className="px-6 py-4 text-[var(--color-text-secondary)]">{room.floor ?? '-'}</td>
-                      <td className="px-6 py-4 text-[var(--color-text-secondary)]">{room.capacity}</td>
-                      <td className="px-6 py-4 text-[var(--color-text-secondary)]">Rs {Number(room.price).toLocaleString()}</td>
-                      <td className="px-6 py-4"><StatusBadge status={room.status} /></td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="inline-flex gap-1">
-                          <button
-                            type="button"
-                            className="rounded-lg p-2 text-[var(--color-text-secondary)] hover:bg-surface-secondary hover:text-[var(--color-primary)]"
-                            onClick={() => {
-                              setEditRow(room as unknown as Record<string, unknown>);
-                              setIsModalOpen(true);
-                            }}
-                            aria-label={`Edit room ${room.roomNumber}`}
-                          >
-                            <Pen className="h-4 w-4" />
-                          </button>
-                          <button
-                            type="button"
-                            className="rounded-lg p-2 text-[var(--color-text-secondary)] hover:bg-danger/10 hover:text-[var(--color-danger)]"
-                            onClick={() => setDeleteRow(room as unknown as Record<string, unknown>)}
-                            aria-label={`Delete room ${room.roomNumber}`}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+                        <div className="flex items-center gap-3">
+                          {image ? (
+                            <img src={image} alt={`Room ${room.roomNumber}`} className="h-10 w-10 rounded-xl border border-card-border object-cover" />
+                          ) : (
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-card-border bg-surface-secondary text-[var(--color-text-secondary)]">
+                              <BedDouble className="h-4 w-4" />
+                            </div>
+                          )}
+                          <span className="font-medium text-[var(--color-text-primary)]">{room.roomNumber}</span>
                         </div>
+                      </td>
+                      <td className="border-l border-card-border px-6 py-4 text-[var(--color-text-secondary)]">{roomTypeLabel(room.type)}</td>
+                      <td className="border-l border-card-border px-6 py-4 text-[var(--color-text-secondary)]">{room.floor ?? '-'}</td>
+                      <td className="border-l border-card-border px-6 py-4 text-[var(--color-text-secondary)]">{room.capacity}</td>
+                      <td className="border-l border-card-border px-6 py-4 text-[var(--color-text-secondary)]">Rs {Number(room.price).toLocaleString()}</td>
+                      <td className="border-l border-card-border px-6 py-4"><StatusBadge status={room.status} /></td>
+                      <td className="border-l border-card-border px-6 py-4 text-right">
+<div className="inline-flex gap-1">
+                           <button
+                             type="button"
+                             className="rounded-xl p-2 text-[var(--color-text-secondary)] hover:bg-surface-secondary hover:text-[var(--color-nav-active)]"
+                             onClick={() => {
+                               setEditRow(room as unknown as Record<string, unknown>);
+                               setIsModalOpen(true);
+                             }}
+                             aria-label={`Edit room ${room.roomNumber}`}
+                           >
+                             <Pen className="h-4 w-4" />
+                           </button>
+                           <button
+                             type="button"
+                             className="rounded-xl p-2 text-[var(--color-text-secondary)] hover:bg-danger/10 hover:text-[var(--color-danger)]"
+                             onClick={() => setDeleteRow(room as unknown as Record<string, unknown>)}
+                             aria-label={`Delete room ${room.roomNumber}`}
+                           >
+                             <Trash2 className="h-4 w-4" />
+                           </button>
+                         </div>
                       </td>
                     </tr>
                   );
@@ -295,19 +297,19 @@ export default function RoomsPage() {
           </div>
         )}
 
-        {!isLoading && filteredRows.length > PAGE_SIZE ? (
-          <div className="flex items-center justify-between border-t border-border px-4 py-3 text-sm text-[var(--color-text-secondary)]">
-            <span>Page {page} of {totalPages}</span>
-            <div className="flex items-center gap-2">
-              <button type="button" className="btn-secondary" disabled={page <= 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>
-                Previous
-              </button>
-              <button type="button" className="btn-secondary" disabled={page >= totalPages} onClick={() => setPage((current) => Math.min(totalPages, current + 1))}>
-                Next
-              </button>
-            </div>
-          </div>
-        ) : null}
+{!isLoading && filteredRows.length > PAGE_SIZE ? (
+           <div className="flex items-center justify-between border-t border-card-border px-4 py-3 text-sm text-[var(--color-text-secondary)]">
+             <span>Page {page} of {totalPages}</span>
+             <div className="flex items-center gap-2">
+               <button type="button" className="btn-secondary" disabled={page <= 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>
+                 Previous
+               </button>
+               <button type="button" className="btn-secondary" disabled={page >= totalPages} onClick={() => setPage((current) => Math.min(totalPages, current + 1))}>
+                 Next
+               </button>
+             </div>
+           </div>
+         ) : null}
       </div>
 
       <RoomModal

@@ -115,7 +115,7 @@ export default function AddActivityPage() {
 
       <div className="grid gap-6 xl:grid-cols-[1fr_320px]">
         <div className="space-y-6">
-          <section className="rounded-2xl border border-border bg-surface p-6 shadow-sm">
+          <section className="rounded-xl border border-border bg-surface p-6 shadow-sm">
             <h2 className="mb-5 font-display text-xl font-semibold text-[var(--color-text-primary)]">Activity Details</h2>
             <div className="space-y-5">
               <label className="block space-y-2">
@@ -199,7 +199,7 @@ export default function AddActivityPage() {
             </div>
           </section>
 
-          <section className="rounded-2xl border border-border bg-surface p-6 shadow-sm">
+          <section className="rounded-xl border border-border bg-surface p-6 shadow-sm">
             <h2 className="font-display text-xl font-semibold text-[var(--color-text-primary)]">Schedule & Requirements</h2>
             <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
               Scheduling functionality will be configured after creating the activity profile.
@@ -237,7 +237,7 @@ export default function AddActivityPage() {
         </div>
 
         <aside className="space-y-6">
-          <section className="rounded-2xl border border-border bg-surface p-5 shadow-sm">
+          <section className="rounded-xl border border-border bg-surface p-5 shadow-sm">
             <h2 className="mb-4 font-display text-lg font-semibold text-[var(--color-text-primary)]">Activity Image</h2>
             <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-surface-secondary px-4 py-10 text-center transition-colors hover:border-primary/40 hover:bg-surface-secondary">
               <CloudUpload className="mb-3 h-8 w-8 text-[var(--color-text-secondary)]" />

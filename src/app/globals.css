@@ -6,22 +6,55 @@
 /* END TAILWIND IMPORTS — ALL OTHER CSS MUST GO BELOW THIS LINE */
 
 :root {
-  /* Color tokens */
-  --color-primary: #334A6A;
-  --color-primary-hover: #2A3E59;
-  --color-accent: #C6A56A;
-  --color-active: #fb6f92;
-  --color-background:  #f8fafc;
+  /* Color tokens - New Color Scheme */
+  /* Button colors */
+  --color-button-primary: #A1C181;
+  --color-button-primary-hover: #FE7F2D;
+  --color-button-primary-active: #FE7F2D;
+  
+  /* Sidebar background */
+  --color-sidebar-bg: #619B8A;
+  --color-sidebar-border: #619B8A;
+  --color-sidebar-hover: #FE7F2D;
+  
+  --image-background: url('/images/background.png');
+  /* Icon colors */
+  --color-icon-body: #FCCA46;
+  
+  /* Date/Status colors */
+  --color-checkout-date: #FCCA46;
+  
+  /* Card/Table border */
+  --color-card-border: #A1C181;
+  
+  /* Search bar border */
+  --color-search-border: #233D4D;
+  
+  /* Sidebar nav active/hover */
+  --color-nav-active: #A1C181;
+  
+  /* Keep danger red for delete/logout buttons */
+  --color-danger: #EF4444;
+  
+  /* Keep date */
+  --color-black: #000000;
+  
+
+  /* Status colors */
+  --color-success: #10B981;
+  --color-warning: #F59E0B;
+  
+  /* Text colors */
+  --color-text-primary: #1F2937;
+  --color-text-secondary: #6B7280;
+  
+  /* Background colors */
+  --color-background: #FAFAFA;
   --color-surface: #FFFFFF;
-  --color-surface-secondary: #F1F2EF;
-  --color-border: hsl(0, 0%, 100%);
-  --color-text-primary: #1F2D3F;
-  --color-text-secondary: #6D7788;
-  --color-success: hwb(146 20% 58%);
-  --color-warning: hwb(8 13% 33%);
-  --color-danger: hsl(11, 95%, 52%);
-  --color-info: #84a59d;
-  --image-background: url('/images/dashboardbg2.jpg');
+  --color-surface-secondary: #F3F4F6;
+  
+  --image-background: url('/images/background.png');
+  
   /* Spacing */
   --space-1: 4px;
   --space-2: 8px;
@@ -31,21 +64,22 @@
   --space-8: 32px;
   --space-12: 56px;
   --space-16: 80px;
-
-  /* Radius */
-  --radius-8: 12px;
-  --radius-12: 12px;
-  --radius-16: 12px;
+  
+  /* Radius - Single value everywhere */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 12px;
+  --radius-xl: 12px;
 }
 
 @layer base {
   body {
-    background-color: var(--color-background);
-    color: var(--color-text-primary);
+   
+        background-color:   var(--color-background);
+    color: var(--color-black);
     font-family: var(--font-poppins, system-ui, sans-serif);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    
   }
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-poppins, system-ui, sans-serif);
@@ -56,150 +90,116 @@
 }
 
 @layer components {
-  /* Poppins weight tokens */
-  .font-heading,
-  .font-display {
-    font-weight: 500 !important;
-  }
-  .font-sidebar {
-    font-weight: 600 !important;
-  }
+  /* Button styles - no shadows */
   .btn-primary,
   .btn-secondary,
   .btn {
     font-weight: 600 !important;
+    border-radius: var(--radius-md) !important;
+    box-shadow: none !important;
   }
-  body {
-    font-weight: 400 !important;
-  }
-  .text-meta {
-    font-weight: 500;
-  }
-  .btn-primary,
-  .btn-secondary {
-    border-radius: var(--radius-12);
-  }
-
+  
   .btn-primary {
-    @apply bg-primary text-white px-4 py-2 rounded-xl transition-colors hover:bg-primary-hover focus:outline-none;
+    background-color: var(--color-button-primary);
+    color: #1F2937;
+    border: 1px solid var(--color-card-border);
+    padding: 8px 16px;
+    transition: background-color .15s ease-in-out;
   }
+  .btn-primary:hover {
+    background-color: var(--color-button-primary-hover);
+  }
+  .btn-primary:active {
+    background-color: var(--color-button-primary-active);
+  }
+  
   .btn-secondary {
-    /* Use design tokens instead of legacy ink/sand/white classes */
     background-color: var(--color-surface);
     color: var(--color-text-primary);
-    border: 1px solid var(--color-border);
+    border: 1px solid var(--color-card-border);
     padding: 8px 16px;
-    border-radius: 12px;
     font-weight: 600 !important;
-    transition: color .15s, background-color .15s, box-shadow .15s;
+    transition: background-color .15s, color .15s;
+    box-shadow: none;
   }
   .btn-secondary:hover {
-    background-color: var(--color-surface-secondary);
+    background-color: #F3F4F6;
   }
-  .btn-secondary:focus {
-    outline: none;
-    box-shadow: 0 0 0 4px rgba(51,74,106,0.12);
+  
+  .btn-danger {
+    background-color: var(--color-danger);
+    color: #FFFFFF;
+    border: 1px solid var(--color-danger);
+    padding: 8px 16px;
+    font-weight: 600 !important;
+    transition: opacity .15s;
+    box-shadow: none;
   }
-
-  /* Normalize any capsule-style utility accidentally applied to button-like controls. */
-  button.rounded-full,
-  a.btn-primary.rounded-full,
-  a.btn-secondary.rounded-full {
-    border-radius: var(--radius-12) !important;
+  .btn-danger:hover {
+    opacity: 0.9;
   }
 
   .btn {
-    @apply px-4 py-2 rounded-xl font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2;
+    background-color: var(--color-button-primary);
+    color: #1F2937;
+    border: 1px solid var(--color-card-border);
+    padding: 8px 16px;
+    font-weight: 600 !important;
+    transition: background-color .15s;
+    box-shadow: none;
   }
+  .btn:hover {
+    background-color: var(--color-button-primary-hover);
+  }
+  
+  /* Card styles - no shadows, with visible border */
   .card {
-    @apply bg-surface border border-border rounded-xl overflow-hidden;
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-card-border);
+    border-radius: var(--radius-md);
   }
-  .bg-active {
-    background-color: var(--color-active);
+  
+  /* Table wrapper */
+  .table-wrap {
+    overflow-x: auto;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-card-border);
   }
-  .p-card {
-    padding: var(--space-4);
-  }
+  
+  /* Input fields - search bar border */
   .input-field {
-    @apply w-full px-3 py-2 bg-surface border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary transition-shadow;
-  }
-  .input {
-    /* tokenized input styles */
     width: 100%;
     padding: 8px 12px;
     background-color: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: 12px;
-    transition: box-shadow .12s, border-color .12s;
+    border: 1px solid var(--color-search-border);
+    border-radius: var(--radius-md);
+    transition: border-color .12s;
+    box-shadow: none;
   }
-  .input:focus {
+  .input-field:focus {
     outline: none;
-    box-shadow: 0 0 0 4px rgba(51,74,106,0.12);
-    border-color: var(--color-primary);
+    border-color: var(--color-search-border);
   }
-  .hide-scrollbar,
-  .custom-scrollbar {
-    scrollbar-width: thin;
-  }
-  .table-wrap {
-    overflow-x: auto;
-    border-radius: var(--radius-12);
-  }
-  .table-compact th,
-  .table-compact td {
-    padding: 10px 14px !important;
-    vertical-align: middle;
-  }
-  .table-compact thead th {
-    font-weight: 500 !important;
-    font-size: 12px !important;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--color-text-secondary);
-  }
-  .table-compact tbody td {
-    font-size: 14px;
-  }
-  .table-compact .name-with-avatar {
+  
+  /* Badge styles */
+  .badge {
     display: inline-flex;
     align-items: center;
-    gap: 10px;
+    padding: 2px 8px;
+    border-radius: var(--radius-md);
+    font-size: 12px;
+    font-weight: 500;
+    box-shadow: none;
   }
-  .table-compact .name-with-avatar img,
-  .table-compact .name-with-avatar .avatar-fallback {
-    width: 40px;
-    height: 40px;
-    border-radius: 9999px;
-    border: 1px solid var(--color-border);
-    object-fit: cover;
-  }
-  .table-compact .name-with-avatar .avatar-fallback {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--color-surface-secondary);
-    color: var(--color-text-secondary);
-    font-size: 13px;
-    font-weight: 600;
-  }
-  .table-footer {
-    border-top: 1px solid var(--color-border);
-    padding: 12px 16px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    font-size: 14px;
+  
+  .badge-default {
+    background-color: var(--color-surface-secondary);
     color: var(--color-text-secondary);
   }
-  .btn-accent {
-    background-color: #fb6f92;
-    color: #fff;
-    border: none;
-  }
-  .btn-accent:hover {
-    background-color: #fb6f92;
-    opacity: 0.92;
+  
+  .badge-danger {
+    background-color: #FEE2E2;
+    color: #DC2626;
   }
 }
 
@@ -240,18 +240,6 @@
 
 svg.lucide {
   stroke-width: 2;
-  color: var(--color-text-primary) !important;
+  color: var(--color-icon-body) !important;
   stroke: currentColor !important;
-}
-
-.rounded-md,
-.rounded-lg,
-.rounded-xl,
-.rounded-2xl,
-.rounded-3xl {
-  border-radius: var(--radius-12) !important;
-}
-
-.rounded-2xl {
-  border-radius: var(--radius-12) !important;
 }

@@ -28,8 +28,8 @@ export function StatCard({
   const isPositive = typeof trend === 'number' && trend > 0;
   const isNegative = typeof trend === 'number' && trend < 0;
 
-  const base = `rounded-2xl p-6 transition-transform duration-200 bg-surface border border-border`;
-  const interactive = onClick ? 'cursor-pointer hover:-translate-y-1' : '';
+  const base = `rounded-xl p-6 transition-all duration-200 bg-surface border border-card-border`;
+  const interactive = onClick ? 'cursor-pointer' : '';
 
   if (isEmpty) {
     return (

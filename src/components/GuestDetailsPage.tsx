@@ -190,9 +190,9 @@ function ProfileHeaderCard({
     <div className="card p-6 md:p-8">
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
-          <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+          <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
             {guest.imagePath ? (
-              <img src={guest.imagePath} alt="" className="h-full w-full rounded-2xl object-cover" />
+              <img src={guest.imagePath} alt="" className="h-full w-full rounded-xl object-cover" />
             ) : (
               <User className="h-10 w-10" />
             )}
@@ -401,6 +401,9 @@ function TabList({
 
 function LoadingState() {
   return (
-    <div className="card p-8 text-[var(--color-text-secondary)]">Loading guest profile...</div>
+    <div className="space-y-6 animate-in fade-in duration-500">
+      <BackLink />
+      <div className="card p-8 text-center text-[var(--color-text-secondary)] border border-card-border">Loading guest profile...</div>
+    </div>
   );
 }

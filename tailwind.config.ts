@@ -5,43 +5,52 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        primary: {
-          DEFAULT: '#0B5D57',
-          hover: '#084843',
-          700: '#084843',
+        button: {
+          primary: '#A1C181',
+          'primary-hover': '#FE7F2D',
+          'primary-active': '#FE7F2D',
         },
-        accent: {
-          DEFAULT: '#C5A46D',
+        sidebar: {
+          bg: '#619B8A',
+          border: '#619B8A',
         },
-        sand: {
-          50: '#F7F5F1',
-          100: '#F7F5F1',
-          200: '#E7E2DA',
-          300: '#D6C8AF',
+        icon: {
+          body: '#FCCA46',
         },
-        ink: {
-          900: '#1B2430',
-          600: '#667085',
-          400: '#8A8F8C',
+        checkout: {
+          date: '#FCCA46',
+        },
+        card: {
+          border: '#A1C181',
+        },
+        search: {
+          border: '#233D4D',
+        },
+        nav: {
+          active: '#FE7F2D',
+        },
+        danger: {
+          DEFAULT: '#EF4444',
+        },
+        success: {
+          DEFAULT: '#10B981',
+        },
+        warning: {
+          DEFAULT: '#F59E0B',
         },
         surface: {
           DEFAULT: '#FFFFFF',
-          secondary: '#FAF9F7',
+          secondary: '#F3F4F6',
         },
         background: {
-          DEFAULT: '#F7F5F1',
+          DEFAULT: '#FAFAFA',
         },
         border: {
-          DEFAULT: '#E7E2DA',
+          DEFAULT: '#A1C181',
         },
-        success: {
-          DEFAULT: '#16A34A',
-        },
-        warning: {
-          DEFAULT: '#D97706',
-        },
-        danger: {
-          DEFAULT: '#DC2626',
+        text: {
+          primary: '#1F2937',
+          secondary: '#6B7280',
         },
       },
       fontFamily: {
