@@ -48,7 +48,7 @@ function overlapsWeek(startAt: string, endAt: string, weekStart: Date, weekEnd: 
   const itemStart = dateKey(startAt);
   const itemEnd = dateKey(endAt);
   const weekStartKey = toDateKey(weekStart);
-  const weekEndKey = toDateKey(weekEnd);
+  const weekEndKey = toDateKey(addDays(weekStart, 6));
   return itemStart <= weekEndKey && itemEnd >= weekStartKey;
 }
 
@@ -76,8 +76,6 @@ export async function GET(request: NextRequest) {
     const selectedGuestId = searchParams.get('guestId') || '';
 
     const requestedWeekStart = startOfWeek(parseDate(weekStartParam, new Date()));
-    const requestedWeekEnd = addDays(requestedWeekStart, 6);
-    requestedWeekEnd.setHours(23, 59, 59, 999);
 
     const supabase = getSupabaseAdmin();
 
@@ -90,7 +88,7 @@ export async function GET(request: NextRequest) {
         .from('reservations')
         .select('id, guest_id, check_in, check_out, status, rooms(room_number)')
         .neq('status', 'CANCELLED')
-        .lte('check_in', toDateKey(requestedWeekEnd))
+        .lte('check_in', toDateKey(addDays(requestedWeekStart, 6)))
         .gte('check_out', toDateKey(requestedWeekStart)),
     ]);
 
@@ -293,7 +291,7 @@ export async function GET(request: NextRequest) {
       scheduledItems.sort((left, right) => new Date(left.start_at).getTime() - new Date(right.start_at).getTime());
     }
 
-    const payloadItems = scheduledItems.filter((item) => overlapsWeek(item.start_at, item.end_at, requestedWeekStart, requestedWeekEnd));
+    const payloadItems = scheduledItems.filter((item) => overlapsWeek(item.start_at, item.end_at, requestedWeekStart, addDays(requestedWeekStart, 6)));
 
     return NextResponse.json({
       success: true,
@@ -310,7 +308,7 @@ export async function GET(request: NextRequest) {
           stay: stayMap.get(selectedGuest.id) ?? null,
         } : null,
         weekStart: requestedWeekStart.toISOString(),
-        weekEnd: requestedWeekEnd.toISOString(),
+        weekEnd: addDays(requestedWeekStart, 6).toISOString(),
         weekLabel: formatWeekLabel(requestedWeekStart),
         items: payloadItems.map((item) => ({
           id: item.id,

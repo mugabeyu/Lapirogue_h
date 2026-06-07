@@ -165,7 +165,7 @@ export default function SchedulePage() {
     return [guest.firstName, guest.lastName, guest.roomNumber ?? '', guest.guestId].join(' ').toLowerCase().includes(query);
   });
 
-  const items = (data?.items ?? []).filter((item) => item.guestId === selectedGuestId || !selectedGuestId);
+  const items = (data?.items ?? []).filter((item) => item.guestId === selectedGuestId);
   const reservationItems = items.filter((item) => item.itemType === 'RESERVATION');
   const timedItems = items.filter((item) => item.itemType !== 'RESERVATION');
 
