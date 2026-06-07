@@ -141,7 +141,7 @@ export default function DashboardDataPage() {
                   </div>
                   <div>
                     <div className="text-sm text-[var(--color-text-secondary)] mb-1">Pending Payments</div>
-                    <div className="font-display text-3xl text-[var(--color-amber-500)]">{stats.pendingPayments}</div>
+                    <div className="font-display text-3xl text-[var(--color-amber-500)]">{formatCurrency(stats.pendingPayments)}</div>
                     <div className="text-xs text-[var(--color-text-secondary)] mt-1">payments awaiting processing</div>
                   </div>
                 </div>

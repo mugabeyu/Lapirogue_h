@@ -88,7 +88,11 @@ declare
   row_id uuid;
 begin
   actor_id := coalesce(auth.uid(), new.updated_by, new.created_by, old.updated_by, old.created_by);
-  row_id := coalesce(new.id, old.id);
+  if tg_table_name = 'profiles' then
+    row_id := coalesce(new.auth_id, old.auth_id);
+  else
+    row_id := coalesce(new.id, old.id);
+  end if;
   if tg_op = 'DELETE' then
     insert into audit_logs(table_name, record_id, action, actor_id, previous_data, new_data)
     values (tg_table_name, row_id, tg_op, actor_id, to_jsonb(old), null);

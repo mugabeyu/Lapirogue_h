@@ -18,8 +18,10 @@ export async function GET() {
       activeReservationsResult,
       checkinsTodayResult,
       checkoutsTodayResult,
-      revenueResult,
-      pendingPaymentsResult,
+      paymentsResult,
+      reservationsResult,
+      activityBookingsResult,
+      foodOrdersResult,
       checkinsListResult,
       checkoutsListResult,
     ] = await Promise.all([
@@ -45,13 +47,19 @@ export async function GET() {
         .in('status', ['CONFIRMED', 'CHECKED_IN'])
         .gte('check_out', today)
         .lt('check_out', tomorrow),
+      supabase.from('payments').select('guest_id,amount,status'),
       supabase
-        .from('payments')
-        .select('amount,status'),
+        .from('reservations')
+        .select('guest_id,total_amount')
+        .in('status', ['CONFIRMED', 'CHECKED_IN']),
       supabase
-        .from('payments')
-        .select('id', { count: 'exact', head: true })
-        .eq('status', 'PENDING'),
+        .from('activity_bookings')
+        .select('guest_id,participants,activities(price)')
+        .eq('status', 'CONFIRMED'),
+      supabase
+        .from('food_orders')
+        .select('guest_id,total')
+        .in('status', ['PENDING', 'PREPARING', 'SERVED']),
       supabase
         .from('reservations')
         .select('id, check_in, check_out, guests(first_name, last_name), rooms(room_number, type)')
@@ -80,8 +88,10 @@ export async function GET() {
       { name: 'activeReservations', error: activeReservationsResult.error },
       { name: 'checkinsToday', error: checkinsTodayResult.error },
       { name: 'checkoutsToday', error: checkoutsTodayResult.error },
-      { name: 'revenue', error: revenueResult.error },
-      { name: 'pendingPayments', error: pendingPaymentsResult.error },
+      { name: 'payments', error: paymentsResult.error },
+      { name: 'reservations', error: reservationsResult.error },
+      { name: 'activityBookings', error: activityBookingsResult.error },
+      { name: 'foodOrders', error: foodOrdersResult.error },
       { name: 'checkinsList', error: checkinsListResult.error },
       { name: 'checkoutsList', error: checkoutsListResult.error },
     ];
@@ -94,13 +104,57 @@ export async function GET() {
     const totalRooms = totalRoomsResult.count ?? 0;
     const occupiedRooms = occupiedRoomsResult.count ?? 0;
     const availableRooms = availableRoomsResult.count ?? 0;
-    const completedPayments = (revenueResult.data ?? []).filter(
+
+    const completedPayments = (paymentsResult.data ?? []).filter(
       (payment) => String(payment.status ?? '').toUpperCase() !== 'PENDING',
     );
     const totalRevenue = completedPayments.reduce(
       (sum, payment) => sum + Number(payment.amount ?? 0),
       0,
     );
+
+    const guestBalances: Record<string, { charges: number; paid: number }> = {};
+
+    (reservationsResult.data ?? []).forEach((r) => {
+      const guestId = r.guest_id;
+      if (!guestId) return;
+      if (!guestBalances[guestId]) guestBalances[guestId] = { charges: 0, paid: 0 };
+      guestBalances[guestId].charges += Number(r.total_amount ?? 0);
+    });
+
+    (paymentsResult.data ?? []).forEach((p) => {
+      const guestId = p.guest_id;
+      if (!guestId) return;
+      if (!guestBalances[guestId]) guestBalances[guestId] = { charges: 0, paid: 0 };
+      const status = String(p.status ?? '').toUpperCase();
+      if (status === 'REFUNDED') {
+        guestBalances[guestId].paid -= Number(p.amount ?? 0);
+      } else if (status !== 'PENDING') {
+        guestBalances[guestId].paid += Number(p.amount ?? 0);
+      }
+    });
+
+    (activityBookingsResult.data ?? []).forEach((ab) => {
+      const guestId = ab.guest_id;
+      if (!guestId) return;
+      if (!guestBalances[guestId]) guestBalances[guestId] = { charges: 0, paid: 0 };
+      const price = (ab.activities as { price?: number | null } | null)?.price ?? 0;
+      guestBalances[guestId].charges += price * (ab.participants ?? 1);
+    });
+
+    (foodOrdersResult.data ?? []).forEach((fo) => {
+      const guestId = fo.guest_id;
+      if (!guestId) return;
+      if (!guestBalances[guestId]) guestBalances[guestId] = { charges: 0, paid: 0 };
+      guestBalances[guestId].charges += Number(fo.total ?? 0);
+    });
+
+    let pendingPayments = 0;
+    Object.values(guestBalances).forEach(({ charges, paid }) => {
+      const balanceDue = Math.max(charges - paid, 0);
+      pendingPayments += balanceDue;
+    });
+
     const occupancyRate = totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0;
 
     return NextResponse.json({
@@ -116,7 +170,7 @@ export async function GET() {
           checkinsToday: checkinsTodayResult.count ?? 0,
           checkoutsToday: checkoutsTodayResult.count ?? 0,
           totalRevenue,
-          pendingPayments: pendingPaymentsResult.count ?? 0,
+          pendingPayments,
           roomStatusBreakdown: {
             available: availableRoomsResult.count ?? 0,
             occupied: occupiedRoomsResult.count ?? 0,
