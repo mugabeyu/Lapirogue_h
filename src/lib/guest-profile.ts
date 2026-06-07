@@ -2,6 +2,7 @@ import { getSupabaseAdmin } from '@/lib/supabase';
 import { toGuest, type GuestRow } from '@/lib/guests';
 import type { Guest, GuestStatus, GuestStay } from '@/types';
 import type { GuestProfileData } from '@/types';
+import { buildBillingSummary } from '@/lib/billing';
 
 export type GuestProfile = {
   guest: Guest;
@@ -129,31 +130,48 @@ export async function loadGuestProfileData(guestId: string): Promise<GuestProfil
   const payments = (paymentsData ?? []).map((p) => ({
     id: p.id,
     paymentId: p.payment_id,
-    amount: p.amount,
+    amount: Number(p.amount ?? 0),
     method: p.method,
     status: p.status,
     reference: p.reference ?? null,
     createdAt: p.created_at,
   }));
 
+const roomCharges = (reservationsData ?? []).map((r) => ({
+    amount: Number(r.total_amount ?? 0),
+    label: r.reservation_id ?? `Reservation ${r.id}`,
+    sourceId: r.id,
+    createdAt: r.created_at,
+  }));
+
+  const activityCharges = (activityBookingsData ?? []).map((ab) => ({
+    amount: ((ab.activities as { price?: number | null } | null)?.price ?? 0) * (ab.participants ?? 1),
+    label: (ab.activities as { name?: string | null } | null)?.name ?? `Activity ${ab.id}`,
+    sourceId: ab.id,
+    createdAt: ab.booking_date,
+  }));
+
+  const billingSummary = buildBillingSummary({
+    roomCharges,
+    activityCharges,
+    foodOrders,
+    payments: (paymentsData ?? []).map((p) => ({
+      amount: Number(p.amount ?? 0),
+      status: p.status,
+    })),
+  });
+
   // Compute stats
   const totalStays = reservations.length;
   const activities = activityBookings.length;
   const foodOrdersCount = foodOrders.length;
-  // Total spent: sum of reservation totals, food order totals, and activity booking amounts (if present)
-  const totalSpent = reservations.reduce((sum, r) => sum + r.totalAmount, 0)
-    + foodOrders.reduce((sum, fo) => sum + fo.total, 0)
-    + activityBookings.reduce((sum, ab) => sum + (ab.amount ?? 0), 0);
-  // Balance due: we can compute as total charges minus total paid? For now, we'll set to 0 or compute from payments?
-  // We don't have a direct field for charges due. We'll leave it as 0 for now, but note that the type expects a number.
-  const balanceDue = 0; // TODO: compute properly if needed
 
   const stats = {
     totalStays,
     activities,
     foodOrders: foodOrdersCount,
-    totalSpent,
-    balanceDue,
+    totalSpent: billingSummary.totalCharges,
+    balanceDue: billingSummary.balanceDue,
   };
 
   // Build the guest object
@@ -167,7 +185,7 @@ export async function loadGuestProfileData(guestId: string): Promise<GuestProfil
     foodOrders,
     payments,
     stats,
-    // billingSummary is optional, we can leave it out
+    billingSummary,
   };
 }
 

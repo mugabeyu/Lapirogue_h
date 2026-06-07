@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { addDays, startOfWeek, toDateKey } from '@/lib/date-utils';
+import { addDays, parseDateKey, startOfWeek, toDateKey } from '@/lib/date-utils';
 
 type GuestRow = {
   id: string;
@@ -40,10 +40,16 @@ function formatWeekLabel(start: Date) {
   return `${formatter.format(start)} - ${formatter.format(end)}`;
 }
 
+function dateKey(value: string) {
+  return value.slice(0, 10);
+}
+
 function overlapsWeek(startAt: string, endAt: string, weekStart: Date, weekEnd: Date) {
-  const start = new Date(startAt);
-  const end = new Date(endAt);
-  return start <= weekEnd && end >= weekStart;
+  const itemStart = dateKey(startAt);
+  const itemEnd = dateKey(endAt);
+  const weekStartKey = toDateKey(weekStart);
+  const weekEndKey = toDateKey(weekEnd);
+  return itemStart <= weekEndKey && itemEnd >= weekStartKey;
 }
 
 function colorForType(type: ScheduleRow['item_type']) {
@@ -124,9 +130,15 @@ export async function GET(request: NextRequest) {
     const scheduledItems: ScheduleRow[] = [];
 
     if (selectedGuestId) {
-      (reservationsResult.data ?? []).forEach((reservation) => {
-        if (reservation.guest_id !== selectedGuestId) return;
+      const allGuestReservations = await supabase
+        .from('reservations')
+        .select('id, guest_id, check_in, check_out, status, rooms(room_number)')
+        .eq('guest_id', selectedGuestId)
+        .neq('status', 'CANCELLED');
 
+      if (allGuestReservations.error) throw allGuestReservations.error;
+
+      (allGuestReservations.data ?? []).forEach((reservation) => {
         const checkIn = reservation.check_in as string | null;
         const checkOut = reservation.check_out as string | null;
         if (!checkIn || !checkOut) return;
@@ -156,33 +168,23 @@ export async function GET(request: NextRequest) {
         supabase
           .from('guest_schedule_items')
           .select('id,guest_id,title,item_type,source_module,source_record_id,start_at,end_at,status,notes,color,created_at,updated_at')
-          .eq('guest_id', selectedGuestId)
-          .gte('start_at', requestedWeekStart.toISOString())
-          .lte('start_at', requestedWeekEnd.toISOString()),
+          .eq('guest_id', selectedGuestId),
         supabase
           .from('activity_bookings')
-          .select('id,guest_id,booking_date,participants,status,notes,activities(name),guests(first_name,last_name)')
-          .eq('guest_id', selectedGuestId)
-          .gte('booking_date', toDateKey(requestedWeekStart))
-          .lte('booking_date', toDateKey(requestedWeekEnd)),
+          .select('id,guest_id,booking_date,booking_time,participants,status,notes,activities(name,price),guests(first_name,last_name)')
+          .eq('guest_id', selectedGuestId),
         supabase
           .from('food_orders')
-          .select('id,guest_id,created_at,status,notes,guests(first_name,last_name)')
-          .eq('guest_id', selectedGuestId)
-          .gte('created_at', requestedWeekStart.toISOString())
-          .lte('created_at', requestedWeekEnd.toISOString()),
+          .select('id,guest_id,order_id,created_at,status,notes,items,guests(first_name,last_name)')
+          .eq('guest_id', selectedGuestId),
         supabase
           .from('guest_orders')
-          .select('id,guest_id,order_time,status,notes,order_type,guests(first_name,last_name)')
-          .eq('guest_id', selectedGuestId)
-          .gte('order_time', requestedWeekStart.toISOString())
-          .lte('order_time', requestedWeekEnd.toISOString()),
+          .select('id,guest_id,order_id,order_time,status,notes,order_type,guests(first_name,last_name)')
+          .eq('guest_id', selectedGuestId),
         supabase
           .from('itinerary_events')
           .select('id,guest_id,title,category,description,event_time,status,guests(first_name,last_name)')
-          .eq('guest_id', selectedGuestId)
-          .gte('event_time', requestedWeekStart.toISOString())
-          .lte('event_time', requestedWeekEnd.toISOString()),
+          .eq('guest_id', selectedGuestId),
       ]);
 
       if (customItemsResult.error) throw customItemsResult.error;
@@ -199,8 +201,13 @@ export async function GET(request: NextRequest) {
 
       (activityBookingsResult.data ?? []).forEach((booking) => {
         const bookingDate = booking.booking_date as string;
-        const startAt = `${bookingDate}T09:00:00`;
-        const endAt = `${bookingDate}T10:00:00`;
+        const parsedTime = parseTimeSlot((booking.booking_time as string | null) ?? '09:00');
+        const [hours, minutes] = (parsedTime ?? '09:00:00').split(':');
+        const startHourInt = parseInt(hours, 10);
+        const endHourInt = (startHourInt + 1) % 24;
+        const startAt = `${bookingDate}T${hours}:${minutes}:00`;
+        const endDate = endHourInt < startHourInt ? addDays(parseDateKey(bookingDate), 1).toISOString().slice(0, 10) : bookingDate;
+        const endAt = `${endDate}T${String(endHourInt).padStart(2, '0')}:${minutes}:00`;
         scheduledItems.push({
           id: booking.id,
           guest_id: selectedGuestId,
@@ -222,10 +229,12 @@ export async function GET(request: NextRequest) {
         const createdAt = order.created_at ?? requestedWeekStart.toISOString();
         const endAt = new Date(createdAt);
         endAt.setMinutes(endAt.getMinutes() + 45);
+        const items = order.items as { name?: string }[] | null;
+        const title = items?.[0]?.name ?? 'Food order';
         scheduledItems.push({
           id: order.id,
           guest_id: selectedGuestId,
-          title: 'Food order',
+          title,
           item_type: 'ORDER',
           source_module: 'food_orders',
           source_record_id: order.id,
@@ -333,9 +342,12 @@ function parseTimeSlot(value?: string) {
   if (match12?.[4]) {
     let hour = Number(match12[1]) % 12;
     if (match12[4].toUpperCase() === 'PM') hour += 12;
-    return `${String(hour).padStart(2, '0')}:${match12[2]}:00`;
+    return `${String(hour).padStart(2, '0')}:${match12[2]}:${match12[3] ?? '00'}`;
   }
-  if (/^\d{2}:\d{2}$/.test(trimmed)) return `${trimmed}:00`;
+  if (/^\d{1,2}:\d{2}(?::\d{2})?$/.test(trimmed)) {
+    const [h, m, s] = trimmed.split(':');
+    return `${h.padStart(2, '0')}:${m.padStart(2, '0')}:${s ?? '00'}`;
+  }
   return null;
 }
 

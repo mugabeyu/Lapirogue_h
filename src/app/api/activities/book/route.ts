@@ -29,13 +29,16 @@ const bookingSchema = z.object({
 function parseTimeSlot(value?: string) {
   if (!value) return null;
   const trimmed = value.trim();
-  const match12 = trimmed.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
-  if (match12) {
+  const match12 = trimmed.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)?$/i);
+  if (match12?.[4]) {
     let hour = Number(match12[1]) % 12;
-    if (match12[3].toUpperCase() === 'PM') hour += 12;
-    return `${String(hour).padStart(2, '0')}:${match12[2]}:00`;
+    if (match12[4].toUpperCase() === 'PM') hour += 12;
+    return `${String(hour).padStart(2, '0')}:${match12[2]}:${match12[3] ?? '00'}`;
   }
-  if (/^\d{2}:\d{2}$/.test(trimmed)) return `${trimmed}:00`;
+  if (/^\d{2}:\d{2}(?::\d{2})?$/.test(trimmed)) {
+    const [h, m, s] = trimmed.split(':');
+    return `${h.padStart(2, '0')}:${m.padStart(2, '0')}:${s ?? '00'}`;
+  }
   return null;
 }
 
