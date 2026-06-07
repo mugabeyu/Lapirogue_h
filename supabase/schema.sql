@@ -67,13 +67,15 @@ returns trigger as $$
 begin
   if tg_op = 'INSERT' then
     if new.created_by is null then
-      new.created_by = auth.uid();
+      new.created_by = coalesce(auth.uid(), new.created_by);
     end if;
     if new.updated_by is null then
-      new.updated_by = coalesce(new.created_by, auth.uid());
+      new.updated_by = coalesce(new.created_by, auth.uid(), new.updated_by);
     end if;
   elsif tg_op = 'UPDATE' then
-    new.updated_by = coalesce(auth.uid(), new.updated_by);
+    if new.updated_by is null then
+      new.updated_by = auth.uid();
+    end if;
   end if;
   return new;
 end;
@@ -85,7 +87,7 @@ declare
   actor_id uuid;
   row_id uuid;
 begin
-  actor_id := coalesce(auth.uid(), old.updated_by, old.created_by, new.updated_by, new.created_by);
+  actor_id := coalesce(auth.uid(), new.updated_by, new.created_by, old.updated_by, old.created_by);
   row_id := coalesce(new.id, old.id);
   if tg_op = 'DELETE' then
     insert into audit_logs(table_name, record_id, action, actor_id, previous_data, new_data)
@@ -112,7 +114,7 @@ begin
   end if;
   return new;
 end;
-$$ language plpgsql;
+$$ language plpgsql security definer;
 
 create or replace function validate_reservation_status_dates()
 returns trigger as $$
@@ -800,6 +802,8 @@ drop trigger if exists reservations_set_audit_fields on reservations;
 create trigger reservations_set_audit_fields before insert or update on reservations for each row execute function set_created_by_and_updated_by();
 drop trigger if exists reservations_validate_status_dates on reservations;
 create trigger reservations_validate_status_dates before insert or update on reservations for each row execute function validate_reservation_status_dates();
+drop trigger if exists reservations_update_room_status on reservations;
+create trigger reservations_update_room_status after insert or update on reservations for each row execute function update_room_status_on_reservation();
 drop trigger if exists reservations_audit_log on reservations;
 create trigger reservations_audit_log after insert or update or delete on reservations for each row execute function log_audit_event();
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { getAuditActor, recordAuditLog } from '@/lib/audit';
 import { z } from 'zod';
+import { createApiResponse } from '@/lib/api-response';
 
 const activitySchema = z.object({
   id: z.string().uuid().optional(),
@@ -322,20 +323,24 @@ export async function DELETE(request: NextRequest) {
     const actorId = actor?.id ?? null;
     const { data: activity } = await supabase.from('activities').select('*').eq('id', id).maybeSingle();
 
-    if (activity) {
-      await recordAuditLog({
-        tableName: 'activities',
-        recordId: id,
-        action: 'DELETE',
-        actorId,
-        before: activity as Record<string, unknown>,
-      });
+    if (!activity) {
+      return createApiResponse(false, 'Activity not found', { status: 404 });
     }
+
+    const [{ count: bookingCount }] = await Promise.all([
+      supabase.from('activity_bookings').select('id', { count: 'exact', head: true }).eq('activity_id', id).neq('status', 'CANCELLED'),
+    ]);
+
+    if (bookingCount && bookingCount > 0) {
+      return createApiResponse(false, `Cannot delete activity: referenced by ${bookingCount} booking(s). Cancel those bookings first.`, { status: 409 });
+    }
+
+    await recordAuditLog({ tableName: 'activities', recordId: id, action: 'DELETE', actorId, before: activity as Record<string, unknown> });
 
     const { error } = await supabase.from('activities').delete().eq('id', id);
     if (error) throw error;
-    return NextResponse.json({ success: true, message: 'Activity deleted' });
+    return createApiResponse(true, { message: 'Activity deleted' });
   } catch {
-    return NextResponse.json({ success: false, error: 'Failed to delete activity' }, { status: 500 });
+    return createApiResponse(false, 'Failed to delete activity');
   }
 }

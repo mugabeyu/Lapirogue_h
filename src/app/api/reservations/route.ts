@@ -238,9 +238,7 @@ export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = request.nextUrl;
     const id = searchParams.get('id');
-    if (!id) {
-      return createApiResponse(false, 'ID required', { status: 400 });
-    }
+    if (!id) return createApiResponse(false, 'ID required', { status: 400 });
     const supabase = getSupabaseAdmin();
     const actor = await getAuditActor(request);
     const actorId = actor?.id ?? null;
@@ -260,10 +258,22 @@ export async function DELETE(request: NextRequest) {
       }
     }
 
+    const [{ count: paymentCount }] = await Promise.all([
+      supabase.from('payments').select('id', { count: 'exact', head: true }).eq('reservation_id', id),
+    ]);
+
+    const blockers: string[] = [];
+    if (paymentCount && paymentCount > 0) blockers.push(`${paymentCount} payment/invoice record(s)`);
+
+    if (blockers.length > 0) {
+      return createApiResponse(false, `Cannot delete reservation: referenced by ${blockers.join(', ')}. Settle or cancel those records first.`, { status: 409 });
+    }
+
     const { error } = await supabase.from('reservations').delete().eq('id', id);
-    if (error) throw error;
+    if (error) return createApiResponse(false, 'Failed to delete reservation', { status: 500 });
     return createApiResponse(true, { message: 'Reservation deleted' });
   } catch {
     return createApiResponse(false, 'Failed to delete reservation');
   }
 }
+

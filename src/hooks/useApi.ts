@@ -19,9 +19,11 @@ export function useApi<T>(url: string | null) {
     },
   );
 
+  const apiError = data?.success === false ? (data.error || 'An error occurred') : null;
+
   return {
-    data: data?.data,
-    error,
+    data: data?.success !== false ? data?.data : undefined,
+    error: apiError ?? (error instanceof Error ? error.message : null),
     isLoading,
     mutate,
     success: data?.success ?? false,

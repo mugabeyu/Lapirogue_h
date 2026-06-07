@@ -218,6 +218,33 @@ export async function DELETE(request: NextRequest) {
     } catch { /* audit skipped */ }
   }
 
+  const [{ count: reservationCount }, { count: activityCount }, { count: paymentCount }, { count: foodOrderCount }, { count: guestOrderCount }, { count: feedbackCount }, { count: messageCount }, { count: scheduleCount }, { count: ecoPointCount }] = await Promise.all([
+    supabase.from('reservations').select('id', { count: 'exact', head: true }).eq('guest_id', id).neq('status', 'CANCELLED'),
+    supabase.from('activity_bookings').select('id', { count: 'exact', head: true }).eq('guest_id', id).neq('status', 'CANCELLED'),
+    supabase.from('payments').select('id', { count: 'exact', head: true }).eq('guest_id', id),
+    supabase.from('food_orders').select('id', { count: 'exact', head: true }).eq('guest_id', id),
+    supabase.from('guest_orders').select('id', { count: 'exact', head: true }).eq('guest_id', id),
+    supabase.from('guest_feedback').select('id', { count: 'exact', head: true }).eq('guest_id', id),
+    supabase.from('messages').select('id', { count: 'exact', head: true }).eq('guest_id', id),
+    supabase.from('guest_schedule_items').select('id', { count: 'exact', head: true }).eq('guest_id', id),
+    supabase.from('guest_eco_point_events').select('id', { count: 'exact', head: true }).eq('guest_id', id),
+  ]);
+
+  const blockers: string[] = [];
+  if (reservationCount && reservationCount > 0) blockers.push(`${reservationCount} reservation(s)`);
+  if (activityCount && activityCount > 0) blockers.push(`${activityCount} activity booking(s)`);
+  if (paymentCount && paymentCount > 0) blockers.push(`${paymentCount} payment(s)`);
+  if (foodOrderCount && foodOrderCount > 0) blockers.push(`${foodOrderCount} food order(s)`);
+  if (guestOrderCount && guestOrderCount > 0) blockers.push(`${guestOrderCount} guest order(s)`);
+  if (feedbackCount && feedbackCount > 0) blockers.push(`${feedbackCount} feedback review(s)`);
+  if (messageCount && messageCount > 0) blockers.push(`${messageCount} message(s)`);
+  if (scheduleCount && scheduleCount > 0) blockers.push(`${scheduleCount} schedule item(s)`);
+  if (ecoPointCount && ecoPointCount > 0) blockers.push(`${ecoPointCount} eco-point event(s)`);
+
+  if (blockers.length > 0) {
+    return createApiResponse(false, `Cannot delete guest: referenced by ${blockers.join(', ')}. Remove or reassign those records first.`, { status: 409 });
+  }
+
   const { error } = await supabase.from('guests').delete().eq('id', id);
   if (error) return createApiResponse(false, 'Failed to delete guest', { status: 500 });
   return createApiResponse(true, { message: 'Guest deleted' });

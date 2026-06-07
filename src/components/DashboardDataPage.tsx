@@ -1,33 +1,38 @@
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
-import {
-  BedDouble,
-  CalendarCheck2,
-} from 'lucide-react';
+import { Bed, Calendar, CreditCard } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { StatCard } from '@/components/StatCard';
 import { useApi } from '@/hooks/useApi';
-import { AddActivityModal } from '@/components/modals/AddActivityModal';
 
 type DashboardData = {
   stats: {
+    totalRooms: number;
+    occupiedRooms: number;
+    availableRooms: number;
+    occupancyRate: number;
     totalGuests: number;
     activeReservations: number;
-    roomOccupancy: {
-      available: number;
-      total: number;
-      percentage: number;
-    };
+    checkinsToday: number;
+    checkoutsToday: number;
     totalRevenue: number;
-    todayRevenue: number;
-    todaysArrivals: number;
-    totalActivities: number;
-    pendingFoodOrders: number;
     pendingPayments: number;
+    roomStatusBreakdown: {
+      available: number;
+      occupied: number;
+      cleaning: number;
+      maintenance: number;
+    };
   };
-  todaysArrivals: Array<{
+  todaysCheckins: Array<{
+    id: string;
+    check_in?: string | null;
+    check_out?: string | null;
+    guests?: { first_name?: string | null; last_name?: string | null } | null;
+    rooms?: { room_number?: string | null; type?: string | null } | null;
+  }>;
+  todaysCheckouts: Array<{
     id: string;
     check_in?: string | null;
     check_out?: string | null;
@@ -49,195 +54,264 @@ function formatShortDate(value?: string | null) {
 }
 
 export default function DashboardDataPage() {
-  const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
-  const { data } = useApi<DashboardData>('/api/dashboard');
+  const { data, isLoading, error } = useApi<DashboardData>('/api/dashboard');
   const stats = data?.stats;
-  const todaysArrivals = data?.todaysArrivals ?? [];
+  const todaysCheckins = data?.todaysCheckins ?? [];
+  const todaysCheckouts = data?.todaysCheckouts ?? [];
 
-  const occupiedPercent = stats?.roomOccupancy.total
-    ? Math.round(((stats.roomOccupancy.total - stats.roomOccupancy.available) / stats.roomOccupancy.total) * 100)
-    : 0;
-
-  // Calculate week-over-week change for occupancy (mock data for now)
-  const occupancyTrend = Math.round((Math.random() * 10 - 5) * 10) / 10; // Random between -5 and 5
-
-return (
+  return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      <PageHeader title="Dashboard" />
+      <PageHeader title="Dashboard" subtitle="Overview of today's operations" />
 
-{stats && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 gap-6 xl:grid-cols-4 section-gap">
-            <StatCard 
-              label="Total Guests" 
-              value={String(stats.totalGuests)} 
-              subtext="All active guest records" 
-              isSecondary={true}
-            />
-            <StatCard 
-              label="Active Reservations" 
-              value={String(stats.activeReservations)} 
-              subtext="Currently checked in" 
-              isSecondary={true}
-            />
-            <StatCard 
-              label="Total Revenue" 
-              value={formatCurrency(stats.totalRevenue)} 
-              subtext={`Today: ${formatCurrency(stats.todayRevenue)}`} 
-              isSecondary={true}
-            />
-            <StatCard 
-              label="Activities" 
-              value={String(stats.totalActivities)} 
-              subtext="Live activity catalogue" 
-              isSecondary={true}
-            />
-          </div>
-          <section className="bg-surface border border-card-border rounded-xl overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-4">
-              <h3 className="font-display text-xl text-[var(--color-text-primary)]">Operational summary</h3>
-            </div>
-
-            <div className="grid p-5 sm:grid-cols-2 sm:divide-x sm:divide-card-border card-internal">
-              <div className="pb-5 sm:pr-6 sm:pb-0">
-                <div className="flex items-center justify-between text-sm text-[var(--color-text-secondary)]">
-                  <span>Available rooms</span>
-                  <BedDouble className="h-4 w-4 text-icon-body" />
-                </div>
-                <div className="mt-4 flex items-end gap-3">
-                  <div className="font-display text-4xl text-[var(--color-text-primary)]">{stats.roomOccupancy.available}</div>
-                  <div className="pb-1 text-sm text-[var(--color-text-secondary)]">of {stats.roomOccupancy.total}</div>
-                </div>
-                <div className="mt-4 h-2 overflow-hidden rounded-xl bg-[var(--color-sidebar-bg)]">
-                  <div className="h-full rounded-xl bg-card-border" style={{ width: `${stats.roomOccupancy.percentage}%` }} />
-                </div>
-                <div className="mt-2 text-xs text-[var(--color-text-secondary)]">{stats.roomOccupancy.percentage}% available</div>
-              </div>
-
-              <div className="pt-5 sm:pl-6 sm:pt-0">
-                <div className="flex items-center justify-between text-sm text-[var(--color-text-secondary)]">
-                  <span>Pending workload</span>
-                  <CalendarCheck2 className="h-4 w-4 text-icon-body" />
-                </div>
-                <div className="mt-4 space-y-3">
-                  <div className="flex items-center justify-between py-2">
-                    <span className="text-sm text-[var(--color-text-secondary)]">Food orders</span>
-                    <span className="font-semibold text-[var(--color-text-primary)]">{stats.pendingFoodOrders}</span>
-                  </div>
-                  <div className="flex items-center justify-between border-t border-card-border py-2">
-                    <span className="text-sm text-[var(--color-text-secondary)]">Payments</span>
-                    <span className="font-semibold text-[var(--color-text-primary)]">{stats.pendingPayments}</span>
-                  </div>
-                  <div className="flex items-center justify-between border-t border-card-border py-2">
-                    <span className="text-sm text-[var(--color-text-secondary)]">Activities</span>
-                    <span className="font-semibold text-[var(--color-text-primary)]">{stats.totalActivities}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid gap-4 border-t border-card-border p-5 md:grid-cols-3 card-internal">
-              <div className="rounded-xl border border-card-border bg-surface-secondary p-6 hover:bg-surface cursor-pointer transition-colors">
-                <div className="mb-3">
-                  <div className="text-xs uppercase tracking-[0.2em] text-[var(--color-text-secondary)]">Occupancy Rate</div>
-                  <div className="mt-2 text-3xl font-display text-[var(--color-text-primary)]">{occupiedPercent}%</div>
-                  <div className="mt-1 text-xs text-icon-body">
-                    {occupancyTrend >= 0 ? '+' : ''}{occupancyTrend}% from last week
-                  </div>
-                </div>
-                <div className="h-1.5 mt-3 rounded-xl bg-card-border">
-                  <div className="h-full rounded-xl bg-card-border" style={{ width: `${occupiedPercent}%` }} />
-                </div>
-                <div className="mt-2 text-xs text-[var(--color-text-secondary)]">
-                  {stats.roomOccupancy.total - stats.roomOccupancy.available} of {stats.roomOccupancy.total} rooms occupied
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div className="border-t border-card-border pt-4">
-                  <div className="mb-2">
-                    <div className="text-xs uppercase tracking-[0.2em] text-[var(--color-text-secondary)]">Availability</div>
-                    <div className="mt-1 text-2xl font-display text-[var(--color-text-primary)]">{stats.roomOccupancy.available}</div>
-                    <div className="text-sm text-[var(--color-text-secondary)]">rooms ready for check-in</div>
-                  </div>
-                </div>
-                <div className="border-t border-card-border pt-4">
-                  <div className="mb-2">
-                    <div className="text-xs uppercase tracking-[0.2em] text-[var(--color-text-secondary)]">Revenue</div>
-                    <div className="mt-1 text-2xl font-display text-[var(--color-text-primary)]">{formatCurrency(stats.totalRevenue)}</div>
-                    <div className="text-sm text-[var(--color-text-secondary)]">Recorded payments total · Today {formatCurrency(stats.todayRevenue)}</div>
-                  </div>
-                </div>
-                <div className="border-t border-card-border pt-4">
-                  <div className="mb-2">
-                    <div className="text-xs uppercase tracking-[0.2em] text-[var(--color-text-secondary)]">Occupancy</div>
-                    <div className="mt-1 text-2xl font-display text-[var(--color-text-primary)]">{occupiedPercent}%</div>
-                    <div className="text-sm text-[var(--color-text-secondary)]">rooms currently occupied</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <section className="card overflow-hidden">
-            <div className="px-5 py-4">
-              <div className="flex items-center justify-between gap-4">
-                <h3 className="font-display text-xl text-[var(--color-text-primary)]">Today's arrivals</h3>
-                <div className="rounded-xl border border-card-border bg-surface-secondary px-3 py-1 text-xs font-medium text-[var(--color-text-primary)]">
-                  {stats.todaysArrivals} expected
-                </div>
-              </div>
-            </div>
-
-            <div className="divide-y divide-card-border">
-              {todaysArrivals.length === 0 ? (
-                <div className="p-8 text-center">
-                  <div className="flex items-center justify-center mb-4">
-                    <span className="h-8 w-8 text-[var(--color-text-secondary)] mr-3">
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.5 0-3 .5-4 1.5m9 8-8.618-8.618a1.875 1.875 0 00-2.652 0L6.367 16m9 8v2m-6-4h.008m.008 0H9.412a2.25 2.25 0 00-2.25 2.25 2.25 2.25 0 002.25 2.25h4.588a2.25 2.25 0 002.25-2.25v-1.5m-11.25 6c-1.113 0-2.25-.45-2.97-1.242l-.458-.48a1.125 1.125 0 011.5-1.5h9.75a1.125 1.125 0 011.5 1.5l-.458.48A2.25 2.25 0 0112.75 20h-.5z" />
-                      </svg>
-                    </span>
-                  </div>
-                  <div className="text-[var(--color-text-secondary)] mb-3">No arrivals scheduled today</div>
-                  <Link href="/reservations/new" className="btn-primary inline-flex px-6 py-2">
-                    New Reservation
-                  </Link>
-                </div>
-              ) : (
-                todaysArrivals.slice(0, 6).map((arrival) => {
-                  const guestName = [arrival.guests?.first_name, arrival.guests?.last_name].filter(Boolean).join(' ') || 'Guest';
-                  const roomLabel = arrival.rooms?.room_number || 'Room pending';
-                  const roomType = arrival.rooms?.type || 'Standard';
-
-                  return (
-                    <div 
-                      key={arrival.id} 
-                      className="flex items-center justify-between gap-4 p-4 transition-colors hover:bg-surface-secondary cursor-pointer"
-                    >
-                      <div>
-                        <div className="font-medium text-[var(--color-text-primary)]">{guestName}</div>
-                        <div className="mt-1 text-sm text-[var(--color-text-secondary)]">
-                          {roomLabel} · {roomType}
-                        </div>
-                        <div className="mt-2 flex items-center gap-3 text-xs text-[var(--color-text-secondary)]">
-                          <span>Check-in {formatShortDate(arrival.check_in)}</span>
-                          <span>Check-out <span className="text-checkout-date">{formatShortDate(arrival.check_out)}</span></span>
-                        </div>
-                      </div>
-                      <div className="rounded-xl border border-card-border bg-surface-secondary px-3 py-1 text-xs font-medium text-[var(--color-text-primary)]">
-                        Arrival
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </section>
+      {error && (
+        <div className="card border-danger/30 bg-danger/5 p-4 text-sm text-[var(--color-danger)]">
+          {error}
         </div>
       )}
 
-      <AddActivityModal isOpen={isActivityModalOpen} onClose={() => setIsActivityModalOpen(false)} />
+      {isLoading && !data && (
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="card p-6 animate-pulse">
+              <div className="h-4 bg-card-border rounded w-20 mb-3" />
+              <div className="h-8 bg-card-border rounded w-16 mb-2" />
+              <div className="h-3 bg-card-border rounded w-24" />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {stats && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-4">
+            <StatCard
+              label="Total Rooms"
+              value={String(stats.totalRooms)}
+              subtext="All rooms in inventory"
+            />
+            <StatCard
+              label="Occupied"
+              value={`${stats.occupiedRooms}/${stats.totalRooms}`}
+              subtext={`${stats.occupancyRate}% occupancy`}
+              variant="primary"
+            />
+            <StatCard
+              label="Available"
+              value={`${stats.availableRooms}/${stats.totalRooms}`}
+              subtext={`${stats.totalRooms - stats.occupiedRooms} ready`}
+            />
+            <StatCard
+              label="Occupancy Rate"
+              value={`${stats.occupancyRate}%`}
+              subtext={stats.occupancyRate > 70 ? 'High occupancy' : stats.occupancyRate > 40 ? 'Moderate occupancy' : 'Low occupancy'}
+            />
+            <StatCard
+              label="Total Guests"
+              value={String(stats.totalGuests)}
+              subtext="Registered guests"
+            />
+            <StatCard
+              label="Active Reservations"
+              value={String(stats.activeReservations)}
+              subtext="Current stays"
+            />
+            <StatCard
+              label="Check-ins Today"
+              value={String(stats.checkinsToday)}
+              subtext="Expected arrivals"
+            />
+            <StatCard
+              label="Check-outs Today"
+              value={String(stats.checkoutsToday)}
+              subtext="Departures today"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <div className="lg:col-span-2 space-y-6">
+              <div className="card p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-display text-xl text-[var(--color-text-primary)]">Revenue Summary</h3>
+                  <CreditCard className="h-5 w-5 text-[var(--color-text-secondary)]" />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-sm text-[var(--color-text-secondary)] mb-1">Total Revenue</div>
+                    <div className="font-display text-3xl text-[var(--color-success)]">{formatCurrency(stats.totalRevenue)}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-[var(--color-text-secondary)] mb-1">Pending Payments</div>
+                    <div className="font-display text-3xl text-[var(--color-amber-500)]">{stats.pendingPayments}</div>
+                    <div className="text-xs text-[var(--color-text-secondary)] mt-1">payments awaiting processing</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="card p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-display text-xl text-[var(--color-text-primary)]">Room Status Breakdown</h3>
+                  <Bed className="h-5 w-5 text-[var(--color-text-secondary)]" />
+                </div>
+                
+                <div className="flex gap-1 h-10 rounded-lg overflow-hidden mb-4">
+                  {stats.roomStatusBreakdown.available > 0 && (
+                    <div
+                      className="bg-[var(--color-success)] transition-all duration-300"
+                      style={{ width: `${(stats.roomStatusBreakdown.available / stats.totalRooms) * 100}%` }}
+                      title={`${stats.roomStatusBreakdown.available} Available`}
+                    />
+                  )}
+                  {stats.roomStatusBreakdown.occupied > 0 && (
+                    <div
+                      className="bg-[var(--color-danger)] transition-all duration-300"
+                      style={{ width: `${(stats.roomStatusBreakdown.occupied / stats.totalRooms) * 100}%` }}
+                      title={`${stats.roomStatusBreakdown.occupied} Occupied`}
+                    />
+                  )}
+                  {stats.roomStatusBreakdown.cleaning > 0 && (
+                    <div
+                      className="bg-amber-500 transition-all duration-300"
+                      style={{ width: `${(stats.roomStatusBreakdown.cleaning / stats.totalRooms) * 100}%` }}
+                      title={`${stats.roomStatusBreakdown.cleaning} Cleaning`}
+                    />
+                  )}
+                  {stats.roomStatusBreakdown.maintenance > 0 && (
+                    <div
+                      className="bg-gray-500 transition-all duration-300"
+                      style={{ width: `${(stats.roomStatusBreakdown.maintenance / stats.totalRooms) * 100}%` }}
+                      title={`${stats.roomStatusBreakdown.maintenance} Maintenance`}
+                    />
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                  <div>
+                    <div className="text-xs text-[var(--color-text-secondary)] uppercase">Available</div>
+                    <div className="font-display text-lg text-[var(--color-success)]">{stats.roomStatusBreakdown.available}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-[var(--color-text-secondary)] uppercase">Occupied</div>
+                    <div className="font-display text-lg text-[var(--color-danger)]">{stats.roomStatusBreakdown.occupied}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-[var(--color-text-secondary)] uppercase">Cleaning</div>
+                    <div className="font-display text-lg text-amber-500">{stats.roomStatusBreakdown.cleaning}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-[var(--color-text-secondary)] uppercase">Maintenance</div>
+                    <div className="font-display text-lg text-gray-500">{stats.roomStatusBreakdown.maintenance}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="lg:col-span-1 space-y-6">
+              <section className="card overflow-hidden">
+                <div className="px-5 py-4 border-b border-card-border">
+                  <div className="flex items-center justify-between gap-4">
+                    <h3 className="font-display text-xl text-[var(--color-text-primary)]">Today's Check-ins</h3>
+                    <div className="rounded-xl border border-card-border bg-surface-secondary px-3 py-1 text-xs font-medium text-[var(--color-text-primary)]">
+                      {stats.checkinsToday} expected
+                    </div>
+                  </div>
+                </div>
+
+                <div className="divide-y divide-card-border max-h-80 overflow-y-auto">
+                  {todaysCheckins.length === 0 ? (
+                    <div className="p-8 text-center">
+                      <div className="flex items-center justify-center mb-4">
+                        <Calendar className="h-8 w-8 text-[var(--color-text-secondary)]" />
+                      </div>
+                      <div className="text-[var(--color-text-secondary)] mb-3">No check-ins scheduled today</div>
+                      <Link href="/reservations/new" className="btn-primary inline-flex px-6 py-2">
+                        New Reservation
+                      </Link>
+                    </div>
+                  ) : (
+                    todaysCheckins.map((checkin) => {
+                      const guestName = [checkin.guests?.first_name, checkin.guests?.last_name]
+                        .filter(Boolean).join(' ') || 'Guest';
+                      const roomLabel = checkin.rooms?.room_number || 'Room pending';
+                      const roomType = checkin.rooms?.type || 'Standard';
+
+                      return (
+                        <div
+                          key={checkin.id}
+                          className="flex items-center justify-between gap-4 p-4 transition-colors hover:bg-surface-secondary"
+                        >
+                          <div>
+                            <div className="font-medium text-[var(--color-text-primary)]">{guestName}</div>
+                            <div className="mt-1 text-sm text-[var(--color-text-secondary)]">
+                              {roomLabel} &middot; {roomType}
+                            </div>
+                            <div className="mt-2 flex items-center gap-3 text-xs text-[var(--color-text-secondary)]">
+                              <span>Check-in {formatShortDate(checkin.check_in)}</span>
+                              <span>Check-out {formatShortDate(checkin.check_out)}</span>
+                            </div>
+                          </div>
+                          <div className="rounded-xl border border-card-border bg-surface-secondary px-3 py-1 text-xs font-medium text-[var(--color-success)]">
+                            Arrival
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </section>
+
+              <section className="card overflow-hidden">
+                <div className="px-5 py-4 border-b border-card-border">
+                  <div className="flex items-center justify-between gap-4">
+                    <h3 className="font-display text-xl text-[var(--color-text-primary)]">Today's Check-outs</h3>
+                    <div className="rounded-xl border border-card-border bg-surface-secondary px-3 py-1 text-xs font-medium text-[var(--color-text-primary)]">
+                      {stats.checkoutsToday} departures
+                    </div>
+                  </div>
+                </div>
+
+                <div className="divide-y divide-card-border max-h-80 overflow-y-auto">
+                  {todaysCheckouts.length === 0 ? (
+                    <div className="p-8 text-center">
+                      <div className="flex items-center justify-center mb-4">
+                        <Calendar className="h-8 w-8 text-[var(--color-text-secondary)]" />
+                      </div>
+                      <div className="text-[var(--color-text-secondary)]">No check-outs scheduled today</div>
+                    </div>
+                  ) : (
+                    todaysCheckouts.map((checkout) => {
+                      const guestName = [checkout.guests?.first_name, checkout.guests?.last_name]
+                        .filter(Boolean).join(' ') || 'Guest';
+                      const roomLabel = checkout.rooms?.room_number || 'Room pending';
+                      const roomType = checkout.rooms?.type || 'Standard';
+
+                      return (
+                        <div
+                          key={checkout.id}
+                          className="flex items-center justify-between gap-4 p-4 transition-colors hover:bg-surface-secondary"
+                        >
+                          <div>
+                            <div className="font-medium text-[var(--color-text-primary)]">{guestName}</div>
+                            <div className="mt-1 text-sm text-[var(--color-text-secondary)]">
+                              {roomLabel} &middot; {roomType}
+                            </div>
+                            <div className="mt-2 flex items-center gap-3 text-xs text-[var(--color-text-secondary)]">
+                              <span>Check-in {formatShortDate(checkout.check_in)}</span>
+                              <span>Check-out {formatShortDate(checkout.check_out)}</span>
+                            </div>
+                          </div>
+                          <div className="rounded-xl border border-card-border bg-surface-secondary px-3 py-1 text-xs font-medium text-amber-500">
+                            Departure
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </section>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

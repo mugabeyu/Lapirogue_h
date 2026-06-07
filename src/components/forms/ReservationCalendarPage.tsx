@@ -83,9 +83,7 @@ function bookingPosition(booking: CalendarBooking, days: string[]) {
   if (first < 0) return null;
 
   const span = last - first + 1;
-  const left = (first / days.length) * 100;
-  const width = (span / days.length) * 100;
-  return { left, width: Math.max(width, 100 / days.length) };
+  return { start: first, span };
 }
 
 type ReservationCalendarPageProps = {
@@ -245,6 +243,7 @@ function GroupRows({
   group,
   days,
   bookingsByRoom,
+  dayColMin,
 }: {
   group: CalendarRoomGroup;
   days: string[];
@@ -263,42 +262,36 @@ function GroupRows({
         const bookings = bookingsByRoom.get(room.id) ?? [];
         return (
           <div key={room.id} className="contents">
-            <div className="sticky left-0 z-10 border-b border-r border-border bg-surface px-4 py-4">
+            <div className="sticky left-0 z-10 border-b border-r border-border bg-surface px-4 py-3">
               <p className="font-medium text-[var(--color-text-primary)]">Room {room.roomNumber}</p>
               {room.subtitle && <p className="text-xs text-[var(--color-text-secondary)]">{room.subtitle}</p>}
               {!room.subtitle && (
                 <p className="text-xs text-[var(--color-text-secondary)]">{room.type.replace('_', ' ')}</p>
               )}
             </div>
+
             <div
-              className="relative border-b border-border bg-surface"
-              style={{ gridColumn: `span ${days.length}` }}
+              className="col-span-full grid border-b border-border bg-surface"
+              style={{ gridColumn: `span ${days.length}`, gridTemplateColumns: `repeat(${days.length}, minmax(${dayColMin}px, 1fr))` }}
             >
-              <div
-                className="grid h-14"
-                style={{ gridTemplateColumns: `repeat(${days.length}, minmax(44px, 1fr))` }}
-              >
-                {days.map((dayKey) => (
-                  <div key={dayKey} className="border-r border-border last:border-r-0" />
-                ))}
-              </div>
-              <div className="absolute inset-y-2 left-0 right-0">
-                {bookings.map((booking) => {
-                  const position = bookingPosition(booking, days);
-                  if (!position) return null;
-                  const { left, width } = position;
-                  return (
-                    <div
-                      key={booking.id}
-                      className={`absolute top-0 flex h-10 items-center overflow-hidden rounded-md px-2 text-xs font-medium shadow-sm ${STATUS_STYLES[booking.displayStatus]}`}
-                      style={{ left: `${left}%`, width: `calc(${width}% - 4px)`, marginLeft: 2 }}
-                      title={`${booking.guestName} · ${booking.checkIn} to ${booking.checkOut}`}
-                    >
-                      <span className="truncate">{booking.guestName}</span>
-                    </div>
-                  );
-                })}
-              </div>
+              {bookings.length === 0 && (
+                <div className="col-span-full h-12" />
+              )}
+              {bookings.map((booking) => {
+                const pos = bookingPosition(booking, days);
+                if (!pos) return null;
+                const gridColumn = `${pos.start + 2} / span ${pos.span}`;
+                return (
+                  <div
+                    key={booking.id}
+                    className={`m-1 flex items-center overflow-hidden rounded-lg px-2 text-xs font-medium shadow-sm ${STATUS_STYLES[booking.displayStatus]}`}
+                    style={{ gridColumn }}
+                    title={`${booking.guestName} · ${booking.checkIn} to ${booking.checkOut}`}
+                  >
+                    <span className="truncate">{booking.guestName}</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         );

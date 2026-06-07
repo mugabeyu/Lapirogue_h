@@ -104,8 +104,9 @@ export default function CrudDataTablePage({
     return `${path}${params.toString() ? `?${params}` : ''}`;
   }, [endpoint, search]);
 
-  const { data, isLoading, mutate } = useApi<Record<string, unknown>[]>(url);
+  const { data, isLoading, mutate, error } = useApi<Record<string, unknown>[]>(url);
   const rows = data ?? [];
+  const apiError = error;
   const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
   const start = (page - 1) * PAGE_SIZE;
   const paginatedRows = rows.slice(start, start + PAGE_SIZE);
@@ -174,6 +175,11 @@ export default function CrudDataTablePage({
       />
 
       <div className="card">
+        {apiError && !isLoading && (
+          <div className="border-b border-danger/30 bg-danger/5 px-6 py-3 text-sm text-[var(--color-danger)]">
+            {apiError}
+          </div>
+        )}
         <div className="px-4 py-4">
           <label htmlFor={`${title}-search`} className="sr-only">
             Search {rowLabel}

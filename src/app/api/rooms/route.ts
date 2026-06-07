@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { getAuditActor, recordAuditLog } from '@/lib/audit';
 import { z } from 'zod';
+import { createApiResponse } from '@/lib/api-response';
 
 const roomSchema = z.object({
   roomNumber: z.string().min(1),
@@ -266,26 +267,41 @@ export async function DELETE(request: NextRequest) {
     const supabase = getSupabaseAdmin();
     const actor = await getAuditActor(request);
     const actorId = actor?.id ?? null;
+
     const { data: room } = await supabase.from('rooms').select('*').eq('id', id).maybeSingle();
+    if (!room) {
+      return createApiResponse(false, 'Room not found', { status: 404 });
+    }
+
+    const { count: reservationCount } = await supabase
+      .from('reservations')
+      .select('id', { count: 'exact', head: true })
+      .eq('room_id', id)
+      .neq('status', 'CANCELLED');
+
+    if (reservationCount && reservationCount > 0) {
+      return createApiResponse(false, `Cannot delete room: referenced by ${reservationCount} active reservation(s). Reassign or complete those reservations first.`, { status: 409 });
+    }
+
+    const { count: foodOrderCount } = await supabase
+      .from('food_orders')
+      .select('id', { count: 'exact', head: true })
+      .eq('room_id', id);
+
+    if (foodOrderCount && foodOrderCount > 0) {
+      return createApiResponse(false, `Cannot delete room: referenced by ${foodOrderCount} food order(s).`, { status: 409 });
+    }
 
     if (room) {
       try {
-        await recordAuditLog({
-          tableName: 'rooms',
-          recordId: id,
-          action: 'DELETE',
-          actorId,
-          before: room as Record<string, unknown>,
-        });
-      } catch (auditError) {
-        console.warn('Room audit log skipped', auditError);
-      }
+        await recordAuditLog({ tableName: 'rooms', recordId: id, action: 'DELETE', actorId, before: room as Record<string, unknown> });
+      } catch { /* audit skipped */ }
     }
 
     const { error } = await supabase.from('rooms').delete().eq('id', id);
-    if (error) throw error;
-    return NextResponse.json({ success: true, message: 'Room deleted' });
+    if (error) return createApiResponse(false, 'Failed to delete room', { status: 500 });
+    return createApiResponse(true, { message: 'Room deleted' });
   } catch {
-    return roomErrorResponse(new Error('Failed to delete room'), 'Failed to delete room');
+    return createApiResponse(false, 'Failed to delete room', { status: 500 });
   }
 }

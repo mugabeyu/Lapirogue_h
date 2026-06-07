@@ -364,14 +364,27 @@ export async function DELETE(request: NextRequest) {
     }
 
     const supabase = getSupabaseAdmin();
+    const actor = await getAuditActor(request);
+    const actorId = actor?.id ?? null;
+
     const { data: existingStaff } = await supabase
       .from('staff')
       .select('id, email')
       .eq('id', id)
       .maybeSingle();
 
-    const actor = await getAuditActor(request);
-    const actorId = actor?.id ?? null;
+    if (!existingStaff) {
+      return createApiResponse(false, 'Staff not found', { status: 404 });
+    }
+
+    const { count: reservationCount } = await supabase
+      .from('reservations')
+      .select('id', { count: 'exact', head: true })
+      .eq('created_by', id);
+
+    if (reservationCount && reservationCount > 0) {
+      return createApiResponse(false, `Cannot delete staff member: referenced by ${reservationCount} reservation(s).`, { status: 409 });
+    }
 
     const { data: staffToDelete } = await supabase
       .from('staff')
@@ -392,7 +405,7 @@ export async function DELETE(request: NextRequest) {
     const { error } = await supabase.from('staff').delete().eq('id', id);
     if (error) throw error;
 
-    if (existingStaff?.email) {
+    if (existingStaff.email) {
       const existingAuthUser = await findAuthUserByEmail(supabase, existingStaff.email);
       if (existingAuthUser) {
         await supabase.from('profiles').delete().eq('auth_id', existingAuthUser.id);
@@ -402,8 +415,8 @@ export async function DELETE(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ success: true, message: 'Staff deleted' });
+    return createApiResponse(true, { message: 'Staff deleted' });
   } catch {
-    return NextResponse.json({ success: false, error: 'Failed to delete staff' }, { status: 500 });
+    return createApiResponse(false, 'Failed to delete staff');
   }
 }
