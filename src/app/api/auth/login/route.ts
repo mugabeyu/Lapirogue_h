@@ -5,7 +5,6 @@ import { z } from 'zod';
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
-  rememberMe: z.boolean().optional().default(false),
 });
 
 function isNetworkLikeSupabaseError(error: unknown) {

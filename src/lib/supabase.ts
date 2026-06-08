@@ -1,8 +1,24 @@
 import 'server-only';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 const resolvedSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const resolvedSupabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+function createFetchWithTimeout(timeoutMs: number) {
+  return async (url: string, options?: RequestInit) => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      return await fetch(url, {
+        ...options,
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  };
+}
 
 export function getSupabaseAdmin() {
   if (!resolvedSupabaseUrl) {
@@ -23,6 +39,9 @@ export function getSupabaseAdmin() {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
+    },
+    global: {
+      fetch: createFetchWithTimeout(60000),
     },
   });
 }

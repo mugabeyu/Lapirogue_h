@@ -5,13 +5,10 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 
-const REMEMBER_EMAIL_KEY = 'login.rememberedEmail';
-
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -26,13 +23,6 @@ export default function LoginPage() {
   }
 
   useEffect(() => {
-    const rememberedEmail = window.localStorage.getItem(REMEMBER_EMAIL_KEY);
-
-    if (rememberedEmail) {
-      setEmail(rememberedEmail);
-      setRememberMe(true);
-    }
-
     let cancelled = false;
     fetch('/api/auth/me')
       .then((response) => (response.ok ? response.json() : null))
@@ -63,7 +53,6 @@ export default function LoginPage() {
         body: JSON.stringify({
           email,
           password,
-          rememberMe,
         }),
       });
 
@@ -72,12 +61,6 @@ export default function LoginPage() {
       if (!response.ok || !result?.success) {
         setErrorMessage(result?.error || 'Login failed');
         return;
-      }
-
-      if (rememberMe) {
-        window.localStorage.setItem(REMEMBER_EMAIL_KEY, email);
-      } else {
-        window.localStorage.removeItem(REMEMBER_EMAIL_KEY);
       }
 
       router.push(getRedirectPath());
@@ -187,33 +170,8 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between gap-4 pt-1">
-                <label className="flex cursor-pointer items-center gap-3 text-[15px] font-medium text-[var(--color-text-primary)]">
-                  <span className="relative flex h-6 w-6 items-center justify-center">
-                    <input
-                      type="checkbox"
-                      checked={rememberMe}
-                      onChange={(e) => setRememberMe(e.target.checked)}
-                      className="peer sr-only"
-                      disabled={isLoading}
-                    />
-                    <span className="absolute inset-0 rounded-xl border border-border bg-surface transition peer-checked:border-primary peer-checked:bg-primary" />
-                    <svg
-                      viewBox="0 0 24 24"
-                      className="relative z-10 hidden h-4 w-4 text-white peer-checked:block"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M20 6L9 17l-5-5" />
-                    </svg>
-                  </span>
-                  Remember me
-                </label>
-
-                <Link href="/forgot-password" className="text-[15px] font-medium text-[var(--color-text-primary)] transition hover:text-[var(--color-text-secondary)]">
+              <div className="flex items-center justify-end gap-4 pt-1">
+                <Link href="/forgot-password" className="text-[15px] font-medium text-[var(--color-link)] transition hover:text-[var(--color-text-secondary)]">
                   Forgot Password?
                 </Link>
               </div>

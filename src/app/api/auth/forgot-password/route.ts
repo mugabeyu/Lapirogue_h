@@ -13,13 +13,25 @@ export async function POST(request: NextRequest) {
     const validatedData = forgotPasswordSchema.parse(body);
     const redirectUrl = new URL('/reset-password', request.url).toString();
 
-    const { data, error: resetError } = await getSupabaseAdmin().auth.admin.generateLink({
-      type: 'recovery',
-      email: validatedData.email,
-      options: {
-        redirectTo: redirectUrl,
-      },
-    });
+    const supabase = getSupabaseAdmin();
+    let data;
+    let resetError;
+
+    try {
+      ({ data, error: resetError } = await supabase.auth.admin.generateLink({
+        type: 'recovery',
+        email: validatedData.email,
+        options: {
+          redirectTo: redirectUrl,
+        },
+      }));
+    } catch (connectionError) {
+      console.error('Forgot password reset link failed', connectionError);
+      return NextResponse.json(
+        { success: false, error: 'Unable to reach authentication service. Please try again later.' },
+        { status: 503 }
+      );
+    }
 
     if (resetError) {
       if (/not found|does not exist|unable to validate/i.test(resetError.message)) {
@@ -27,14 +39,14 @@ export async function POST(request: NextRequest) {
       }
 
       console.error('Forgot password reset link failed', resetError.message, resetError);
-      throw resetError;
+      return NextResponse.json({ success: false, error: 'Unable to send reset link' }, { status: 502 });
     }
 
-    const resetUrl = data.properties?.action_link;
-    if (!resetUrl) {
-      throw new Error('Supabase did not return a password recovery link');
+    if (!(data as { properties?: { action_link?: string } } | null)?.properties?.action_link) {
+      return NextResponse.json({ success: false, error: 'Supabase did not return a password recovery link' }, { status: 502 });
     }
 
+    const resetUrl = (data as { properties: { action_link: string } }).properties.action_link;
     await sendPasswordResetEmail({
       to: validatedData.email,
       resetUrl,

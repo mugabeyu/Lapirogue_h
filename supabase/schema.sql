@@ -1,7 +1,3 @@
--- Canonical schema is maintained in a dedicated migration file.
--- This file is intentionally kept as a single SQL source of truth for reviews,
--- but the live deployment should be applied through the migration pipeline.
-
 create extension if not exists pgcrypto;
 
 do $$ begin
@@ -119,6 +115,8 @@ begin
   return new;
 end;
 $$ language plpgsql security definer;
+
+grant execute on function update_room_status_on_reservation() to authenticated, service_role;
 
 create or replace function validate_reservation_status_dates()
 returns trigger as $$
