@@ -86,7 +86,7 @@ const navItems: NavItem[] = [
 export default function Sidebar() {
   const pathname = usePathname() ?? '/';
   const router = useRouter();
-  const { collapsed, toggle } = useSidebar();
+  const { collapsed } = useSidebar();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const isSectionActive = (item: NavItem) => {

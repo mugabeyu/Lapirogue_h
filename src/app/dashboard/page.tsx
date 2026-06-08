@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { redirect } from 'next/navigation';
 import Layout from '@/components/Layout';
 import DashboardDataPage from '@/components/DashboardDataPage';

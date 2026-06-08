@@ -1,17 +1,17 @@
 import 'server-only';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
 
 const resolvedSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const resolvedSupabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 function createFetchWithTimeout(timeoutMs: number) {
-  return async (url: string, options?: RequestInit) => {
+  return async (input: URL | RequestInfo, init?: RequestInit) => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
-      return await fetch(url, {
-        ...options,
+      return await fetch(input, {
+        ...init,
         signal: controller.signal,
       });
     } finally {

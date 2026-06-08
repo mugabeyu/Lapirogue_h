@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { Suspense } from 'react';
 import ProtectedPage from '@/components/ProtectedPage';
 import AssignRoomPage from '@/components/forms/AssignRoomPage';
