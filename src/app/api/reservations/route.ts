@@ -3,7 +3,7 @@ import { getSupabaseAdmin } from '@/lib/supabase';
 import { getAuditActor, recordAuditLog } from '@/lib/audit';
 import { z } from 'zod';
 import { createApiResponse, validationErrorResponse } from '@/lib/api-response';
-import { sendGuestRoomEmail } from '@/lib/mailer';
+import { sendGuestRoomEmail, sendGuestWelcomeEmailWithCredentials } from '@/lib/mailer';
 
 const reservationSchema = z.object({
   id: z.string().uuid().optional(),
@@ -26,7 +26,7 @@ type ReservationRow = {
   children?: number | null;
   status?: string | null;
   total_amount?: number | string | null;
-  guests?: { first_name?: string | null; last_name?: string | null } | null;
+  guests?: { first_name?: string | null; last_name?: string | null; email?: string | null; auth_id?: string | null } | null;
   rooms?: { room_number?: string | null; type?: string | null } | null;
 };
 
@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
     const supabase = getSupabaseAdmin();
     let query = supabase
       .from('reservations')
-      .select('id,reservation_id,guest_id,room_id,check_in,check_out,adults,children,status,total_amount,guests(first_name,last_name),rooms(room_number,type)')
+      .select('id,reservation_id,guest_id,room_id,check_in,check_out,adults,children,status,total_amount,guests(first_name,last_name,email),rooms(room_number,type)')
       .order('created_at', { ascending: false });
 
     if (guestId) {
@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
     const body = reservationSchema.parse(await request.json());
     const supabase = getSupabaseAdmin();
     await getAuditActor(request);
-    
+
     const { data: conflicting, error: conflictError } = await supabase
       .from('reservations')
       .select('id')
@@ -117,12 +117,18 @@ export async function POST(request: NextRequest) {
     if (error) throw error;
 
     const [{ data: guestRow }, { data: roomRow }] = await Promise.all([
-      supabase.from('guests').select('first_name,last_name,email').eq('id', body.guestId).maybeSingle(),
+      supabase.from('guests').select('first_name,last_name,email,auth_id').eq('id', body.guestId).maybeSingle(),
       supabase.from('rooms').select('room_number,type').eq('id', body.roomId).maybeSingle(),
     ]);
 
     if (guestRow?.email && roomRow?.room_number) {
-      sendGuestRoomEmail({ to: guestRow.email, roomNumber: roomRow.room_number, lastName: guestRow.last_name ?? 'Guest', checkIn: body.checkIn, checkOut: body.checkOut }).catch(() => {});
+      await sendGuestRoomEmail({
+        to: guestRow.email,
+        roomNumber: roomRow.room_number,
+        lastName: guestRow.last_name ?? 'Guest',
+        checkIn: body.checkIn,
+        checkOut: body.checkOut,
+      }).catch(() => {});
     }
 
     return createApiResponse(true, data, { status: 201 });
@@ -142,11 +148,10 @@ export async function PUT(request: NextRequest) {
     const actor = await getAuditActor(request);
     const actorId = actor?.id ?? null;
 
-    // Prevent early/invalid check-ins. Guest can check in only on/after check_in and before check_out.
     if (status === 'CHECKED_IN') {
       const today = toDateKey();
       if (today < checkIn || today >= checkOut) {
-        return createApiResponse(false, 'Check-in is only allowed on or after the check-in date and before the check-out date', { status: 400 });
+        return createApiResponse(false, 'Check-in is only allowed on or after check-in and before check-out', { status: 400 });
       }
     }
 
@@ -190,7 +195,6 @@ export async function PUT(request: NextRequest) {
 
     if (error) throw error;
 
-    // Update guest status to match reservation status if it's CHECKED_IN or CHECKED_OUT
     if (status === 'CHECKED_IN' || status === 'CHECKED_OUT') {
       await supabase
         .from('guests')
@@ -276,4 +280,3 @@ export async function DELETE(request: NextRequest) {
     return createApiResponse(false, 'Failed to delete reservation');
   }
 }
-

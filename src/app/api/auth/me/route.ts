@@ -13,7 +13,6 @@ function normalizeRole(role?: string | null) {
 }
 
 const profileSchema = z.object({
-  // Allow fullName to be optional/null during quick avatar uploads
   fullName: z.string().min(1).optional().nullable(),
   email: z.string().email(),
   avatarUrl: z.string().url().optional().nullable(),
@@ -34,6 +33,17 @@ export async function GET(request: NextRequest) {
     const response = NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 });
     response.headers.set('Cache-Control', 'no-store, max-age=0');
     return response;
+  }
+
+  // Reject guest users - staff portal only
+  const { data: guestRow } = await adminClient
+    .from('guests')
+    .select('id')
+    .eq('auth_id', user.id)
+    .maybeSingle();
+
+  if (guestRow) {
+    return NextResponse.json({ success: false, error: 'Guests must access via the mobile app' }, { status: 403 });
   }
 
   const [profileResult, staffResult] = await Promise.all([
@@ -67,12 +77,8 @@ export async function GET(request: NextRequest) {
 
   const email = profileRow?.email || user.email || '';
 
-  // Prefer explicit profile/staff full_name, then auth metadata.
   let name = profileRow?.full_name || staffRow?.full_name || (user.user_metadata?.full_name as string | undefined) || null;
 
-  // If we still have no usable full name, derive a friendly name from the
-  // email local-part (e.g. "uncle.yunusu@gmail.com" -> "Uncle Yunusu") and
-  // persist it to `profiles` so subsequent reads return the DB value.
   if (!name && email) {
     const local = email.split('@')[0] ?? '';
     const derived = local
@@ -83,34 +89,26 @@ export async function GET(request: NextRequest) {
       .join(' ');
     name = derived || email;
     try {
-      // Persist via admin client so server reads see the stable value immediately.
       await adminClient.from('profiles').upsert({ auth_id: user.id, full_name: name }, { onConflict: 'auth_id' });
     } catch {
-      // ignore persistence errors — we still return the derived name
+      // ignore
     }
   }
   const role = profileRow?.is_main
     ? ('MAIN_RECEPTIONIST' as const)
     : normalizeRole(profileRow?.role || (user.user_metadata?.role as string | undefined));
 
-  // Normalize avatar URL: profiles.avatar_url may already be a public URL, or it
-  // might be stored as a storage path (e.g. "profile/..../file.png") or as
-  // staff.image_path. When a storage path is stored we must convert it to a
-  // public URL using the storage API so clients can render it directly.
   let avatarUrl: string | null = null;
   const tryToMakePublic = async (maybePathOrUrl: string | null | undefined) => {
     if (!maybePathOrUrl) return null;
     if (/^https?:\/\//i.test(maybePathOrUrl)) return maybePathOrUrl;
     try {
-      // Normalize common stored forms into a storage path inside the bucket.
       let path = maybePathOrUrl;
-      // If the value contains an embedded storage URL, extract the path segment.
       const marker = '/storage/v1/object/public/staff-avatars/';
       const idx = path.indexOf(marker);
       if (idx !== -1) {
         path = decodeURIComponent(path.slice(idx + marker.length));
       }
-      // If the stored path accidentally includes the bucket prefix, strip it.
       if (path.startsWith('staff-avatars/')) {
         path = path.replace(/^staff-avatars\//, '');
       }
@@ -122,7 +120,6 @@ export async function GET(request: NextRequest) {
     }
   };
 
-  // Prefer explicit profile.avatar_url, then staff.image_path
   avatarUrl = await tryToMakePublic(profileRow?.avatar_url ?? null) || (await tryToMakePublic(staffRow?.image_path ?? null));
 
   const response = NextResponse.json({
@@ -164,7 +161,6 @@ export async function PUT(request: NextRequest) {
           full_name: validatedData.fullName,
           email: validatedData.email,
           phone: validatedData.phone ?? null,
-          // Persist avatar URL if provided by the client upload flow
           avatar_url: validatedData.avatarUrl ?? null,
         },
         { onConflict: 'auth_id' },

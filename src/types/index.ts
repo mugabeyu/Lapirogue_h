@@ -296,3 +296,58 @@ export type PaymentStatus = 'PENDING' | 'PARTIALLY_PAID' | 'PAID' | 'REFUNDED';
 export type ActivityStatus = 'ACTIVE' | 'INACTIVE' | 'FULL';
 
 export type OrderStatus = 'PENDING' | 'PREPARING' | 'SERVED' | 'CANCELLED';
+
+export interface SustainabilityActivity {
+  id: string;
+  name: string;
+  category: string;
+  color: string;
+  defaultPoints: number;
+  carbonOffsetKg: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EcaTier {
+  id: string;
+  name: string;
+  minPoints: number;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GuestEcoPointEvent {
+  id: string;
+  guestId: string;
+  activityId: string;
+  activityName?: string;
+  sourceType: 'ACTIVITY_BOOKING' | 'SERVICE_REQUEST' | 'MANUAL';
+  sourceRecordId: string;
+  sourceLabel?: string;
+  points: number;
+  carbonOffsetKg: number;
+  metadata?: Record<string, unknown>;
+  earnedAt: string;
+  createdAt: string;
+}
+
+export interface EcoPointsBalance {
+  id: string;
+  guestId: string;
+  balance: number;
+  tier: string;
+  updatedAt: string;
+}
+
+export interface EcoPointsTx {
+  id: string;
+  guestId: string;
+  amount: number;
+  type: 'EARN' | 'SPEND' | 'ADJUST';
+  status: 'COMPLETED' | 'PENDING' | 'FAILED';
+  reference?: string;
+  notes?: string;
+  createdAt: string;
+}

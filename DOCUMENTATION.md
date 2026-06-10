@@ -182,7 +182,7 @@ website/
 
 | Table | Description |
 |-------|-------------|
-| `profiles` | Staff accounts mapped to Supabase Auth `users`. Roles: ADMIN, MANAGER, RECEPTION, RESTAURANT, TOUR_MANAGER, STAFF, RECEPTIONIST |
+| `profiles` | Staff accounts mapped to Supabase Auth `users`. Roles: MAIN RECEPTIONIST, RECEPTIONIST |
 | `guests` | Hotel guest records (`guest_id` sequence) |
 | `rooms` | Room inventory (STANDARD / DELUXE / SUITE / VILLA), status, amenities |
 | `reservations` | Booking records with `reservation_id`, linked to guests & rooms |
@@ -350,13 +350,8 @@ Authenticated user → / → redirect to /dashboard
 
 | Role | Description | Assignment |
 |------|-------------|-----------|
-| `MAIN_RECEPTIONIST` | Primary supervisor, system admin | First profile in DB (unique partial index on `is_main`) |
-| `RECEPTIONIST` | Standard front-desk / operations staff | Standard signup / onboarding |
-| `ADMIN` | Supabase auth back-end access | DB enum only |
-| `MANAGER` | Department manager | DB enum only |
-| `RESTAURANT` | F&B staff | DB enum only |
-| `TOUR_MANAGER` | Activity / tour supervisor | DB enum only |
-| `STAFF` | General employee | DB enum only |
+| `MAIN_RECEPTIONIST` | Primary supervisor, full system access | First profile in DB (unique partial index on `is_main`) |
+| `RECEPTIONIST` | Standard front-desk staff | Standard signup / onboarding |
 
 **Note:** Application-level type in `src/types/index.ts` simplifies DB roles to `'MAIN_RECEPTIONIST' | 'RECEPTIONIST'` driven by `is_main` boolean flag on `profiles`.
 
@@ -666,7 +661,7 @@ Uses `sonner` (positioned top-center, rich colors).
 
 | Variable | Scope | Notes |
 |----------|-------|-------|
-| `NEXT_PUBLIC_SUPABASE_URL` | Client + Server | Project URL (`https://afilatpihmbicqadwslm.supabase.co`) |
+| `NEXT_PUBLIC_SUPABASE_URL` | Client + Server | Project URL (`https://vpqqfsuuetfltwtoblen.supabase.co`) |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Client + Server | Public anon / publishable key |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Client + Server | Legacy anon key (also set for compatibility) |
 | `SUPABASE_URL` | Server | Server-side copy |

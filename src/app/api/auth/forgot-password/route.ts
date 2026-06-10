@@ -11,9 +11,12 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const validatedData = forgotPasswordSchema.parse(body);
-    const redirectUrl = new URL('/reset-password', request.url).toString();
 
     const supabase = getSupabaseAdmin();
+
+   
+    const redirectUrl = new URL('/reset-password', request.url).toString();
+
     let data;
     let resetError;
 

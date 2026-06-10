@@ -67,11 +67,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: signInError.message }, { status: 401 });
     }
 
+const userId = signInData.user?.id ?? '';
     const metadata = signInData.user?.user_metadata ?? {};
+
+
+    // Check if this is a staff user
     const { data: profileRow } = await authClient
       .from('profiles')
       .select('auth_id, is_active')
-      .eq('auth_id', signInData.user?.id ?? '')
+      .eq('auth_id', userId)
       .maybeSingle();
 
     if (profileRow?.is_active === false) {
@@ -79,17 +83,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'This staff account is blocked' }, { status: 403 });
     }
 
-    // user's email into `full_name` automatically.
+    // Staff login successful - upsert profile
     void authClient
       .from('profiles')
       .upsert({
-        auth_id: signInData.user?.id ?? '',
+        auth_id: userId,
         email: signInData.user?.email ?? '',
         full_name: metadata.full_name ?? metadata.name ?? undefined,
         is_active: true,
       }, { onConflict: 'auth_id' });
 
-    const result = attachSupabaseCookies(NextResponse.json({ success: true, data: { user: signInData.user ?? null } }), response);
+    const result = attachSupabaseCookies(
+      NextResponse.json({ success: true, data: { user: signInData.user ?? null, userType: 'staff' } }),
+      response,
+    );
     return result;
   } catch (error) {
     if (error instanceof z.ZodError) {

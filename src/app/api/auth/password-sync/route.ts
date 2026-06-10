@@ -8,34 +8,37 @@ const syncPasswordSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('authorization');
-    const token = authHeader?.replace('Bearer ', '');
+    const { supabase: authClient } = await import('@/lib/supabase-server').then(m => m.createRouteHandlerSupabaseContext(request));
+    const { data: { user }, error: userError } = await authClient.auth.getUser();
 
-    if (!token) {
+    if (userError || !user) {
       return NextResponse.json({ success: false, error: 'Authentication required' }, { status: 401 });
     }
 
-    void syncPasswordSchema.parse(await request.json());
-    const supabase = getSupabaseAdmin();
-    const { data: userData, error: userError } = await supabase.auth.getUser(token);
+    
+    const body = await request.json();
+    const validatedData = syncPasswordSchema.parse(body);
 
-    if (userError || !userData.user?.email) {
-      return NextResponse.json({ success: false, error: 'Invalid session' }, { status: 401 });
+    const adminClient = getSupabaseAdmin();
+
+    // Update password via Supabase Auth
+    const { error: updateError } = await adminClient.auth.admin.updateUserById(user.id, {
+      password: validatedData.newPassword,
+    });
+
+    if (updateError) {
+      return NextResponse.json({ success: false, error: updateError.message }, { status: 400 });
     }
 
-    const { error } = await supabase
-      .from('profiles')
-      .update({ updated_at: new Date().toISOString() })
-      .eq('auth_id', userData.user.id);
+    // Update profile timestamp
+    void adminClient.from('profiles').update({ updated_at: new Date().toISOString() }).eq('auth_id', user.id);
 
-    if (error) throw error;
-
-    return NextResponse.json({ success: true, message: 'Password synchronized' });
+    return NextResponse.json({ success: true, message: 'Password updated successfully' });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ success: false, error: 'Validation error', details: error.errors }, { status: 400 });
     }
 
-    return NextResponse.json({ success: false, error: 'Failed to synchronize password' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Failed to update password' }, { status: 500 });
   }
 }

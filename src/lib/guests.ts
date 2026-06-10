@@ -12,6 +12,10 @@ export type GuestRow = {
   status: string;
   notes: string | null;
   image_path: string | null;
+  fcm_token: string | null;
+  auth_id: string | null;
+  temporary_password: string | null;
+  is_temp_password_changed: boolean;
   created_at: string;
   updated_at: string;
 };

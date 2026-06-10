@@ -28,6 +28,11 @@ async function generateGuestId() {
   return `G-${timestamp}${suffix}`;
 }
 
+function generateTempPassword(firstName: string, roomNumber?: string): string {
+  const base = `${firstName}${roomNumber || ''}@lapirogue`;
+  return base.toLowerCase();
+}
+
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;

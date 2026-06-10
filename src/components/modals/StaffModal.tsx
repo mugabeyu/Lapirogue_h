@@ -100,7 +100,7 @@ export function StaffModal({ isOpen, onClose, onSaved, editRow }: StaffModalProp
               disabled={isEmailLocked}
               aria-disabled={isEmailLocked}
             />
-            {isEmailLocked ? <p className="mt-1 text-xs text-[var(--color-text-secondary)]">Only admin users can update staff email addresses.</p> : null}
+            {isEmailLocked ? <p className="mt-1 text-xs text-[var(--color-text-secondary)]">Only MAIN_RECEPTIONIST users can update staff email addresses.</p> : null}
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Phone</label>

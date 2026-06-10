@@ -15,7 +15,7 @@ export async function sendGuestRoomEmail(input: {
       html: `
         <div style="font-family: Arial, sans-serif; padding: 20px; color: #1f2937;">
           <h2 style="color: #0f766e;">La Pirogue Hotel</h2>
-          <p>Welcome! Kindly use  these details to access the Guest Application. Here are your room details:</p>
+          <p>Welcome! Here are your room details:</p>
           <table style="margin: 16px 0; border-collapse: collapse;">
             <tr><td style="padding: 4px 0; color: #6b7280;">Last Name:</td><td style="padding: 4px 0; font-weight: bold;">${input.lastName}</td></tr>
             <tr><td style="padding: 4px 0; color: #6b7280;">Room Number:</td><td style="padding: 4px 0; font-weight: bold;">${input.roomNumber}</td></tr>
@@ -29,6 +29,77 @@ export async function sendGuestRoomEmail(input: {
     return { success: true, data: response };
   } catch (error) {
     console.error('GUEST EMAIL ERROR:', error);
+    throw error;
+  }
+}
+
+export async function sendGuestWelcomeEmailWithCredentials(input: {
+  to: string;
+  guestName: string;
+  email: string;
+  temporaryPassword: string;
+  roomNumber: string;
+  checkIn?: string;
+  checkOut?: string;
+}) {
+  try {
+    const response = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: input.to,
+      subject: 'Welcome to La Pirogue Hotel - Your Mobile App Credentials',
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; color: #1f2937; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #0f766e; text-align: center;">Welcome to La Pirogue Hotel</h2>
+          <p>Dear ${input.guestName},</p>
+          <p>Thank you for choosing La Pirogue Hotel. We are delighted to have you with us.</p>
+          
+          <div style="background: #f0fdf4; border-left: 4px solid #0f766e; padding: 16px; margin: 20px 0; border-radius: 4px;">
+            <h3 style="color: #0f766e; margin-top: 0;">Mobile App Login Credentials</h3>
+            <p>You can access our mobile app using the following credentials:</p>
+            <table style="margin: 12px 0; border-collapse: collapse; width: 100%;">
+              <tr>
+                <td style="padding: 8px 0; color: #6b7280; font-weight: 500;">Email:</td>
+                <td style="padding: 8px 12px; font-weight: bold; color: #0f2742;">${input.email}</td>
+              </tr>
+              <tr style="background: #f9fafb;">
+                <td style="padding: 8px 0; color: #6b7280; font-weight: 500;">Temporary Password:</td>
+                <td style="padding: 8px 12px; font-weight: bold; color: #0f2742; font-family: monospace; font-size: 16px;">${input.temporaryPassword}</td>
+              </tr>
+            </table>
+          </div>
+
+          <div style="background: #eff6ff; padding: 16px; margin: 20px 0; border-radius: 4px; border-left: 4px solid #2563eb;">
+            <h3 style="color: #2563eb; margin-top: 0;">Your Stay Details</h3>
+            <table style="margin: 8px 0; border-collapse: collapse;">
+              ${input.roomNumber ? `<tr><td style="padding: 6px 0; color: #6b7280;">Room:</td><td style="padding: 6px 12px; font-weight: bold;">${input.roomNumber}</td></tr>` : ''}
+              ${input.checkIn ? `<tr><td style="padding: 6px 0; color: #6b7280;">Check-in:</td><td style="padding: 6px 12px; font-weight: bold;">${input.checkIn}</td></tr>` : ''}
+              ${input.checkOut ? `<tr><td style="padding: 6px 0; color: #6b7280;">Check-out:</td><td style="padding: 6px 12px; font-weight: bold;">${input.checkOut}</td></tr>` : ''}
+            </table>
+          </div>
+
+          <div style="margin: 20px 0;">
+            <h3 style="color: #0f2742;">How to Access the Mobile App</h3>
+            <ol style="color: #374151; line-height: 1.8;">
+              <li>Download the <strong>La Pirogue Hotel</strong> mobile app from your device's app store.</li>
+              <li>Open the app and select <strong>"Sign In"</strong>.</li>
+              <li>Enter your email address and temporary password.</li>
+              <li><strong>On first login, you will be prompted to change your temporary password.</strong></li>
+            </ol>
+          </div>
+
+          <div style="background: #fef3c7; padding: 14px; margin: 20px 0; border-radius: 6px; border-left: 4px solid #d97706;">
+            <p style="margin: 0; color: #92400e;"><strong>Security Note:</strong> For your security, please change your temporary password after your first login. Do not share your credentials with anyone.</p>
+          </div>
+
+          <p style="margin-top: 24px; color: #6b7280;">If you have any questions or need assistance, please contact our reception desk at <a href="mailto:reception@lapirogue-hotel.mu" style="color: #0f766e;">reception@lapirogue-hotel.mu</a>.</p>
+          <p>We look forward to serving you!</p>
+          <p style="color: #6b7280; font-size: 14px;">Warm regards,<br><strong>The La Pirogue Hotel Team</strong></p>
+        </div>
+      `,
+    });
+    return { success: true, data: response };
+  } catch (error) {
+    console.error('GUEST WELCOME EMAIL ERROR:', error);
     throw error;
   }
 }
