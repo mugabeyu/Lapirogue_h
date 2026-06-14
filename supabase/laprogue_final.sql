@@ -1,4 +1,4 @@
-﻿-- =============================================
+-- =============================================
 -- LA PIROGUE HMS - CONSOLIDATED SUPABASE SCHEMA (FINAL)
 -- Generated: Consolidated from existing schema + app requirements
 -- Safe to run multiple times (uses IF NOT EXISTS where practical)
@@ -227,7 +227,10 @@ CREATE TABLE IF NOT EXISTS public.guest_schedule_items (
     created_at timestamptz DEFAULT now() NOT NULL,
     updated_at timestamptz DEFAULT now() NOT NULL,
     created_by uuid,
-    updated_by uuid
+    updated_by uuid,
+    source_module text,
+    source_record_id uuid,
+    notes text
 );
 
 -- 8. Food & Beverage
@@ -274,7 +277,8 @@ CREATE TABLE IF NOT EXISTS public.guest_orders (
     order_time timestamptz DEFAULT now(),
     notes text,
     created_at timestamptz DEFAULT now() NOT NULL,
-    updated_at timestamptz DEFAULT now() NOT NULL
+    updated_at timestamptz DEFAULT now() NOT NULL,
+    order_type text
 );
 
 CREATE TABLE IF NOT EXISTS public.guest_order_items (
@@ -414,11 +418,14 @@ CREATE VIEW public.guest_eco_point_events AS
 -- Itinerary events
 CREATE TABLE IF NOT EXISTS public.itinerary_events (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    guest_id uuid REFERENCES public.guests(id) ON DELETE CASCADE,
     title text NOT NULL,
     description text,
+    category text,
     start_at timestamptz NOT NULL,
     end_at timestamptz NOT NULL,
     location text,
+    status text DEFAULT 'CONFIRMED',
     created_at timestamptz DEFAULT now() NOT NULL,
     updated_at timestamptz DEFAULT now() NOT NULL
 );
@@ -428,11 +435,50 @@ CREATE TABLE IF NOT EXISTS public.site_content_pages (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     slug text UNIQUE NOT NULL,
     title text NOT NULL,
+    subtitle text,
     body text,
+    highlights jsonb NOT NULL DEFAULT '[]'::jsonb,
+    metrics jsonb NOT NULL DEFAULT '[]'::jsonb,
+    image_path text,
+    updated_by uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+    is_active boolean NOT NULL DEFAULT true,
     metadata jsonb,
     created_at timestamptz DEFAULT now() NOT NULL,
     updated_at timestamptz DEFAULT now() NOT NULL
 );
+
+ALTER TABLE IF EXISTS public.site_content_pages
+    ADD COLUMN IF NOT EXISTS subtitle text,
+    ADD COLUMN IF NOT EXISTS highlights jsonb NOT NULL DEFAULT '[]'::jsonb,
+    ADD COLUMN IF NOT EXISTS metrics jsonb NOT NULL DEFAULT '[]'::jsonb,
+    ADD COLUMN IF NOT EXISTS image_path text,
+    ADD COLUMN IF NOT EXISTS updated_by uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+    ADD COLUMN IF NOT EXISTS is_active boolean NOT NULL DEFAULT true;
+
+UPDATE public.site_content_pages
+SET
+    subtitle = COALESCE(subtitle, NULLIF(metadata->>'subtitle', '')),
+    highlights = CASE
+        WHEN jsonb_typeof(metadata->'highlights') = 'array' AND highlights = '[]'::jsonb
+            THEN metadata->'highlights'
+        ELSE highlights
+    END,
+    metrics = CASE
+        WHEN jsonb_typeof(metadata->'metrics') = 'array' AND metrics = '[]'::jsonb
+            THEN metadata->'metrics'
+        ELSE metrics
+    END,
+    image_path = COALESCE(image_path, NULLIF(metadata->>'image_path', ''), NULLIF(metadata->>'imagePath', '')),
+    is_active = COALESCE(
+        is_active,
+        CASE
+            WHEN metadata ? 'is_active' THEN (metadata->>'is_active')::boolean
+            WHEN metadata ? 'isActive' THEN (metadata->>'isActive')::boolean
+            ELSE true
+        END,
+        true
+    )
+WHERE metadata IS NOT NULL;
 
 -- Audit
 CREATE TABLE IF NOT EXISTS public.audit_logs (

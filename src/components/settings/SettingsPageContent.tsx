@@ -29,6 +29,12 @@ type AboutMetric = {
   value?: string;
 };
 
+async function readErrorMessage(response: Response, fallback: string) {
+  const payload = await response.json().catch(() => null);
+  if (payload?.error && typeof payload.error === 'string') return payload.error;
+  return fallback;
+}
+
 const TABS: Array<{ id: SettingsTab; label: string }> = [
   { id: 'profile', label: 'Profile' },
   { id: 'security', label: 'Security' },
@@ -61,24 +67,33 @@ export default function SettingsPageContent() {
 
   useEffect(() => {
     async function loadAboutContent() {
-      const response = await fetch('/api/content/about');
-      if (!response.ok) return;
-      const payload = await response.json();
-      const data = payload.data;
-      if (!data) return;
+      try {
+        const response = await fetch('/api/content/about');
+        if (!response.ok) {
+          const message = await readErrorMessage(response, 'Unable to load hotel info');
+          toast.error(message);
+          return;
+        }
 
-      setAboutData({
-        title: data.title ?? '',
-        subtitle: data.subtitle ?? '',
-        body: data.body ?? '',
-        highlightsText: Array.isArray(data.highlights) ? data.highlights.join('\n') : '',
-        metricsText: Array.isArray(data.metrics)
-          ? data.metrics
-              .map((metric: AboutMetric) => `${metric.label ?? ''}|${metric.value ?? ''}`)
-              .join('\n')
-          : '',
-        imagePath: data.image_path ?? '',
-      });
+        const payload = await response.json();
+        const data = payload.data;
+        if (!data) return;
+
+        setAboutData({
+          title: data.title ?? '',
+          subtitle: data.subtitle ?? '',
+          body: data.body ?? '',
+          highlightsText: Array.isArray(data.highlights) ? data.highlights.join('\n') : '',
+          metricsText: Array.isArray(data.metrics)
+            ? data.metrics
+                .map((metric: AboutMetric) => `${metric.label ?? ''}|${metric.value ?? ''}`)
+                .join('\n')
+            : '',
+          imagePath: data.image_path ?? '',
+        });
+      } catch {
+        toast.error('Unable to load hotel info');
+      }
     }
 
     loadAboutContent();
@@ -254,7 +269,12 @@ export default function SettingsPageContent() {
     });
 
     setIsSaving(false);
-    toast[response.ok ? 'success' : 'error'](response.ok ? 'Hotel info saved' : 'Unable to save hotel info');
+    if (response.ok) {
+      toast.success('Hotel info saved');
+      return;
+    }
+
+    toast.error(await readErrorMessage(response, 'Unable to save hotel info'));
   }
 
   const tabTitle =

@@ -5,6 +5,7 @@ import { CalendarDays, ChevronLeft, ChevronRight, Download, Plus, Search } from 
 import { PageHeader } from '@/components/PageHeader';
 import { CreateScheduleItemModal } from '@/components/modals/CreateScheduleItemModal';
 import { useApi } from '@/hooks/useApi';
+import { addDays, parseDateKey, startOfWeek, toDateKey } from '@/lib/date-utils';
 
 type Guest = {
   id: string;
@@ -57,23 +58,8 @@ type CreateSlot = {
 
 const TIME_SLOTS = Array.from({ length: 15 }, (_, index) => index + 7);
 
-function buildMonday(date: Date) {
-  const result = new Date(date);
-  const day = result.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  result.setDate(result.getDate() + diff);
-  result.setHours(0, 0, 0, 0);
-  return result;
-}
-
-function addDays(date: Date, days: number) {
-  const result = new Date(date);
-  result.setDate(result.getDate() + days);
-  return result;
-}
-
 function toDateInput(date: Date) {
-  return date.toISOString().slice(0, 10);
+  return toDateKey(date);
 }
 
 function formatWeekLabel(start: Date) {
@@ -113,11 +99,7 @@ function minuteOffset(value: string) {
 }
 
 function calendarDateKey(value: string) {
-  return new Date(value).toISOString().slice(0, 10);
-}
-
-function getColor(item: ScheduleItem) {
-  return item.color ?? 'var(--color-primary)';
+  return value.slice(0, 10);
 }
 
 function shiftWeek(weekStart: string, direction: -1 | 1) {
@@ -136,26 +118,30 @@ function formatGuestStatus(status: string) {
 
 export default function SchedulePage() {
   const [searchTerm, setSearchTerm] = useState('');
-  const [weekStart, setWeekStart] = useState(() => toDateInput(buildMonday(new Date())));
-  const [selectedGuestId, setSelectedGuestId] = useState('');
+  const [weekStart, setWeekStart] = useState(() => toDateInput(startOfWeek(new Date())));
+  const [selectedGuestId, setSelectedGuestId] = useState<string>('');
+  const [hasInitialized, setHasInitialized] = useState(false);
   const [slot, setSlot] = useState<CreateSlot | null>(null);
 
   const scheduleUrl = `/api/schedule?weekStart=${weekStart}${selectedGuestId ? `&guestId=${selectedGuestId}` : ''}`;
   const { data, isLoading, mutate } = useApi<ScheduleResponse>(scheduleUrl);
 
+  // Auto-select first guest only on initial data load
   useEffect(() => {
-    if (!selectedGuestId && data?.guests?.length) {
+    if (!hasInitialized && data?.guests?.length) {
       setSelectedGuestId(data.guests[0].id);
+      setHasInitialized(true);
     }
-  }, [data, selectedGuestId]);
+  }, [data, hasInitialized]);
 
   useEffect(() => {
-    if (data?.selectedGuest?.id && data.selectedGuest.id !== selectedGuestId) {
-      setSelectedGuestId(data.selectedGuest.id);
+    const normalizedWeekStart = data?.weekStart?.slice(0, 10);
+    if (normalizedWeekStart && normalizedWeekStart !== weekStart) {
+      setWeekStart(normalizedWeekStart);
     }
-  }, [data, selectedGuestId]);
+  }, [data?.weekStart, weekStart]);
 
-  const weekStartDate = new Date(`${weekStart}T00:00:00`);
+  const weekStartDate = parseDateKey(weekStart);
   const days = Array.from({ length: 7 }, (_, index) => addDays(weekStartDate, index));
   const selectedGuest: SelectedGuest | null =
     data?.selectedGuest ?? data?.guests?.find((guest) => guest.id === selectedGuestId) ?? null;
@@ -165,13 +151,25 @@ export default function SchedulePage() {
     return [guest.firstName, guest.lastName, guest.roomNumber ?? '', guest.guestId].join(' ').toLowerCase().includes(query);
   });
 
-  const items = (data?.items ?? []).filter((item) => item.guestId === selectedGuestId);
+  const items = [...(data?.items ?? [])]
+    .filter((item) => item.guestId === selectedGuestId)
+    .sort((left, right) => {
+      const startDiff = new Date(left.startAt).getTime() - new Date(right.startAt).getTime();
+      if (startDiff !== 0) return startDiff;
+      return new Date(left.endAt).getTime() - new Date(right.endAt).getTime();
+    });
   const reservationItems = items.filter((item) => item.itemType === 'RESERVATION');
   const timedItems = items.filter((item) => item.itemType !== 'RESERVATION');
 
   const eventsByDay = days.map((day) => {
     const dayKey = toDateInput(day);
-    return timedItems.filter((item) => calendarDateKey(item.startAt) === dayKey);
+    return timedItems
+      .filter((item) => calendarDateKey(item.startAt) === dayKey)
+      .sort((left, right) => {
+        const startDiff = new Date(left.startAt).getTime() - new Date(right.startAt).getTime();
+        if (startDiff !== 0) return startDiff;
+        return new Date(left.endAt).getTime() - new Date(right.endAt).getTime();
+      });
   });
 
   const weekLabel = data?.weekLabel ?? formatWeekLabel(weekStartDate);
@@ -194,7 +192,7 @@ export default function SchedulePage() {
               </button>
               <button
                 type="button"
-                onClick={() => setWeekStart(toDateInput(buildMonday(new Date())))}
+                onClick={() => setWeekStart(toDateInput(startOfWeek(new Date())))}
                 className="inline-flex items-center gap-2 border-x border-border px-4 py-2 text-sm font-medium text-[var(--color-text-primary)]"
               >
                 <CalendarDays className="h-4 w-4" />
@@ -322,7 +320,7 @@ export default function SchedulePage() {
               <div className="grid grid-cols-[64px_repeat(7,minmax(0,1fr))] border-b border-border bg-surface">
                 <div className="px-3 py-4 text-xs font-medium uppercase tracking-[0.22em] text-[var(--color-text-secondary)]">Time</div>
                 {days.map((day) => (
-                    <div key={day.toISOString()} className="border-l border-border px-3 py-4 text-center">
+                    <div key={toDateInput(day)} className="border-l border-border px-3 py-4 text-center">
                     <div className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--color-text-secondary)]">{formatDayLabel(day)}</div>
                     <div className="mt-1 text-sm text-[var(--color-text-primary)]">{new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short' }).format(day)}</div>
                   </div>
@@ -340,11 +338,12 @@ export default function SchedulePage() {
 
                 {days.map((day, dayIndex) => {
                   const dayItems = eventsByDay[dayIndex] ?? [];
+                  const dayKey = toDateInput(day);
                   return (
-                    <div key={day.toISOString()} className="relative border-r border-border bg-surface" style={{ height: `${TIME_SLOTS.length * 72}px` }}>
+                    <div key={dayKey} className="relative border-r border-border bg-surface" style={{ height: `${TIME_SLOTS.length * 72}px` }}>
                       {TIME_SLOTS.map((hour) => (
                         <button
-                          key={`${day.toISOString()}-${hour}`}
+                          key={`${dayKey}-${hour}`}
                           type="button"
                           onClick={() => {
                             if (!selectedGuestId) return;
@@ -379,6 +378,7 @@ export default function SchedulePage() {
                     key={item.id}
                     type="button"
                     className={`absolute left-2 right-2 z-10 rounded-xl border border-card-border px-3 py-2 text-left transition-transform`}
+                    style={{ top: `${top}px`, height: `${height}px` }}
                   >
                             <div className="text-xs font-semibold text-[var(--color-text-primary)]">{item.title}</div>
                             <div className="mt-1 text-[11px] text-[var(--color-text-secondary)]">

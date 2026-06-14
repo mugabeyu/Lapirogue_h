@@ -16,12 +16,12 @@ type ScheduleRow = {
   guest_id: string;
   title: string;
   item_type: 'RESERVATION' | 'ACTIVITY' | 'BOOKING' | 'ORDER' | 'SERVICE' | 'CUSTOM';
-  source_module: string | null;
-  source_record_id: string | null;
+  source_module?: string | null;
+  source_record_id?: string | null;
   start_at: string;
   end_at: string;
   status: 'SCHEDULED' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED';
-  notes: string | null;
+  notes?: string | null;
   color: string | null;
   created_at: string;
   updated_at: string;
@@ -44,7 +44,7 @@ function dateKey(value: string) {
   return value.slice(0, 10);
 }
 
-function overlapsWeek(startAt: string, endAt: string, weekStart: Date, weekEnd: Date) {
+function overlapsWeek(startAt: string, endAt: string, weekStart: Date) {
   const itemStart = dateKey(startAt);
   const itemEnd = dateKey(endAt);
   const weekStartKey = toDateKey(weekStart);
@@ -165,7 +165,7 @@ export async function GET(request: NextRequest) {
       const [customItemsResult, activityBookingsResult, foodOrdersResult, guestOrdersResult, itineraryEventsResult] = await Promise.all([
         supabase
           .from('guest_schedule_items')
-          .select('id,guest_id,title,item_type,source_module,source_record_id,start_at,end_at,status,notes,color,created_at,updated_at')
+          .select('id,guest_id,title,item_type,start_at,end_at,status,color,created_at,updated_at,source_module,source_record_id,notes')
           .eq('guest_id', selectedGuestId),
         supabase
           .from('activity_bookings')
@@ -181,7 +181,7 @@ export async function GET(request: NextRequest) {
           .eq('guest_id', selectedGuestId),
         supabase
           .from('itinerary_events')
-          .select('id,guest_id,title,category,description,event_time,status,guests(first_name,last_name)')
+          .select('id,guest_id,title,category,description,start_at,end_at,location,status,guests(first_name,last_name)')
           .eq('guest_id', selectedGuestId),
       ]);
 
@@ -204,7 +204,7 @@ export async function GET(request: NextRequest) {
         const startHourInt = parseInt(hours, 10);
         const endHourInt = (startHourInt + 1) % 24;
         const startAt = `${bookingDate}T${hours}:${minutes}:00`;
-        const endDate = endHourInt < startHourInt ? addDays(parseDateKey(bookingDate), 1).toISOString().slice(0, 10) : bookingDate;
+        const endDate = endHourInt < startHourInt ? toDateKey(addDays(parseDateKey(bookingDate), 1)) : bookingDate;
         const endAt = `${endDate}T${String(endHourInt).padStart(2, '0')}:${minutes}:00`;
         scheduledItems.push({
           id: booking.id,
@@ -253,7 +253,7 @@ export async function GET(request: NextRequest) {
         scheduledItems.push({
           id: order.id,
           guest_id: selectedGuestId,
-          title: order.order_type ?? 'Guest order',
+          title: 'Guest order',
           item_type: 'ORDER',
           source_module: 'guest_orders',
           source_record_id: order.id,
@@ -268,9 +268,8 @@ export async function GET(request: NextRequest) {
       });
 
       (itineraryEventsResult.data ?? []).forEach((event) => {
-        const startAt = event.event_time ?? requestedWeekStart.toISOString();
-        const endAt = new Date(startAt);
-        endAt.setHours(endAt.getHours() + 1);
+        const startAt = event.start_at ?? requestedWeekStart.toISOString();
+        const endAt = event.end_at ?? new Date(new Date(startAt).getTime() + 60 * 60 * 1000).toISOString();
         scheduledItems.push({
           id: event.id,
           guest_id: selectedGuestId,
@@ -279,7 +278,7 @@ export async function GET(request: NextRequest) {
           source_module: 'itinerary_events',
           source_record_id: event.id,
           start_at: startAt,
-          end_at: endAt.toISOString(),
+          end_at: endAt,
           status: (event.status as ScheduleRow['status']) ?? 'CONFIRMED',
           notes: event.description ?? null,
           color: colorForType('SERVICE'),
@@ -288,10 +287,14 @@ export async function GET(request: NextRequest) {
         });
       });
 
-      scheduledItems.sort((left, right) => new Date(left.start_at).getTime() - new Date(right.start_at).getTime());
+      scheduledItems.sort((left, right) => {
+        const startDiff = new Date(left.start_at).getTime() - new Date(right.start_at).getTime();
+        if (startDiff !== 0) return startDiff;
+        return new Date(left.end_at).getTime() - new Date(right.end_at).getTime();
+      });
     }
 
-    const payloadItems = scheduledItems.filter((item) => overlapsWeek(item.start_at, item.end_at, requestedWeekStart, addDays(requestedWeekStart, 6)));
+    const payloadItems = scheduledItems.filter((item) => overlapsWeek(item.start_at, item.end_at, requestedWeekStart));
 
     return NextResponse.json({
       success: true,
@@ -307,8 +310,8 @@ export async function GET(request: NextRequest) {
           roomNumber: roomMap.get(selectedGuest.id) ?? null,
           stay: stayMap.get(selectedGuest.id) ?? null,
         } : null,
-        weekStart: requestedWeekStart.toISOString(),
-        weekEnd: addDays(requestedWeekStart, 6).toISOString(),
+        weekStart: toDateKey(requestedWeekStart),
+        weekEnd: toDateKey(addDays(requestedWeekStart, 6)),
         weekLabel: formatWeekLabel(requestedWeekStart),
         items: payloadItems.map((item) => ({
           id: item.id,
@@ -328,7 +331,8 @@ export async function GET(request: NextRequest) {
         totalActivities: payloadItems.length,
       },
     });
-  } catch {
+  } catch (error) {
+    console.error('Schedule API Error:', error);
     return NextResponse.json({ success: false, error: 'Failed to fetch schedule data' }, { status: 500 });
   }
 }
@@ -410,7 +414,7 @@ export async function POST(request: NextRequest) {
           booking_date: bookingDate,
           booking_time: parseTimeSlot(timeSlot),
           participants,
-          status: 'CONFIRMED',
+          status: (body.status as ScheduleRow['status']) ?? 'CONFIRMED',
           notes,
         })
         .select('id')

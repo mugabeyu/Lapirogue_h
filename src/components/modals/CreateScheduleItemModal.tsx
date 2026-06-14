@@ -60,7 +60,7 @@ function pickerLabel(type: ScheduleItemType) {
 }
 
 function calendarDateKey(value: string) {
-  return new Date(value).toISOString().slice(0, 10);
+  return value.slice(0, 10);
 }
 
 function toTimeInput(date: Date) {
