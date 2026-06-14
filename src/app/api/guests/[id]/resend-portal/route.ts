@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { getRouteHandlerSupabaseClient } from '@/lib/supabase-server';
 import { loadGuestProfile } from '@/lib/guest-profile';
-import { sendGuestRoomEmail } from '@/lib/mailer';
+import { sendGuestPortalInvitationEmail } from '@/lib/mailer';
 
 const resendPortalSchema = z.object({
   guestId: z.string().uuid(),
@@ -62,17 +62,23 @@ export async function POST(request: NextRequest, context: { params: Promise<unkn
       return NextResponse.json({ success: false, error: 'Guest does not have an assigned room yet' }, { status: 409 });
     }
 
-    await sendGuestRoomEmail({
+    const registerUrl = new URL('/register', request.url);
+    registerUrl.searchParams.set('guestId', body.guestId);
+
+    await sendGuestPortalInvitationEmail({
       to: profile.guest.email,
+      guestName: `${profile.guest.firstName} ${profile.guest.lastName}`.trim(),
+      guestId: profile.guest.guestId,
+      guestEmail: profile.guest.email,
       roomNumber: stay.roomNumber,
-      lastName: profile.guest.lastName,
       checkIn: stay.checkIn,
       checkOut: stay.checkOut,
+      registerUrl: registerUrl.toString(),
     });
 
     return NextResponse.json({
       success: true,
-      message: 'Guest room email sent successfully.',
+      message: 'Guest portal invitation email sent successfully.',
       data: {
         guestId: body.guestId,
         email: profile.guest.email,
@@ -84,7 +90,7 @@ export async function POST(request: NextRequest, context: { params: Promise<unkn
       return NextResponse.json({ success: false, error: 'Validation error', details: error.errors }, { status: 400 });
     }
 
-    console.error('Guest room email error:', error);
-    return NextResponse.json({ success: false, error: 'Failed to send guest room email' }, { status: 500 });
+    console.error('Guest portal invitation email error:', error);
+    return NextResponse.json({ success: false, error: 'Failed to send guest portal invitation email' }, { status: 500 });
   }
 }

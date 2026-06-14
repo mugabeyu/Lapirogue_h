@@ -46,8 +46,8 @@ function toDateKey(date = new Date()) {
 
 export async function GET(request: NextRequest) {
   try {
-    const search = request.nextUrl.searchParams.get("search") ?? "";
-    const guestId = request.nextUrl.searchParams.get("guestId") ?? "";
+    const search = request.nextUrl.searchParams.get("search") || "";
+    const guestId = request.nextUrl.searchParams.get("guestId") || "";
     const supabase = getSupabaseAdmin();
     let query = supabase
       .from("reservations")
@@ -70,28 +70,20 @@ export async function GET(request: NextRequest) {
     const rows = (data ?? []) as ReservationRow[];
     const mapped = rows.map((reservation) => ({
       id: reservation.id,
-      reservationId: reservation.reservation_id ?? null,
-      guestId:
-        (reservation as ReservationRow & { guest_id?: string }).guest_id ??
-        null,
-      roomId:
-        (reservation as ReservationRow & { room_id?: string }).room_id ?? null,
+      reservationId: reservation.reservation_id,
+      guestId: (reservation as ReservationRow & { guest_id?: string }).guest_id,
+      roomId: (reservation as ReservationRow & { room_id?: string }).room_id,
       guest: reservation.guests
-        ? `${reservation.guests.first_name ?? ""} ${reservation.guests.last_name ?? ""}`.trim() ||
-          null
+        ? `${reservation.guests.first_name || ""} ${reservation.guests.last_name || ""}`.trim()
         : null,
-      room: reservation.rooms?.room_number ?? null,
-      roomType: reservation.rooms?.type ?? null,
-      checkIn: reservation.check_in ?? null,
-      checkOut: reservation.check_out ?? null,
-      adults: reservation.adults ?? 0,
-      children: reservation.children ?? 0,
-      status: reservation.status ?? null,
-      totalAmount:
-        reservation.total_amount === undefined ||
-        reservation.total_amount === null
-          ? 0
-          : Number(reservation.total_amount),
+      room: reservation.rooms?.room_number,
+      roomType: reservation.rooms?.type,
+      checkIn: reservation.check_in,
+      checkOut: reservation.check_out,
+      adults: reservation.adults,
+      children: reservation.children,
+      status: reservation.status,
+      totalAmount: Number(reservation.total_amount),
     }));
 
     return createApiResponse(true, mapped);
@@ -132,7 +124,7 @@ export async function POST(request: NextRequest) {
         adults: body.adults,
         children: body.children,
         total_amount: body.totalAmount,
-        status: body.status ?? "CONFIRMED",
+        status: body.status || "CONFIRMED",
       })
       .select("*")
       .single();
@@ -142,7 +134,7 @@ export async function POST(request: NextRequest) {
     const [{ data: guestRow }, { data: roomRow }] = await Promise.all([
       supabase
         .from("guests")
-        .select("first_name,last_name,email,auth_id")
+        .select("first_name,last_name,email,auth_id,guest_id")
         .eq("id", body.guestId)
         .maybeSingle(),
       supabase
@@ -153,19 +145,19 @@ export async function POST(request: NextRequest) {
     ]);
 
     if (guestRow?.email && roomRow?.room_number) {
-      const baseUrl = request.nextUrl.origin;
-      const registerUrl = `${baseUrl}/register?guestId=${guestRow.auth_id ?? body.guestId}`;
+      const registerUrl = new URL("/register", request.url);
+      registerUrl.searchParams.set("guestId", body.guestId);
 
       await sendGuestPortalInvitationEmail({
         to: guestRow.email,
         guestName:
-          `${guestRow.first_name ?? ""} ${guestRow.last_name ?? "Guest"}`.trim(),
-        guestId: guestRow.auth_id ?? "TBA",
+          `${guestRow.first_name || ""} ${guestRow.last_name || ""}`.trim(),
+        guestId: guestRow.guest_id || body.guestId,
         guestEmail: guestRow.email,
         roomNumber: roomRow.room_number,
         checkIn: body.checkIn,
         checkOut: body.checkOut,
-        registerUrl: registerUrl,
+        registerUrl: registerUrl.toString(),
       }).catch((emailError) => {
         console.warn(
           "Guest portal invitation email could not be sent on POST:",
@@ -205,7 +197,7 @@ export async function PUT(request: NextRequest) {
     } = parsed;
     const supabase = getSupabaseAdmin();
     const actor = await getAuditActor(request);
-    const actorId = actor?.id ?? null;
+    const actorId = actor?.id;
 
     if (status === "CHECKED_IN") {
       const today = toDateKey();
@@ -272,7 +264,7 @@ export async function PUT(request: NextRequest) {
     const [{ data: guestRow }, { data: roomRow }] = await Promise.all([
       supabase
         .from("guests")
-        .select("first_name,last_name,email,auth_id")
+        .select("first_name,last_name,email,auth_id,guest_id")
         .eq("id", guestId)
         .maybeSingle(),
       supabase
@@ -290,21 +282,21 @@ export async function PUT(request: NextRequest) {
           previousReservation.status !== "CHECKED_IN")),
     );
 
-    if (shouldSendGuestEmail && guestRow?.email) {
+    if (shouldSendGuestEmail && guestRow?.email && roomRow?.room_number) {
       try {
-        const baseUrl = request.nextUrl.origin;
-        const registerUrl = `${baseUrl}/register?guestId=${guestRow.auth_id ?? guestId}`;
+        const registerUrl = new URL("/register", request.url);
+        registerUrl.searchParams.set("guestId", guestId);
 
         await sendGuestPortalInvitationEmail({
           to: guestRow.email,
           guestName:
-            `${guestRow.first_name ?? ""} ${guestRow.last_name ?? "Guest"}`.trim(),
-          guestId: guestRow.auth_id ?? "TBA",
+            `${guestRow.first_name || ""} ${guestRow.last_name || ""}`.trim(),
+          guestId: guestRow.guest_id || guestId,
           guestEmail: guestRow.email,
-          roomNumber: roomRow?.room_number ?? "TBA",
+          roomNumber: roomRow.room_number,
           checkIn: checkIn,
           checkOut: checkOut,
-          registerUrl: registerUrl,
+          registerUrl: registerUrl.toString(),
         });
       } catch (emailError) {
         console.warn("Guest room email could not be sent on PUT:", emailError);
@@ -329,7 +321,7 @@ export async function DELETE(request: NextRequest) {
     if (!id) return createApiResponse(false, "ID required", { status: 400 });
     const supabase = getSupabaseAdmin();
     const actor = await getAuditActor(request);
-    const actorId = actor?.id ?? null;
+    const actorId = actor?.id;
     const { data: reservation } = await supabase
       .from("reservations")
       .select("*")
@@ -342,7 +334,7 @@ export async function DELETE(request: NextRequest) {
           tableName: "reservations",
           recordId: id,
           action: "DELETE",
-          actorId,
+          actorId: actor?.id || "unknown",
           before: reservation as Record<string, unknown>,
         });
       } catch (auditError) {

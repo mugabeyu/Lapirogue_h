@@ -14,42 +14,105 @@ type StaffOnboarding = {
   position: string;
 };
 
+type GuestInvitation = {
+  id: string;
+  guestId: string;
+  email: string;
+  fullName: string;
+  roomNumber?: string | null;
+  checkIn?: string | null;
+  checkOut?: string | null;
+  alreadyRegistered: boolean;
+};
+
 export default function RegisterPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingInvite, setIsLoadingInvite] = useState(true);
   const [isReady, setIsReady] = useState(false);
   const [staff, setStaff] = useState<StaffOnboarding | null>(null);
+  const [guest, setGuest] = useState<GuestInvitation | null>(null);
+  const [inviteType, setInviteType] = useState<'staff' | 'guest' | null>(null);
+  const [loadError, setLoadError] = useState('');
+  const [completedMessage, setCompletedMessage] = useState('');
   const [passwordData, setPasswordData] = useState({
     password: '',
     confirmPassword: '',
   });
 
+  function closePage() {
+    if (typeof window === 'undefined') return;
+    window.close();
+  }
+
   useEffect(() => {
     const token = new URLSearchParams(window.location.search).get('token');
-    if (!token) {
+    const guestId = new URLSearchParams(window.location.search).get('guestId');
+    setInviteType(token ? 'staff' : guestId ? 'guest' : null);
+
+    if (!token && !guestId) {
+      setIsLoadingInvite(false);
       setIsReady(false);
       setStaff(null);
+      setGuest(null);
+      setLoadError('This registration link is invalid.');
       return;
     }
 
     let cancelled = false;
-    fetch(`/api/staff/onboarding?token=${encodeURIComponent(token)}`)
-      .then((response) => (response.ok ? response.json() : null))
-      .then((result) => {
-        if (!cancelled && result?.success) {
+
+    const loadInvite = async () => {
+      try {
+        const url = token
+          ? `/api/staff/onboarding?token=${encodeURIComponent(token)}`
+          : `/api/guests/register-account?guestId=${encodeURIComponent(guestId ?? '')}`;
+
+        const response = await fetch(url);
+        const result = await response.json().catch(() => null);
+
+        if (cancelled) return;
+
+        if (!response.ok || !result?.success) {
+          setIsReady(false);
+          setStaff(null);
+          setGuest(null);
+          setLoadError(
+            result?.error ||
+              (token
+                ? 'This invitation link is invalid or has expired.'
+                : 'This guest registration link is invalid.'),
+          );
+          return;
+        }
+
+        if (token) {
           setStaff(result.data);
-          setIsReady(true);
-        } else if (!cancelled) {
-          setIsReady(false);
+          setGuest(null);
+        } else {
+          setGuest(result.data);
           setStaff(null);
         }
-      })
-      .catch(() => {
+
+        setLoadError('');
+        setIsReady(true);
+      } catch {
+        if (cancelled) return;
+        setIsReady(false);
+        setStaff(null);
+        setGuest(null);
+        setLoadError(
+          token
+            ? 'This invitation link is invalid or has expired.'
+            : 'Failed to load the guest registration link.',
+        );
+      } finally {
         if (!cancelled) {
-          setIsReady(false);
-          setStaff(null);
+          setIsLoadingInvite(false);
         }
-      });
+      }
+    };
+
+    void loadInvite();
 
     return () => {
       cancelled = true;
@@ -60,7 +123,8 @@ export default function RegisterPage() {
     event.preventDefault();
 
     const token = new URLSearchParams(window.location.search).get('token');
-    if (!token || !staff) return;
+    const guestId = new URLSearchParams(window.location.search).get('guestId');
+    if (!token && !guestId) return;
 
     if (passwordData.password !== passwordData.confirmPassword) {
       toast.error('Passwords do not match');
@@ -70,10 +134,14 @@ export default function RegisterPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch('/api/staff/onboarding', {
+      const response = await fetch(token ? '/api/staff/onboarding' : '/api/guests/register-account', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, password: passwordData.password }),
+        body: JSON.stringify(
+          token
+            ? { token, password: passwordData.password }
+            : { guestId, password: passwordData.password },
+        ),
       });
 
       const result = await response.json();
@@ -83,8 +151,14 @@ export default function RegisterPage() {
         return;
       }
 
-      toast.success('Account setup complete. Please sign in.');
-      router.replace('/login?registered=1');
+      if (token) {
+        toast.success('Account setup complete. Please sign in.');
+        router.replace('/login?registered=1');
+        return;
+      }
+
+      setCompletedMessage('Guest portal account created successfully. You can now close this page.');
+      toast.success('Guest account created successfully.');
     } catch {
       toast.error('Registration failed. Please try again.');
     } finally {
@@ -92,15 +166,53 @@ export default function RegisterPage() {
     }
   }
 
-  if (!isReady && !staff) {
+  if (isLoadingInvite) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-surface-secondary px-4">
+        <div className="card w-full max-w-md p-8 text-center">
+          <h1 className="mb-4 text-2xl font-semibold text-[var(--color-text-primary)]">Loading Registration</h1>
+          <p className="text-[var(--color-text-secondary)]">Please wait while we load your registration link.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isReady || (!staff && !guest)) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-surface-secondary px-4">
         <div className="card w-full max-w-md p-8 text-center">
           <h1 className="mb-4 text-2xl font-semibold text-[var(--color-text-primary)]">Invalid Invitation</h1>
           <p className="text-[var(--color-text-secondary)] mb-6">
-            This invitation link is invalid or has expired. Please contact your administrator.
+            {loadError || 'This invitation link is invalid or has expired.'}
           </p>
-          <Link href="/login" className="btn-primary">Back to Login</Link>
+          {inviteType === 'guest' ? (
+            <button type="button" onClick={closePage} className="btn-primary">
+              Close Page
+            </button>
+          ) : (
+            <Link href="/login" className="btn-primary">Back to Login</Link>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (inviteType === 'guest' && (guest?.alreadyRegistered || completedMessage)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-cover bg-center bg-no-repeat px-4 auth-page-bg">
+        <div className="absolute inset-0 auth-dark-overlay" />
+        <div className="card relative z-10 w-full max-w-md border border-border bg-surface p-8 text-center">
+          <h1 className="mb-2 text-2xl font-semibold text-[var(--color-text-primary)]">
+          {guest?.alreadyRegistered ? 'Guest Already Registered' : 'Registration Complete'}
+          </h1>
+          <p className="mb-6 text-sm text-[var(--color-text-secondary)]">
+            {guest?.alreadyRegistered
+              ? 'This guest invitation has already been used. You can close this page.'
+              : completedMessage}
+          </p>
+          <button type="button" onClick={closePage} className="btn-primary w-full">
+            Close Page
+          </button>
         </div>
       </div>
     );
@@ -110,7 +222,9 @@ export default function RegisterPage() {
     <div className="min-h-screen flex items-center justify-center bg-cover bg-center bg-no-repeat px-4 auth-page-bg">
       <div className="absolute inset-0 auth-dark-overlay" />
       <div className="card relative z-10 w-full max-w-md border border-border bg-surface p-8">
-        <h1 className="mb-2 text-center text-2xl font-semibold text-[var(--color-text-primary)]">Complete Staff Registration</h1>
+        <h1 className="mb-2 text-center text-2xl font-semibold text-[var(--color-text-primary)]">
+          {inviteType === 'guest' ? 'Complete Guest Registration' : 'Complete Staff Registration'}
+        </h1>
         <p className="mb-6 text-center text-sm text-[var(--color-text-secondary)]">Your invitation details are pre-filled below.</p>
 
         {staff && (
@@ -118,6 +232,17 @@ export default function RegisterPage() {
             <p><strong>Email:</strong> <span className="text-[var(--color-text-secondary)]">{staff.email}</span></p>
             <p><strong>Name:</strong> <span className="text-[var(--color-text-secondary)]">{staff.full_name}</span></p>
             <p><strong>Employee Code:</strong> <span className="text-[var(--color-text-secondary)]">{staff.employee_code}</span></p>
+          </div>
+        )}
+
+        {guest && (
+          <div className="mb-6 rounded-xl border border-border bg-surface-secondary p-4 text-sm">
+            <p><strong>Email:</strong> <span className="text-[var(--color-text-secondary)]">{guest.email}</span></p>
+            <p><strong>Name:</strong> <span className="text-[var(--color-text-secondary)]">{guest.fullName}</span></p>
+            <p><strong>Guest ID:</strong> <span className="text-[var(--color-text-secondary)]">{guest.guestId}</span></p>
+            {guest.roomNumber ? (
+              <p><strong>Room Number:</strong> <span className="text-[var(--color-text-secondary)]">{guest.roomNumber}</span></p>
+            ) : null}
           </div>
         )}
 
@@ -152,7 +277,17 @@ export default function RegisterPage() {
             {isSubmitting ? 'Setting up...' : 'Create Password'}
           </button>
 
-          <Link href="/login" className="block text-center text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]">Back to Login</Link>
+          {inviteType === 'guest' ? (
+            <button
+              type="button"
+              onClick={closePage}
+              className="block w-full text-center text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
+            >
+              Close Page
+            </button>
+          ) : (
+            <Link href="/login" className="block text-center text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]">Back to Login</Link>
+          )}
         </form>
       </div>
     </div>

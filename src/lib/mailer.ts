@@ -29,6 +29,7 @@ export async function sendGuestPortalInvitationEmail(input: {
             ${input.checkOut ? `<tr><td style="padding:4px 0;color:#6b7280">Check-out Date:</td><td style="padding:4px 0;font-weight:bold">${input.checkOut}</td></tr>` : ""}
           </table>
           <p><a href="${input.registerUrl}" style="display:inline-block;padding:12px 18px;border-radius:10px;background:#0f766e;color:#ffffff;text-decoration:none">Complete Registration</a></p>
+          
           <p style="font-size:13px;color:#FF0000">This link expires in 48 hours. If you did not expect this invitation, disregard this email.</p>
         </div>
       `,
