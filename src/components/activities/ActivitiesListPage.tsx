@@ -132,7 +132,7 @@ export default function ActivitiesListPage() {
     return `/api/activities?${params}`;
   }, [category]);
 
-  const { data, isLoading, mutate } = useSWR(url, fetchActivities);
+  const { data, mutate } = useSWR(url, fetchActivities);
   const activities = data?.data ?? [];
   const categories = useMemo(() => {
     const fromApi = data?.categories ?? [];
@@ -196,9 +196,8 @@ className={`rounded-xl px-4 py-2 text-sm font-medium transition-colors ${
         </div>
       </div>
 
-      {isLoading && <p className="text-sm text-[var(--color-text-secondary)]">Loading activities...</p>}
-
-      {!isLoading && activities.length === 0 && (
+     
+      { activities.length === 0 && (
         <div className="card rounded-xl border-dashed border-card-border px-6 py-16 text-center">
           <p className="text-[var(--color-text-secondary)]">No activities in this category yet.</p>
           <Link href="/activities/new" className="mt-4 inline-block">

@@ -54,7 +54,7 @@ function formatShortDate(value?: string | null) {
 }
 
 export default function DashboardDataPage() {
-  const { data, isLoading, error } = useApi<DashboardData>('/api/dashboard');
+  const { data,error } = useApi<DashboardData>('/api/dashboard');
   const stats = data?.stats;
   const todaysCheckins = data?.todaysCheckins ?? [];
   const todaysCheckouts = data?.todaysCheckouts ?? [];
@@ -69,7 +69,7 @@ export default function DashboardDataPage() {
         </div>
       )}
 
-      {isLoading && !data && (
+      { !data && (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
           {Array.from({ length: 8 }).map((_, i) => (
             <div key={i} className="card p-6 animate-pulse">

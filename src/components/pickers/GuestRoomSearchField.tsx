@@ -19,7 +19,7 @@ export function GuestRoomSearchField({ selectedGuest, onSelect }: GuestRoomSearc
     return `/api/guests?${params}`;
   }, [search]);
 
-  const { data: guests, isLoading } = useApi<Guest[]>(guestsUrl);
+  const { data: guests } = useApi<Guest[]>(guestsUrl);
 
   const filteredGuests = useMemo(() => {
     const rows = guests ?? [];
@@ -76,8 +76,7 @@ export function GuestRoomSearchField({ selectedGuest, onSelect }: GuestRoomSearc
 
       {(search.trim() || filteredGuests.length > 0) && (
         <div className="max-h-44 space-y-1 overflow-y-auto rounded-xl border border-border bg-surface p-1 shadow-sm">
-          {isLoading && <p className="px-3 py-2 text-sm text-[var(--color-text-secondary)]">Searching...</p>}
-          {!isLoading && filteredGuests.length === 0 && (
+          {filteredGuests.length === 0 && (
             <p className="px-3 py-2 text-sm text-[var(--color-text-secondary)]">No guests found.</p>
           )}
           {filteredGuests.map((guest) => (

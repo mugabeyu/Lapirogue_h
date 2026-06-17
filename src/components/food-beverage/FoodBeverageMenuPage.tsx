@@ -120,7 +120,7 @@ export default function FoodBeverageMenuPage() {
     return `/api/menu-items?${params}`;
   }, [search, category]);
 
-  const { data, isLoading, mutate } = useSWR(url, fetchMenu);
+  const { data,  mutate } = useSWR(url, fetchMenu);
   const items = data?.data ?? [];
 
   const categories = useMemo(() => {
@@ -199,9 +199,9 @@ export default function FoodBeverageMenuPage() {
         })}
       </div>
 
-      {isLoading && <p className="text-sm text-[var(--color-text-secondary)]">Loading menu...</p>}
 
-      {!isLoading && items.length === 0 && (
+
+      { items.length === 0 && (
         <div className="card rounded-xl border-dashed border-card-border px-6 py-16 text-center">
           <p className="text-[var(--color-text-secondary)]">No menu items found.</p>
           <button type="button" onClick={openCreate} className="mt-4 text-sm font-semibold text-[var(--color-button-primary)]">

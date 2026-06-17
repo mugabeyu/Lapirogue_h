@@ -59,7 +59,7 @@ type HtmlCapablePdf = jsPDF & {
 
 export function PaymentDetailsPage() {
   const params = useParams<{ id: string }>();
-  const { data, isLoading } = useApi<PaymentDetailResponse>(`/api/payments/${params.id}`);
+  const { data} = useApi<PaymentDetailResponse>(`/api/payments/${params.id}`);
 
   const detail = data;
 
@@ -104,9 +104,7 @@ export function PaymentDetailsPage() {
     }
   }
 
-  if (isLoading) {
-    return <div className="rounded-[24px] border border-border bg-surface p-6 shadow-sm">Loading payment details...</div>;
-  }
+  
 
   if (!detail) {
     return <div className="rounded-[24px] border border-border bg-surface p-6 shadow-sm">Payment not found.</div>;

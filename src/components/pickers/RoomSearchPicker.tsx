@@ -28,7 +28,7 @@ export function RoomSearchPicker({
     return '/api/rooms?limit=100';
   }, [checkIn, checkOut]);
 
-  const { data: rooms, isLoading } = useApi<Room[]>(roomsUrl);
+  const { data: rooms } = useApi<Room[]>(roomsUrl);
 
   const filtered = useMemo(() => {
     const list = rooms ?? [];
@@ -56,8 +56,7 @@ export function RoomSearchPicker({
       </div>
 
       <div className={`max-h-48 space-y-2 overflow-y-auto ${compact ? '' : 'max-h-64'}`}>
-        {isLoading && <p className="text-xs text-[var(--color-text-secondary)]">Loading rooms...</p>}
-        {!isLoading && filtered.length === 0 && (
+        {filtered.length === 0 && (
           <p className="text-xs text-ink-500">
             {checkIn && checkOut ? 'No rooms available for these dates.' : 'No rooms found.'}
           </p>

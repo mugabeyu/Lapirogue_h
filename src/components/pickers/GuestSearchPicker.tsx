@@ -25,7 +25,7 @@ export function GuestSearchPicker({
     return `/api/guests?${params}`;
   }, [search]);
 
-  const { data: guests, isLoading } = useApi<Guest[]>(guestsUrl);
+  const { data: guests } = useApi<Guest[]>(guestsUrl);
   const rows = guests ?? [];
 
   return (
@@ -42,8 +42,7 @@ export function GuestSearchPicker({
       </div>
 
       <div className="space-y-3">
-        {isLoading && <p className="text-sm text-[var(--color-text-secondary)]">Loading guests...</p>}
-        {!isLoading && rows.length === 0 && (
+        {rows.length === 0 && (
           <p className="rounded-xl border border-dashed border-border bg-surface-secondary/50 px-4 py-8 text-center text-sm text-[var(--color-text-secondary)]">
             No guests match your search.
           </p>

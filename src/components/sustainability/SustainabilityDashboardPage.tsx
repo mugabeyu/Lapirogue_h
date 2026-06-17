@@ -61,7 +61,7 @@ function formatPoints(value: number) {
 }
 
 export default function SustainabilityDashboardPage() {
-  const { data, isLoading } = useSWR('/api/sustainability', fetchSustainability);
+  const { data } = useSWR('/api/sustainability', fetchSustainability);
   const payload = data?.data;
   const summary = payload?.summary;
   const leaderboard = payload?.leaderboard ?? [];
@@ -132,8 +132,7 @@ export default function SustainabilityDashboardPage() {
           <h2 id="guest-leaderboard-heading" className="font-display text-lg font-semibold text-ink-900">
             Guest Leaderboard
           </h2>
-          {isLoading && <p className="mt-6 text-sm text-[var(--color-text-secondary)]">Loading leaderboard...</p>}
-          {!isLoading && leaderboard.length === 0 && (
+          {leaderboard.length === 0 && (
             <p className="mt-6 text-sm text-[var(--color-text-secondary)]">No eco-points recorded yet.</p>
           )}
           <ol className="mt-5 space-y-4">
@@ -158,11 +157,10 @@ export default function SustainabilityDashboardPage() {
             <h2 id="activity-distribution-heading" className="font-display text-lg font-semibold text-ink-900">
               Points Distribution by Activity
             </h2>
-            {isLoading && <p className="mt-6 text-sm text-[var(--color-text-secondary)]">Loading chart...</p>}
-            {!isLoading && activityDistribution.length === 0 && (
+            {activityDistribution.length === 0 && (
               <p className="mt-6 text-sm text-[var(--color-text-secondary)]">No activity data yet.</p>
             )}
-            {!isLoading && activityDistribution.length > 0 && (
+            {activityDistribution.length > 0 && (
               <div className="mt-4 grid items-center gap-6 md:grid-cols-[1fr_200px]">
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
@@ -202,11 +200,11 @@ export default function SustainabilityDashboardPage() {
             <h2 id="monthly-trend-heading" className="font-display text-lg font-semibold text-[var(--color-text-primary)]">
               Monthly Eco-Points Trend
             </h2>
-            {isLoading && <p className="mt-6 text-sm text-[var(--color-text-secondary)]">Loading trend...</p>}
-            {!isLoading && monthlyTrend.every((row) => row.points === 0) && (
+           
+            { monthlyTrend.every((row) => row.points === 0) && (
               <p className="mt-6 text-sm text-[var(--color-text-secondary)]">No monthly data yet.</p>
             )}
-            {!isLoading && monthlyTrend.some((row) => row.points > 0) && (
+            {monthlyTrend.some((row) => row.points > 0) && (
               <div className="mt-4 h-72">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={monthlyTrend} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>

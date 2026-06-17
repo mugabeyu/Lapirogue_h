@@ -37,7 +37,7 @@ export default function RoomsPage() {
   const [isDeleting, setIsDeleting] = useState(false);
 
   const url = useMemo(() => '/api/rooms?limit=200', []);
-  const { data, isLoading, mutate } = useApi<Room[]>(url);
+  const { data, mutate } = useApi<Room[]>(url);
   const rows = data ?? [];
 
   const filteredRows = useMemo(() => {
@@ -145,7 +145,7 @@ export default function RoomsPage() {
 
         {view === 'grid' ? (
           <div className="grid gap-5 p-4 sm:grid-cols-2 xl:grid-cols-4">
-            {!isLoading && filteredRows.length === 0 ? (
+            {filteredRows.length === 0 ? (
 <div className="col-span-full rounded-xl border border-dashed border-card-border p-10 text-center text-sm text-[var(--color-text-secondary)]">
                     No rooms found.
                   </div>
@@ -238,7 +238,7 @@ export default function RoomsPage() {
                 </tr>
               </thead>
               <tbody>
-                {!isLoading && filteredRows.length === 0 ? (
+                {filteredRows.length === 0 ? (
                   <tr className="border-b border-card-border">
                     <td colSpan={7} className="px-6 py-12 text-center text-sm text-[var(--color-text-secondary)]">
                       No rooms found.
@@ -297,7 +297,7 @@ export default function RoomsPage() {
           </div>
         )}
 
-{!isLoading && filteredRows.length > PAGE_SIZE ? (
+{filteredRows.length > PAGE_SIZE ? (
            <div className="flex items-center justify-between border-t border-card-border px-4 py-3 text-sm text-[var(--color-text-secondary)]">
              <span>Page {page} of {totalPages}</span>
              <div className="flex items-center gap-2">

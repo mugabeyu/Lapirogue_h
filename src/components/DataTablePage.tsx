@@ -44,7 +44,7 @@ export default function DataTablePage({
     if (search) params.set('search', search);
     return `${path}${params.toString() ? `?${params}` : ''}`;
   }, [endpoint, search]);
-  const { data, isLoading, error } = useApi<Record<string, unknown>[]>(url);
+  const { data,  error } = useApi<Record<string, unknown>[]>(url);
   const rows = data ?? [];
   const apiError = error;
   const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
@@ -69,7 +69,7 @@ export default function DataTablePage({
       <PageHeader title={title} subtitle={subtitle} />
 
       <div className="card">
-        {apiError && !isLoading && (
+        {apiError && (
           <div className="border-b border-danger/30 bg-danger/5 px-6 py-3 text-sm text-[var(--color-danger)]">
             {apiError}
           </div>
@@ -95,9 +95,7 @@ export default function DataTablePage({
           <LabeledTable
             caption={caption}
             footer={
-              isLoading
-                ? `Loading ${rowLabel}...`
-                : `Showing ${rows.length === 0 ? 0 : start + 1}-${Math.min(start + PAGE_SIZE, rows.length)} of ${rows.length} ${rows.length === 1 ? rowLabel.replace(/s$/, '') : rowLabel}`
+              `Showing ${rows.length === 0 ? 0 : start + 1}-${Math.min(start + PAGE_SIZE, rows.length)} of ${rows.length} ${rows.length === 1 ? rowLabel.replace(/s$/, '') : rowLabel}`
             }
           >
             <thead>
@@ -110,7 +108,7 @@ export default function DataTablePage({
               </tr>
             </thead>
             <tbody>
-              {!isLoading && rows.length === 0 && (
+              { rows.length === 0 && (
                 <tr className="border-b border-card-border">
                   <td colSpan={columns.length} className="px-6 py-12 text-center text-sm text-[var(--color-text-secondary)]">
                     {emptyText}
@@ -149,7 +147,7 @@ export default function DataTablePage({
             </tbody>
           </LabeledTable>
         </div>
-        {!isLoading && rows.length > PAGE_SIZE ? (
+        {rows.length > PAGE_SIZE ? (
           <div className="table-footer">
             <span>Page {page} of {totalPages}</span>
             <div className="flex items-center gap-2">
