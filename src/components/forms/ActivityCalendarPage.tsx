@@ -57,7 +57,7 @@ export default function ActivityCalendarPage() {
     return `/api/activities/calendar?${params}`;
   }, [anchor, category]);
 
-  const { data, isLoading } = useSWR(url, fetchCalendar);
+  const { data } = useSWR(url, fetchCalendar);
   const calendar = data?.data;
   const today = calendar?.today ?? anchor;
 
@@ -83,9 +83,7 @@ export default function ActivityCalendarPage() {
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
-            <span className="min-w-[10rem] text-center text-sm font-medium text-[var(--color-text-primary)]">
-              {calendar?.weekLabel ?? 'Loading...'}
-            </span>
+           
             <button
               type="button"
               onClick={() => setAnchor((current) => shiftWeek(current, 1))}
@@ -124,9 +122,9 @@ export default function ActivityCalendarPage() {
 
       <div className="grid gap-6 xl:grid-cols-[1fr_320px]">
         <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-sm">
-          {isLoading && <p className="p-6 text-sm text-[var(--color-text-secondary)]">Loading calendar...</p>}
+         
 
-          {!isLoading && calendar && (
+          {calendar && (
             <div className="overflow-x-auto">
               <div className="grid min-w-[760px] grid-cols-7 border-b border-border bg-surface-secondary">
                 {calendar.days.map((day) => (

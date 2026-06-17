@@ -42,7 +42,7 @@ export default function GuestsPage() {
     return `/api/guests?${params.toString()}`;
   }, [search]);
 
-  const { data, isLoading, mutate } = useApi<Guest[]>(url);
+  const { data, mutate } = useApi<Guest[]>(url);
   const rows = data ?? [];
 
   const filteredRows = useMemo(() => {
@@ -104,9 +104,7 @@ export default function GuestsPage() {
           <LabeledTable
             caption="Registered guests"
             footer={
-              isLoading
-                ? 'Loading guests...'
-                : `Showing ${filteredRows.length === 0 ? 0 : start + 1}-${Math.min(start + PAGE_SIZE, filteredRows.length)} of ${filteredRows.length} ${filteredRows.length === 1 ? 'guest' : 'guests'}`
+              `Showing ${filteredRows.length === 0 ? 0 : start + 1}-${Math.min(start + PAGE_SIZE, filteredRows.length)} of ${filteredRows.length} ${filteredRows.length === 1 ? 'guest' : 'guests'}`
             }>
 
             <thead>
@@ -121,7 +119,7 @@ export default function GuestsPage() {
             </thead>
 
             <tbody>
-              {!isLoading && filteredRows.length === 0 && (
+              { filteredRows.length === 0 && (
                 <tr className="border-b border-border">
                   <td colSpan={6} className="px-6 py-12 text-center text-sm text-[var(--color-text-secondary)]">No guests found. Register a guest to get started.</td>
                 </tr>
@@ -149,7 +147,7 @@ export default function GuestsPage() {
             </tbody>
           </LabeledTable>
         </div>
-        {!isLoading && filteredRows.length > PAGE_SIZE ? (
+        {filteredRows.length > PAGE_SIZE ? (
           <div className="table-footer">
             <span>Page {page} of {totalPages}</span>
             <div className="flex items-center gap-2">

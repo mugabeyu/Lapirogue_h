@@ -114,8 +114,6 @@ CREATE TABLE IF NOT EXISTS public.guests (
     notes text,
     image_path text,
     fcm_token text,
-    temporary_password text,
-    is_temp_password_changed boolean DEFAULT false NOT NULL,
     created_at timestamptz DEFAULT now() NOT NULL,
     updated_at timestamptz DEFAULT now() NOT NULL,
     created_by uuid,
@@ -123,9 +121,7 @@ CREATE TABLE IF NOT EXISTS public.guests (
 );
 
 ALTER TABLE IF EXISTS public.guests
-  ADD COLUMN IF NOT EXISTS passport text,
-  ADD COLUMN IF NOT EXISTS temporary_password text,
-  ADD COLUMN IF NOT EXISTS is_temp_password_changed boolean DEFAULT false NOT NULL;
+  ADD COLUMN IF NOT EXISTS passport text;
 
 DO $$
 BEGIN
@@ -415,6 +411,80 @@ CREATE TABLE IF NOT EXISTS public.eco_points_tx (
 CREATE VIEW public.guest_eco_point_events AS
     SELECT id, guest_id, tx_type AS activity_id, points, description, status, created_at FROM public.eco_points_tx;
 
+-- Function to increment eco points and update tier
+CREATE OR REPLACE FUNCTION public.increment_eco_points(p_guest_id uuid, p_points integer)
+RETURNS void AS $$
+BEGIN
+    -- Insert or update balance
+    INSERT INTO public.eco_points_balance (guest_id, points, tier)
+    VALUES (p_guest_id, p_points, 'Bronze')
+    ON CONFLICT (guest_id)
+    DO UPDATE SET
+        points = eco_points_balance.points + p_points,
+        tier = CASE
+            WHEN (eco_points_balance.points + p_points) >= 1000 THEN 'Platinum'
+            WHEN (eco_points_balance.points + p_points) >= 500 THEN 'Gold'
+            WHEN (eco_points_balance.points + p_points) >= 200 THEN 'Silver'
+            ELSE 'Bronze'
+        END;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Eco Actions - Available sustainability actions guests can participate in
+CREATE TABLE IF NOT EXISTS public.eco_actions (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    title text NOT NULL,
+    description text,
+    points integer NOT NULL DEFAULT 10 CHECK (points > 0),
+    icon_name text DEFAULT 'eco',
+    is_active boolean DEFAULT true,
+    created_at timestamptz DEFAULT now() NOT NULL,
+    updated_at timestamptz DEFAULT now() NOT NULL
+);
+
+-- Track guest participation in eco actions
+CREATE TABLE IF NOT EXISTS public.guest_eco_actions (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    guest_id uuid NOT NULL REFERENCES public.guests(id) ON DELETE CASCADE,
+    eco_action_id uuid NOT NULL REFERENCES public.eco_actions(id) ON DELETE CASCADE,
+    earned_points integer NOT NULL DEFAULT 0,
+    notes text,
+    created_at timestamptz DEFAULT now() NOT NULL
+);
+
+-- Seed eco actions (run only if table is empty)
+INSERT INTO public.eco_actions (title, description, points, icon_name)
+SELECT 'Beach Clean-up Program', 'Participate in our weekly beach clean-up initiative', 50, 'beach'
+WHERE NOT EXISTS (SELECT 1 FROM public.eco_actions WHERE title = 'Beach Clean-up Program');
+
+INSERT INTO public.eco_actions (title, description, points, icon_name)
+SELECT 'Reuse Towels & Linens', 'Opt out of daily towel and linen replacement', 10, 'towel'
+WHERE NOT EXISTS (SELECT 1 FROM public.eco_actions WHERE title = 'Reuse Towels & Linens');
+
+INSERT INTO public.eco_actions (title, description, points, icon_name)
+SELECT 'Digital Invoice', 'Choose digital invoice instead of printed receipt', 15, 'digital'
+WHERE NOT EXISTS (SELECT 1 FROM public.eco_actions WHERE title = 'Digital Invoice');
+
+INSERT INTO public.eco_actions (title, description, points, icon_name)
+SELECT 'Sustainability Workshop', 'Attend our eco-friendly sustainability workshops', 30, 'workshop'
+WHERE NOT EXISTS (SELECT 1 FROM public.eco_actions WHERE title = 'Sustainability Workshop');
+
+INSERT INTO public.eco_actions (title, description, points, icon_name)
+SELECT 'Use Bicycle', 'Use hotel bicycles instead of transport services', 20, 'bicycle'
+WHERE NOT EXISTS (SELECT 1 FROM public.eco_actions WHERE title = 'Use Bicycle');
+
+INSERT INTO public.eco_actions (title, description, points, icon_name)
+SELECT 'Environmental Tour', 'Join our guided environmental awareness tours', 25, 'tour'
+WHERE NOT EXISTS (SELECT 1 FROM public.eco_actions WHERE title = 'Environmental Tour');
+
+INSERT INTO public.eco_actions (title, description, points, icon_name)
+SELECT 'Decline Room Cleaning', 'Skip daily room cleaning service', 15, 'cleaning'
+WHERE NOT EXISTS (SELECT 1 FROM public.eco_actions WHERE title = 'Decline Room Cleaning');
+
+INSERT INTO public.eco_actions (title, description, points, icon_name)
+SELECT 'Refillable Water Station', 'Use refillable water stations during stay', 5, 'water'
+WHERE NOT EXISTS (SELECT 1 FROM public.eco_actions WHERE title = 'Refillable Water Station');
+
 -- Itinerary events
 CREATE TABLE IF NOT EXISTS public.itinerary_events (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -504,6 +574,9 @@ CREATE INDEX IF NOT EXISTS idx_messages_guest_id ON public.messages(guest_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_guest_id ON public.notifications(guest_id);
 CREATE INDEX IF NOT EXISTS idx_payments_guest_id ON public.payments(guest_id);
 CREATE INDEX IF NOT EXISTS idx_food_orders_guest_id ON public.food_orders(guest_id);
+CREATE INDEX IF NOT EXISTS idx_eco_points_tx_guest_id ON public.eco_points_tx(guest_id);
+CREATE INDEX IF NOT EXISTS idx_eco_actions_active ON public.eco_actions(is_active);
+CREATE INDEX IF NOT EXISTS idx_guest_eco_actions_guest_id ON public.guest_eco_actions(guest_id);
 
 -- =============================================
 -- FUNCTIONS & TRIGGERS
@@ -520,7 +593,7 @@ DO $$
 DECLARE t text;
 BEGIN
   FOR t IN SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename IN (
-    'profiles','guests','rooms','reservations','activities','activity_bookings','guest_schedule_items', 'menu_items','food_orders','guest_orders','guest_order_items','payments','payment_extra_items','messages','hotel_service_categories','hotel_services','emergency_contacts','eco_points_tx','site_content_pages','itinerary_events'
+    'profiles','guests','rooms','reservations','activities','activity_bookings','guest_schedule_items', 'menu_items','food_orders','guest_orders','guest_order_items','payments','payment_extra_items','messages','hotel_service_categories','hotel_services','emergency_contacts','eco_points_tx','eco_actions','guest_eco_actions','site_content_pages','itinerary_events'
   ) LOOP
     BEGIN
       EXECUTE format('CREATE TRIGGER trg_%s_updated_at BEFORE UPDATE ON public.%I FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();', t, t);
@@ -562,7 +635,7 @@ DO $$
 DECLARE t text;
 BEGIN
   FOR t IN SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename IN (
-    'profiles','guests','reservations','activities','payments','food_orders','messages','guest_feedback','hotel_services','guest_orders'
+    'profiles','guests','reservations','activities','payments','food_orders','messages','guest_feedback','hotel_services','guest_orders','eco_points_tx','guest_eco_actions'
   ) LOOP
     BEGIN
       EXECUTE format('CREATE TRIGGER trg_audit_%s AFTER INSERT OR UPDATE ON public.%I FOR EACH ROW EXECUTE FUNCTION public.log_audit_event();', t, t);
@@ -587,6 +660,8 @@ ALTER TABLE IF EXISTS public.guest_schedule_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS public.eco_points_balance ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS public.eco_points_tx ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS public.guest_orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.eco_actions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.guest_eco_actions ENABLE ROW LEVEL SECURITY;
 
 -- Guest policies
 DO $$ BEGIN
@@ -616,6 +691,16 @@ DO $$ BEGIN
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='food_orders' AND policyname='Guests view own food orders') THEN
     CREATE POLICY "Guests view own food orders" ON public.food_orders FOR SELECT USING (guest_id IN (SELECT id FROM public.guests WHERE auth_id = auth.uid()));
+  END IF;
+  -- Eco actions policies
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='eco_actions' AND policyname='Eco actions public read') THEN
+    CREATE POLICY "Eco actions public read" ON public.eco_actions FOR SELECT USING (true);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='guest_eco_actions' AND policyname='Guests manage own eco actions') THEN
+    CREATE POLICY "Guests manage own eco actions" ON public.guest_eco_actions FOR ALL USING (guest_id IN (SELECT id FROM public.guests WHERE auth_id = auth.uid()));
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='eco_points_balance' AND policyname='Guests view own balance') THEN
+    CREATE POLICY "Guests view own balance" ON public.eco_points_balance FOR SELECT USING (guest_id IN (SELECT id FROM public.guests WHERE auth_id = auth.uid()));
   END IF;
 END$$;
 

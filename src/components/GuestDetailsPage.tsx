@@ -46,7 +46,7 @@ export default function GuestDetailsPage() {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const { data: profile, isLoading, mutate } = useApi<GuestProfileData>(
+  const { data: profile,  mutate } = useApi<GuestProfileData>(
     `/api/guests/${params.id}/profile`,
   );
 
@@ -64,11 +64,7 @@ export default function GuestDetailsPage() {
     router.push('/guests');
   }
 
-  if (isLoading) {
-    return (
-      <LoadingState />
-    );
-  }
+  
 
   if (!profile) {
     return (
@@ -162,7 +158,7 @@ export default function GuestDetailsPage() {
         title="Delete Guest"
         message={`Are you sure you want to permanently delete ${guest.firstName} ${guest.lastName}? This action cannot be undone.`}
         confirmLabel="Delete Guest"
-        isLoading={isDeleting}
+    
       />
     </div>
   );
@@ -399,11 +395,3 @@ function TabList({
   );
 }
 
-function LoadingState() {
-  return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <BackLink />
-      <div className="card p-8 text-center text-[var(--color-text-secondary)] border border-card-border">Loading guest profile...</div>
-    </div>
-  );
-}

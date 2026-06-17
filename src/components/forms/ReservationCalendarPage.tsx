@@ -98,7 +98,7 @@ export default function ReservationCalendarPage({ embedded = false }: Reservatio
     () => `/api/reservations/calendar?anchor=${anchor}&view=${view}`,
     [anchor, view],
   );
-  const { data, isLoading } = useApi<CalendarData>(url);
+  const { data} = useApi<CalendarData>(url);
 
   const bookingsByRoom = useMemo(() => {
     const map = new Map<string, CalendarBooking[]>();
@@ -189,9 +189,9 @@ export default function ReservationCalendarPage({ embedded = false }: Reservatio
       </div>
 
           <div className="overflow-hidden rounded-[24px] border border-border bg-surface shadow-sm">
-        {isLoading && <p className="p-8 text-sm text-[var(--color-text-secondary)]">Loading calendar...</p>}
+  
 
-        {!isLoading && data && (
+        { data && (
           <div className="overflow-x-auto">
             <div
               className="grid min-w-max"

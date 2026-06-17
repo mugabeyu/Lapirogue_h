@@ -38,7 +38,7 @@ export function PaymentModal({ isOpen, onClose, onSaved, editRow }: PaymentModal
   const [isSaving, setIsSaving] = useState(false);
   const [guest, setGuest] = useState<Guest | null>(null);
   const [billingSummary, setBillingSummary] = useState<GuestBillingSummary | null>(null);
-  const [isLoadingSummary, setIsLoadingSummary] = useState(false);
+  
   const [extraCharges, setExtraCharges] = useState<ExtraChargeInput[]>([]);
   const isEdit = Boolean(editRow?.id);
 
@@ -85,7 +85,7 @@ export function PaymentModal({ isOpen, onClose, onSaved, editRow }: PaymentModal
     }
 
     let cancelled = false;
-    setIsLoadingSummary(true);
+  
     fetch(`/api/guests/${guest.id}/profile`)
       .then((response) => response.json())
       .then((result) => {
@@ -99,9 +99,7 @@ export function PaymentModal({ isOpen, onClose, onSaved, editRow }: PaymentModal
       .catch(() => {
         if (!cancelled) setBillingSummary(null);
       })
-      .finally(() => {
-        if (!cancelled) setIsLoadingSummary(false);
-      });
+     ;
 
     return () => {
       cancelled = true;
@@ -195,9 +193,9 @@ export function PaymentModal({ isOpen, onClose, onSaved, editRow }: PaymentModal
               readOnly
             />
             <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
-              {isLoadingSummary
-                ? 'Calculating guest balance...'
-                : `Outstanding balance + extra charges = Rs ${autoAmountDue.toLocaleString()}`}
+             
+              
+                 `Outstanding balance + extra charges = Rs ${autoAmountDue.toLocaleString()}`
             </p>
           </div>
           <div>

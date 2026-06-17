@@ -1,8 +1,10 @@
 import 'server-only';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 const resolvedSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const resolvedSupabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+let cachedAdminClient: SupabaseClient | null = null;
 
 function createFetchWithTimeout(timeoutMs: number) {
   return async (input: URL | RequestInfo, init?: RequestInit) => {
@@ -20,7 +22,7 @@ function createFetchWithTimeout(timeoutMs: number) {
   };
 }
 
-export function getSupabaseAdmin() {
+function validateConfig() {
   if (!resolvedSupabaseUrl) {
     throw new Error('NEXT_PUBLIC_SUPABASE_URL is not configured');
   }
@@ -34,8 +36,16 @@ export function getSupabaseAdmin() {
   if (!resolvedSupabaseServiceKey) {
     throw new Error('SUPABASE_SERVICE_ROLE_KEY is not configured');
   }
+}
 
-  return createClient(resolvedSupabaseUrl, resolvedSupabaseServiceKey, {
+export function getSupabaseAdmin(): SupabaseClient {
+  if (cachedAdminClient) {
+    return cachedAdminClient;
+  }
+
+  validateConfig();
+
+  cachedAdminClient = createClient(resolvedSupabaseUrl!, resolvedSupabaseServiceKey!, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
@@ -44,4 +54,10 @@ export function getSupabaseAdmin() {
       fetch: createFetchWithTimeout(60000),
     },
   });
+
+  return cachedAdminClient;
+}
+
+export function resetSupabaseAdminCache(): void {
+  cachedAdminClient = null;
 }

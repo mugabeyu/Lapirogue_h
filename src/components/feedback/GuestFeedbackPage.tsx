@@ -137,7 +137,7 @@ export default function GuestFeedbackPage() {
     return `/api/feedback?${params}`;
   }, [page, sort, order]);
 
-  const { data, isLoading } = useSWR(url, fetchFeedback);
+  const { data } = useSWR(url, fetchFeedback);
   const payload = data?.data;
   const summary = payload?.summary;
   const distribution = payload?.distribution ?? [];
@@ -208,8 +208,8 @@ export default function GuestFeedbackPage() {
 
       <div className="card p-6">
         <h2 className="font-display text-lg font-semibold text-[var(--color-text-primary)]">Rating Distribution</h2>
-        {isLoading && <p className="mt-6 text-sm text-[var(--color-text-secondary)]">Loading distribution...</p>}
-        {!isLoading && distribution.every((row) => row.count === 0) && (
+       
+        { distribution.every((row) => row.count === 0) && (
           <p className="mt-6 text-sm text-[var(--color-text-secondary)]">No ratings yet.</p>
         )}
         <div className="mt-6 space-y-3">
@@ -254,17 +254,13 @@ export default function GuestFeedbackPage() {
               </tr>
             </thead>
             <tbody>
-              {isLoading && (
-                <tr className="border-b border-border">
-                  <td colSpan={5} className="px-5 py-12 text-center text-[var(--color-text-secondary)]">Loading feedback...</td>
-                </tr>
-              )}
-              {!isLoading && reviews.length === 0 && (
+             
+              { reviews.length === 0 && (
                 <tr className="border-b border-border">
                   <td colSpan={5} className="px-5 py-12 text-center text-[var(--color-text-secondary)]">No feedback recorded yet.</td>
                 </tr>
               )}
-              {!isLoading &&
+              {
                 reviews.map((row) => (
                   <tr key={row.id} className="border-b border-border hover:bg-surface-secondary/50">
                     <td className="px-5 py-4 font-medium text-[var(--color-text-primary)]">{row.guest}</td>

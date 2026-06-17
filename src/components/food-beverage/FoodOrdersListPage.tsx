@@ -61,7 +61,7 @@ export default function FoodOrdersListPage() {
     return `/api/food-orders?${params}`;
   }, [search, statusFilter]);
 
-  const { data, isLoading } = useSWR(url, fetchOrders);
+  const { data} = useSWR(url, fetchOrders);
   const orders = data?.data ?? [];
   const totalPages = Math.max(1, Math.ceil(orders.length / PAGE_SIZE));
   const start = (page - 1) * PAGE_SIZE;
@@ -157,12 +157,8 @@ export default function FoodOrdersListPage() {
               </tr>
             </thead>
             <tbody>
-              {isLoading && (
-                <tr className="border-b border-border">
-                  <td colSpan={6} className="px-5 py-12 text-center text-[var(--color-text-secondary)]">Loading orders...</td>
-                </tr>
-              )}
-              {!isLoading && orders.length === 0 && (
+            
+              { orders.length === 0 && (
                 <tr className="border-b border-border">
                   <td colSpan={6} className="px-5 py-12 text-center text-[var(--color-text-secondary)]">No orders found.</td>
                 </tr>
@@ -194,7 +190,7 @@ export default function FoodOrdersListPage() {
             </tbody>
           </table>
         </div>
-        {!isLoading && orders.length > PAGE_SIZE ? (
+        { orders.length > PAGE_SIZE ? (
           <div className="flex items-center justify-between border-t border-border px-5 py-3 text-sm text-[var(--color-text-secondary)]">
             <span>Page {page} of {totalPages}</span>
             <div className="flex items-center gap-2">

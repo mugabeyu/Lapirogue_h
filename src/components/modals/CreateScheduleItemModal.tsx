@@ -90,7 +90,7 @@ export function CreateScheduleItemModal({
   const [isSaving, setIsSaving] = useState(false);
 
   const optionsUrl = usesLinkedPicker(itemType) ? `/api/schedule/options?type=${itemType}` : null;
-  const { data: options, isLoading: optionsLoading } = useApi<LinkableOption[]>(optionsUrl ?? '');
+  const { data: options} = useApi<LinkableOption[]>(optionsUrl );
 
   const linkedOptions = useMemo(() => options ?? [], [options]);
   const selectedOption = useMemo(
@@ -244,11 +244,9 @@ export function CreateScheduleItemModal({
                 onChange={(event) => setSourceId(event.target.value)}
                 className="input-field w-full bg-surface"
                 required
-                disabled={optionsLoading}
+              
               >
-                <option value="">
-                  {optionsLoading ? 'Loading options...' : `Select ${pickerLabel(itemType).toLowerCase()}`}
-                </option>
+               
                 {linkedOptions.map((option) => (
                   <option key={option.id} value={option.id}>
                     {option.label}
@@ -268,7 +266,7 @@ export function CreateScheduleItemModal({
               </div>
             )}
 
-            {!optionsLoading && linkedOptions.length === 0 && (
+            { linkedOptions.length === 0 && (
               <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
                 No {pickerLabel(itemType).toLowerCase()}s available. Add items in Activities or Food & Beverage first.
               </p>

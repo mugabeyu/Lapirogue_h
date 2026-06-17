@@ -104,7 +104,7 @@ export default function CrudDataTablePage({
     return `${path}${params.toString() ? `?${params}` : ''}`;
   }, [endpoint, search]);
 
-  const { data, isLoading, mutate, error } = useApi<Record<string, unknown>[]>(url);
+  const { data,  mutate, error } = useApi<Record<string, unknown>[]>(url);
   const rows = data ?? [];
   const apiError = error;
   const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
@@ -175,7 +175,7 @@ export default function CrudDataTablePage({
       />
 
       <div className="card">
-        {apiError && !isLoading && (
+        {apiError &&  (
           <div className="border-b border-danger/30 bg-danger/5 px-6 py-3 text-sm text-[var(--color-danger)]">
             {apiError}
           </div>
@@ -201,9 +201,8 @@ export default function CrudDataTablePage({
           <LabeledTable
             caption={caption}
             footer={
-              isLoading
-                ? `Loading ${rowLabel}...`
-                : `Showing ${rows.length === 0 ? 0 : start + 1}-${Math.min(start + PAGE_SIZE, rows.length)} of ${rows.length} ${rows.length === 1 ? rowLabel.replace(/s$/, '') : rowLabel}`
+           
+            `Showing ${rows.length === 0 ? 0 : start + 1}-${Math.min(start + PAGE_SIZE, rows.length)} of ${rows.length} ${rows.length === 1 ? rowLabel.replace(/s$/, '') : rowLabel}`
             }
           >
               <thead>
@@ -219,7 +218,7 @@ export default function CrudDataTablePage({
               </tr>
             </thead>
               <tbody>
-                {!isLoading && rows.length === 0 && (
+                {rows.length === 0 && (
                   <tr className="border-b border-border">
                     <td colSpan={columns.length + (disableEdit && disableDelete ? 0 : 1)} className="px-6 py-12 text-center text-sm text-[var(--color-text-secondary)]">
                       {emptyText}
@@ -300,7 +299,7 @@ export default function CrudDataTablePage({
               </tbody>
           </LabeledTable>
         </div>
-        {!isLoading && rows.length > PAGE_SIZE ? (
+        {rows.length > PAGE_SIZE ? (
           <div className="table-footer">
             <span>Page {page} of {totalPages}</span>
             <div className="flex items-center gap-2">
@@ -330,7 +329,7 @@ export default function CrudDataTablePage({
           onConfirm={handleDelete}
           title="Delete Record"
           message="Are you sure you want to delete this record? This action cannot be undone."
-          isLoading={isDeleting}
+          confirmLabel="Delete"
         />
       )}
     </div>
