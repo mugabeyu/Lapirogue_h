@@ -6,14 +6,14 @@ import DashboardDataPage from '@/components/DashboardDataPage';
 import { getServerSession } from '@/lib/auth-server';
 
 export default async function DashboardRoutePage() {
-  const session = await getServerSession();
+  const user = await getServerSession();
 
-  if (!session) {
+  if (!user) {
     redirect('/login');
   }
 
   return (
-    <Layout>
+    <Layout user={user}>
       <DashboardDataPage />
     </Layout>
   );

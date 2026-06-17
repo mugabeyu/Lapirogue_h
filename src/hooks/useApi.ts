@@ -7,15 +7,16 @@ const fetcher = async (url: string) => {
   return data;
 };
 
-export function useApi<T>(url: string | null) {
-  const { data, error,  mutate } = useSWR<ApiResponse<T>>(
+export function useApi<T>(url: string | null, options?: { revalidateOnMount?: boolean }) {
+  const { data, error, isLoading, mutate } = useSWR<ApiResponse<T>>(
     url,
     fetcher,
     {
       revalidateOnFocus: false,
       revalidateOnReconnect: false,
-      dedupingInterval: 30_000,
+      dedupingInterval: 60_000,
       keepPreviousData: true,
+      revalidateOnMount: options?.revalidateOnMount ?? false,
     },
   );
 

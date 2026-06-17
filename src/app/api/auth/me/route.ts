@@ -7,6 +7,9 @@ import { INTERNATIONAL_PHONE_DISPLAY_PATTERN } from '@/lib/phone';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+const userCache = new Map<string, { data: unknown; timestamp: number }>();
+const USER_CACHE_TTL_MS = 60000;
+
 function normalizeRole(role?: string | null) {
   if (role === 'MAIN_RECEPTIONIST') return 'MAIN_RECEPTIONIST' as const;
   return 'RECEPTIONIST' as const;
@@ -27,7 +30,6 @@ function normalizeVal(value: string | null | undefined): string | null {
 
 export async function GET(request: NextRequest) {
   const authClient = getRouteHandlerSupabaseClient(request);
-  const adminClient = getSupabaseAdmin();
   const { data: { user }, error: userError } = await authClient.auth.getUser();
   if (!user || userError) {
     const response = NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 });
@@ -35,18 +37,18 @@ export async function GET(request: NextRequest) {
     return response;
   }
 
-  // Reject guest users - staff portal only
-  const { data: guestRow } = await adminClient
-    .from('guests')
-    .select('id')
-    .eq('auth_id', user.id)
-    .maybeSingle();
-
-  if (guestRow) {
-    return NextResponse.json({ success: false, error: 'Guests must access via the mobile app' }, { status: 403 });
+  const cacheKey = `user-${user.id}`;
+  const cached = userCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < USER_CACHE_TTL_MS) {
+    const response = NextResponse.json({ success: true, data: cached.data }, {
+      headers: { 'Cache-Control': 'private, max-age=60' },
+    });
+    return response;
   }
 
-  const [profileResult, staffResult] = await Promise.all([
+  const adminClient = getSupabaseAdmin();
+
+  const [profileResult, staffResult, guestResult] = await Promise.all([
     adminClient
       .from('profiles')
       .select('auth_id, email, full_name, phone, avatar_url, role, is_main, is_active, created_at, updated_at')
@@ -57,7 +59,16 @@ export async function GET(request: NextRequest) {
       .select('auth_user_id, full_name, image_path, status')
       .eq('auth_user_id', user.id)
       .maybeSingle(),
+    adminClient
+      .from('guests')
+      .select('id')
+      .eq('auth_id', user.id)
+      .maybeSingle(),
   ]);
+
+  if (guestResult.data) {
+    return NextResponse.json({ success: false, error: 'Guests must access via the mobile app' }, { status: 403 });
+  }
 
   const profileRow = profileResult.data
     ? {
@@ -94,6 +105,7 @@ export async function GET(request: NextRequest) {
       // ignore
     }
   }
+
   const role = profileRow?.is_main
     ? ('MAIN_RECEPTIONIST' as const)
     : normalizeRole(profileRow?.role || (user.user_metadata?.role as string | undefined));
@@ -122,21 +134,25 @@ export async function GET(request: NextRequest) {
 
   avatarUrl = await tryToMakePublic(profileRow?.avatar_url ?? null) || (await tryToMakePublic(staffRow?.image_path ?? null));
 
+  const responseData = {
+    id: profileRow?.auth_id || user.id,
+    email,
+    name,
+    role,
+    phone: profileRow?.phone ?? null,
+    avatarUrl,
+    isActive: profileRow?.is_active !== false,
+    createdAt: profileRow?.created_at || user.created_at || '',
+    updatedAt: profileRow?.updated_at || user.updated_at || '',
+  };
+
+  userCache.set(cacheKey, { data: responseData, timestamp: Date.now() });
+
   const response = NextResponse.json({
     success: true,
-    data: {
-      id: profileRow?.auth_id || user.id,
-      email,
-      name,
-      role,
-      phone: profileRow?.phone ?? null,
-      avatarUrl,
-      isActive: profileRow?.is_active !== false,
-      createdAt: profileRow?.created_at || user.created_at || '',
-      updatedAt: profileRow?.updated_at || user.updated_at || '',
-    },
+    data: responseData,
   });
-  response.headers.set('Cache-Control', 'no-store, max-age=0');
+  response.headers.set('Cache-Control', 'private, max-age=60');
   return response;
 }
 
@@ -148,6 +164,8 @@ export async function PUT(request: NextRequest) {
     response.headers.set('Cache-Control', 'no-store, max-age=0');
     return response;
   }
+
+  userCache.delete(`user-${user.id}`);
 
   try {
     const body = await request.json();

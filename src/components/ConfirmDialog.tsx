@@ -1,5 +1,6 @@
 'use client';
 
+import { Loader2 } from 'lucide-react';
 import { Modal } from '@/components/Modal';
 import Button from '@/components/ui/Button';
 
@@ -29,8 +30,9 @@ export function ConfirmDialog({
         <Button variant="secondary" onClick={onClose}>
           Cancel
         </Button>
-        <Button variant="danger" onClick={onConfirm}>
-          {confirmLabel}
+        <Button variant="danger" onClick={onConfirm} disabled={isLoading}>
+          {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+          {isLoading ? 'Deleting...' : confirmLabel}
         </Button>
       </div>
     </Modal>

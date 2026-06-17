@@ -2,56 +2,67 @@ import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { toDateKey, addDays } from '@/lib/date-utils';
 
+const dashboardCache = new Map<string, { data: unknown; timestamp: number }>();
+const CACHE_TTL_MS = 30000;
+
+function getCachedResponse<T>(key: string): T | null {
+  const cached = dashboardCache.get(key);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+    return cached.data as T;
+  }
+  return null;
+}
+
+function setCachedResponse<T>(key: string, data: T): void {
+  if (dashboardCache.size > 10) {
+    const oldestKey = dashboardCache.keys().next().value;
+    if (oldestKey) dashboardCache.delete(oldestKey);
+  }
+  dashboardCache.set(key, { data, timestamp: Date.now() });
+}
+
 export async function GET() {
   try {
-    const supabase = getSupabaseAdmin();
     const today = toDateKey(new Date());
+    const cacheKey = `dashboard-${today}`;
+    const cached = getCachedResponse<{
+      stats: unknown;
+      todaysCheckins: unknown[];
+      todaysCheckouts: unknown[];
+    }>(cacheKey);
+
+    if (cached) {
+      return NextResponse.json({ success: true, data: cached }, {
+        headers: { 'Cache-Control': 'private, max-age=30' },
+      });
+    }
+
+    const supabase = getSupabaseAdmin();
     const tomorrow = toDateKey(addDays(new Date(), 1));
 
     const [
-      totalRoomsResult,
-      occupiedRoomsResult,
-      availableRoomsResult,
-      cleaningRoomsResult,
-      maintenanceRoomsResult,
+      roomsResult,
       totalGuestsResult,
-      activeReservationsResult,
-      checkinsTodayResult,
-      checkoutsTodayResult,
-      paymentsResult,
       reservationsResult,
+      todayReservationsResult,
+      paymentsResult,
       activityBookingsResult,
       foodOrdersResult,
-      checkinsListResult,
-      checkoutsListResult,
     ] = await Promise.all([
-      supabase.from('rooms').select('id', { count: 'exact', head: true }),
-      supabase.from('rooms').select('id', { count: 'exact', head: true }).eq('status', 'OCCUPIED'),
-      supabase.from('rooms').select('id', { count: 'exact', head: true }).eq('status', 'AVAILABLE'),
-      supabase.from('rooms').select('id', { count: 'exact', head: true }).eq('status', 'CLEANING'),
-      supabase.from('rooms').select('id', { count: 'exact', head: true }).eq('status', 'MAINTENANCE'),
+      supabase.from('rooms').select('status'),
       supabase.from('guests').select('id', { count: 'exact', head: true }),
       supabase
         .from('reservations')
-        .select('id', { count: 'exact', head: true })
+        .select('guest_id,total_amount,status,check_in,check_out')
         .in('status', ['CONFIRMED', 'CHECKED_IN']),
       supabase
         .from('reservations')
-        .select('id', { count: 'exact', head: true })
+        .select('id, check_in, check_out, guests(first_name, last_name), rooms(room_number, type)')
         .in('status', ['CONFIRMED', 'CHECKED_IN'])
-        .gte('check_in', today)
-        .lt('check_in', tomorrow),
-      supabase
-        .from('reservations')
-        .select('id', { count: 'exact', head: true })
-        .in('status', ['CONFIRMED', 'CHECKED_IN'])
-        .gte('check_out', today)
-        .lt('check_out', tomorrow),
+        .or(`check_in.gte.${today},check_in.lt.${tomorrow},check_out.gte.${today},check_out.lt.${tomorrow}`)
+        .order('check_in', { ascending: true })
+        .limit(20),
       supabase.from('payments').select('guest_id,amount,status'),
-      supabase
-        .from('reservations')
-        .select('guest_id,total_amount')
-        .in('status', ['CONFIRMED', 'CHECKED_IN']),
       supabase
         .from('activity_bookings')
         .select('guest_id,participants,activities(price)')
@@ -60,50 +71,49 @@ export async function GET() {
         .from('food_orders')
         .select('guest_id,total')
         .in('status', ['PENDING', 'PREPARING', 'SERVED']),
-      supabase
-        .from('reservations')
-        .select('id, check_in, check_out, guests(first_name, last_name), rooms(room_number, type)')
-        .in('status', ['CONFIRMED', 'CHECKED_IN'])
-        .gte('check_in', today)
-        .lt('check_in', tomorrow)
-        .order('check_in', { ascending: true })
-        .limit(10),
-      supabase
-        .from('reservations')
-        .select('id, check_in, check_out, guests(first_name, last_name), rooms(room_number, type)')
-        .in('status', ['CONFIRMED', 'CHECKED_IN'])
-        .gte('check_out', today)
-        .lt('check_out', tomorrow)
-        .order('check_out', { ascending: true })
-        .limit(10),
     ]);
 
-    const errors = [
-      { name: 'totalRooms', error: totalRoomsResult.error },
-      { name: 'occupiedRooms', error: occupiedRoomsResult.error },
-      { name: 'availableRooms', error: availableRoomsResult.error },
-      { name: 'cleaningRooms', error: cleaningRoomsResult.error },
-      { name: 'maintenanceRooms', error: maintenanceRoomsResult.error },
-      { name: 'totalGuests', error: totalGuestsResult.error },
-      { name: 'activeReservations', error: activeReservationsResult.error },
-      { name: 'checkinsToday', error: checkinsTodayResult.error },
-      { name: 'checkoutsToday', error: checkoutsTodayResult.error },
-      { name: 'payments', error: paymentsResult.error },
-      { name: 'reservations', error: reservationsResult.error },
-      { name: 'activityBookings', error: activityBookingsResult.error },
-      { name: 'foodOrders', error: foodOrdersResult.error },
-      { name: 'checkinsList', error: checkinsListResult.error },
-      { name: 'checkoutsList', error: checkoutsListResult.error },
-    ];
-
-    const failedQuery = errors.find((e) => e.error);
-    if (failedQuery) {
-      throw new Error(`Failed to fetch ${failedQuery.name}: ${failedQuery.error?.message || 'Unknown error'}`);
+    if (roomsResult.error) {
+      throw new Error(`Failed to fetch rooms: ${roomsResult.error.message}`);
+    }
+    if (totalGuestsResult.error) {
+      throw new Error(`Failed to fetch guests: ${totalGuestsResult.error.message}`);
+    }
+    if (reservationsResult.error) {
+      throw new Error(`Failed to fetch reservations: ${reservationsResult.error.message}`);
+    }
+    if (todayReservationsResult.error) {
+      throw new Error(`Failed to fetch today's reservations: ${todayReservationsResult.error.message}`);
+    }
+    if (paymentsResult.error) {
+      throw new Error(`Failed to fetch payments: ${paymentsResult.error.message}`);
+    }
+    if (activityBookingsResult.error) {
+      throw new Error(`Failed to fetch activity bookings: ${activityBookingsResult.error.message}`);
+    }
+    if (foodOrdersResult.error) {
+      throw new Error(`Failed to fetch food orders: ${foodOrdersResult.error.message}`);
     }
 
-    const totalRooms = totalRoomsResult.count ?? 0;
-    const occupiedRooms = occupiedRoomsResult.count ?? 0;
-    const availableRooms = availableRoomsResult.count ?? 0;
+    const roomsData = roomsResult.data ?? [];
+    const totalRooms = roomsData.length;
+    const occupiedRooms = roomsData.filter((r) => r.status === 'OCCUPIED').length;
+    const availableRooms = roomsData.filter((r) => r.status === 'AVAILABLE').length;
+    const cleaningRooms = roomsData.filter((r) => r.status === 'CLEANING').length;
+    const maintenanceRooms = roomsData.filter((r) => r.status === 'MAINTENANCE').length;
+
+    const reservationsData = reservationsResult.data ?? [];
+    const todayReservations = todayReservationsResult.data ?? [];
+
+    const checkinsToday = todayReservations.filter((r) => {
+      const checkInDate = r.check_in?.split('T')[0];
+      return checkInDate === today;
+    });
+
+    const checkoutsToday = todayReservations.filter((r) => {
+      const checkOutDate = r.check_out?.split('T')[0];
+      return checkOutDate === today;
+    });
 
     const completedPayments = (paymentsResult.data ?? []).filter(
       (payment) => String(payment.status ?? '').toUpperCase() !== 'PENDING',
@@ -115,14 +125,14 @@ export async function GET() {
 
     const guestBalances: Record<string, { charges: number; paid: number }> = {};
 
-    (reservationsResult.data ?? []).forEach((r) => {
+    reservationsData.forEach((r) => {
       const guestId = r.guest_id;
       if (!guestId) return;
       if (!guestBalances[guestId]) guestBalances[guestId] = { charges: 0, paid: 0 };
       guestBalances[guestId].charges += Number(r.total_amount ?? 0);
     });
 
-    (paymentsResult.data ?? []).forEach((p) => {
+    paymentsResult.data?.forEach((p) => {
       const guestId = p.guest_id;
       if (!guestId) return;
       if (!guestBalances[guestId]) guestBalances[guestId] = { charges: 0, paid: 0 };
@@ -134,7 +144,7 @@ export async function GET() {
       }
     });
 
-    (activityBookingsResult.data ?? []).forEach((ab) => {
+    activityBookingsResult.data?.forEach((ab) => {
       const guestId = ab.guest_id;
       if (!guestId) return;
       if (!guestBalances[guestId]) guestBalances[guestId] = { charges: 0, paid: 0 };
@@ -142,7 +152,7 @@ export async function GET() {
       guestBalances[guestId].charges += price * (ab.participants ?? 1);
     });
 
-    (foodOrdersResult.data ?? []).forEach((fo) => {
+    foodOrdersResult.data?.forEach((fo) => {
       const guestId = fo.guest_id;
       if (!guestId) return;
       if (!guestBalances[guestId]) guestBalances[guestId] = { charges: 0, paid: 0 };
@@ -157,30 +167,33 @@ export async function GET() {
 
     const occupancyRate = totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0;
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        stats: {
-          totalRooms,
-          occupiedRooms,
-          availableRooms,
-          occupancyRate,
-          totalGuests: totalGuestsResult.count ?? 0,
-          activeReservations: activeReservationsResult.count ?? 0,
-          checkinsToday: checkinsTodayResult.count ?? 0,
-          checkoutsToday: checkoutsTodayResult.count ?? 0,
-          totalRevenue,
-          pendingPayments,
-          roomStatusBreakdown: {
-            available: availableRoomsResult.count ?? 0,
-            occupied: occupiedRoomsResult.count ?? 0,
-            cleaning: cleaningRoomsResult.count ?? 0,
-            maintenance: maintenanceRoomsResult.count ?? 0,
-          },
+    const responseData = {
+      stats: {
+        totalRooms,
+        occupiedRooms,
+        availableRooms,
+        occupancyRate,
+        totalGuests: totalGuestsResult.count ?? 0,
+        activeReservations: reservationsData.length,
+        checkinsToday: checkinsToday.length,
+        checkoutsToday: checkoutsToday.length,
+        totalRevenue,
+        pendingPayments,
+        roomStatusBreakdown: {
+          available: availableRooms,
+          occupied: occupiedRooms,
+          cleaning: cleaningRooms,
+          maintenance: maintenanceRooms,
         },
-        todaysCheckins: checkinsListResult.data ?? [],
-        todaysCheckouts: checkoutsListResult.data ?? [],
       },
+      todaysCheckins: checkinsToday,
+      todaysCheckouts: checkoutsToday,
+    };
+
+    setCachedResponse(cacheKey, responseData);
+
+    return NextResponse.json({ success: true, data: responseData }, {
+      headers: { 'Cache-Control': 'private, max-age=30' },
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to fetch dashboard data';
