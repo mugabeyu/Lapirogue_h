@@ -331,6 +331,7 @@ export default function RoomsPage() {
         confirmLabel={isDeleting ? 'Deleting...' : 'Delete'}
         onConfirm={handleDelete}
         onClose={() => setDeleteRow(null)}
+        isLoading={isDeleting}
       />
     </div>
   );

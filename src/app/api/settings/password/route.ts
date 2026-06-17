@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { getRouteHandlerSupabaseClient } from '@/lib/supabase-server';
+import { attachSupabaseCookies, getRouteHandlerSupabaseSession } from '@/lib/supabase-server';
 
 const passwordSchema = z.object({
   currentPassword: z.string().min(1),
@@ -8,10 +8,10 @@ const passwordSchema = z.object({
 });
 
 export async function PUT(request: NextRequest) {
-  const authClient = getRouteHandlerSupabaseClient(request);
-  const { data: { user }, error: userError } = await authClient.auth.getUser();
+  const { user, error: userError, response, supabase } = await getRouteHandlerSupabaseSession(request);
   if (!user || userError) {
-    return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 });
+    response.headers.set('Cache-Control', 'no-store, max-age=0');
+    return attachSupabaseCookies(NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 }), response);
   }
 
   try {
@@ -19,27 +19,34 @@ export async function PUT(request: NextRequest) {
     const validatedData = passwordSchema.parse(body);
 
     if (!user.email) {
-      return NextResponse.json({ success: false, error: 'User email missing' }, { status: 400 });
+      response.headers.set('Cache-Control', 'no-store, max-age=0');
+      return attachSupabaseCookies(NextResponse.json({ success: false, error: 'User email missing' }, { status: 400 }), response);
     }
 
-    const { error: signInError } = await authClient.auth.signInWithPassword({
+    const { error: signInError } = await supabase.auth.signInWithPassword({
       email: user.email,
       password: validatedData.currentPassword,
     });
 
     if (signInError) {
-      return NextResponse.json({ success: false, error: 'Current password is incorrect' }, { status: 401 });
+      response.headers.set('Cache-Control', 'no-store, max-age=0');
+      return attachSupabaseCookies(NextResponse.json({ success: false, error: 'Current password is incorrect' }, { status: 401 }), response);
     }
 
-    const { error } = await authClient.auth.updateUser({ password: validatedData.newPassword });
+    const { error } = await supabase.auth.updateUser({ password: validatedData.newPassword });
 
     if (error) throw error;
 
-    return NextResponse.json({ success: true, message: 'Password updated successfully' });
+    response.headers.set('Cache-Control', 'no-store, max-age=0');
+    return attachSupabaseCookies(NextResponse.json({ success: true, message: 'Password updated successfully' }), response);
   } catch (error) {
+    response.headers.set('Cache-Control', 'no-store, max-age=0');
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ success: false, error: 'Validation error', details: error.errors }, { status: 400 });
+      return attachSupabaseCookies(
+        NextResponse.json({ success: false, error: 'Validation error', details: error.errors }, { status: 400 }),
+        response,
+      );
     }
-    return NextResponse.json({ success: false, error: 'Failed to update password' }, { status: 500 });
+    return attachSupabaseCookies(NextResponse.json({ success: false, error: 'Failed to update password' }, { status: 500 }), response);
   }
 }

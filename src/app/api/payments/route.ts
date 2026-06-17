@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { getAuditActor } from '@/lib/audit';
+import { attachSupabaseCookies, getRouteHandlerSupabaseSession } from '@/lib/supabase-server';
 import { z } from 'zod';
 
 const extraChargeSchema = z.object({
@@ -32,69 +33,121 @@ type PaymentRow = {
   reference?: string | null;
   notes?: string | null;
   created_at?: string | null;
-  guests?: { first_name?: string | null; last_name?: string | null; image_path?: string | null } | null;
-  reservations?: {
-    reservation_id?: string | null;
-    guests?: { first_name?: string | null; last_name?: string | null } | null;
-  } | null;
 };
 
-function guestName(row: PaymentRow) {
-  if (row.guests) {
-    return `${row.guests.first_name ?? ''} ${row.guests.last_name ?? ''}`.trim() || null;
+type GuestRow = {
+  id: string;
+  first_name?: string | null;
+  last_name?: string | null;
+  image_path?: string | null;
+};
+
+type ReservationRow = {
+  id: string;
+  reservation_id?: string | null;
+  guest_id?: string | null;
+};
+
+async function loadPaymentGuests(guestIds: string[]): Promise<Map<string, GuestRow>> {
+  if (!guestIds.length) return new Map<string, GuestRow>();
+
+  const { data, error } = await getSupabaseAdmin()
+    .from('guests')
+    .select('id, first_name, last_name, image_path')
+    .in('id', guestIds);
+
+  if (error) throw error;
+  return new Map((data ?? []).map((guest) => [guest.id, guest] as const));
+}
+
+async function loadPaymentReservations(reservationIds: string[]): Promise<Map<string, ReservationRow>> {
+  if (!reservationIds.length) return new Map<string, ReservationRow>();
+
+  const { data, error } = await getSupabaseAdmin()
+    .from('reservations')
+    .select('id, reservation_id, guest_id')
+    .in('id', reservationIds);
+
+  if (error) throw error;
+  return new Map((data ?? []).map((reservation) => [reservation.id, reservation] as const));
+}
+
+function guestNameFromRows(guest?: GuestRow | null, reservation?: ReservationRow | null, guestsByName?: Map<string, GuestRow>) {
+  if (guest) {
+    return `${guest.first_name ?? ''} ${guest.last_name ?? ''}`.trim() || null;
   }
-  if (row.reservations?.guests) {
-    return `${row.reservations.guests.first_name ?? ''} ${row.reservations.guests.last_name ?? ''}`.trim() || null;
-  }
-  return null;
+  const reservationGuest = reservation?.guest_id ? guestsByName?.get(reservation.guest_id) : null;
+  return reservationGuest ? `${reservationGuest.first_name ?? ''} ${reservationGuest.last_name ?? ''}`.trim() || null : null;
 }
 
 export async function GET(request: NextRequest) {
+  const { user, error: userError, response } = await getRouteHandlerSupabaseSession(request);
+  if (!user || userError) {
+    response.headers.set('Cache-Control', 'no-store, max-age=0');
+    return attachSupabaseCookies(NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 }), response);
+  }
+
   try {
     const search = request.nextUrl.searchParams.get('search') ?? '';
     const { data, error } = await getSupabaseAdmin()
       .from('payments')
-      .select(
-        'id,payment_id,guest_id,reservation_id,amount,method,status,reference,notes,created_at,guests(first_name,last_name,image_path),reservations(reservation_id,guests(first_name,last_name))',
-      )
+      .select('id,payment_id,guest_id,reservation_id,amount,method,status,reference,notes,created_at')
       .order('created_at', { ascending: false });
 
     if (error) throw error;
 
     const rows = (data ?? []) as PaymentRow[];
-    const payments = rows.map((payment) => ({
-      id: payment.id,
-      paymentId: payment.payment_id ?? null,
-      guestId: payment.guest_id ?? null,
-      reservationId: payment.reservation_id ?? null,
-      reservation: payment.reservations?.reservation_id ?? null,
-      guest: guestName(payment),
-      guestImagePath: payment.guests?.image_path ?? null,
-      amount: payment.amount === undefined || payment.amount === null ? 0 : Number(payment.amount),
-      method: payment.method ?? null,
-      status: payment.status ?? null,
-      reference: payment.reference ?? null,
-      notes: payment.notes ?? null,
-      createdAt: payment.created_at ?? null,
-    }));
+    const guestIds = [...new Set(rows.map((payment) => payment.guest_id).filter((id): id is string => Boolean(id)))];
+    const reservationIds = [...new Set(rows.map((payment) => payment.reservation_id).filter((id): id is string => Boolean(id)))];
 
-    return NextResponse.json({
+    const [guestsByName, reservationsById] = await Promise.all([
+      loadPaymentGuests(guestIds),
+      loadPaymentReservations(reservationIds),
+    ]);
+
+    const payments = rows.map((payment) => {
+      const guest = guestsByName.get(payment.guest_id ?? '');
+      const reservation = payment.reservation_id ? reservationsById.get(payment.reservation_id) : null;
+      return {
+        id: payment.id,
+        paymentId: payment.payment_id ?? null,
+        guestId: payment.guest_id ?? null,
+        reservationId: payment.reservation_id ?? null,
+        reservation: reservation?.reservation_id ?? null,
+        guest: guestNameFromRows(guest, reservation, guestsByName),
+        guestImagePath: guest?.image_path ?? null,
+        amount: payment.amount === undefined || payment.amount === null ? 0 : Number(payment.amount),
+        method: payment.method ?? null,
+        status: payment.status ?? null,
+        reference: payment.reference ?? null,
+        notes: payment.notes ?? null,
+        createdAt: payment.created_at ?? null,
+      };
+    });
+
+    return attachSupabaseCookies(NextResponse.json({
       success: true,
       data: search
         ? payments.filter((payment) => JSON.stringify(payment).toLowerCase().includes(search.toLowerCase()))
         : payments,
-    });
-  } catch {
-    return NextResponse.json({ success: false, error: 'Failed to fetch payments' }, { status: 500 });
+    }), response);
+  } catch (error) {
+    response.headers.set('Cache-Control', 'no-store, max-age=0');
+    return attachSupabaseCookies(NextResponse.json({ success: false, error: error instanceof Error ? error.message : 'Failed to fetch payments' }, { status: 500 }), response);
   }
 }
 
 export async function POST(request: NextRequest) {
+  const { user, error: userError, response } = await getRouteHandlerSupabaseSession(request);
+  if (!user || userError) {
+    response.headers.set('Cache-Control', 'no-store, max-age=0');
+    return attachSupabaseCookies(NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 }), response);
+  }
+
   try {
     const body = paymentSchema.parse(await request.json());
     const admin = getSupabaseAdmin();
-    const actor = await getAuditActor(request);
-    const actorId = actor?.id ?? null;
+    await getAuditActor(request);
 
     const { data, error } = await admin
       .from('payments')
@@ -127,22 +180,28 @@ export async function POST(request: NextRequest) {
       if (extrasError) throw extrasError;
     }
 
-    return NextResponse.json({ success: true, data }, { status: 201 });
+    return attachSupabaseCookies(NextResponse.json({ success: true, data }, { status: 201 }), response);
   } catch (error) {
+    response.headers.set('Cache-Control', 'no-store, max-age=0');
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ success: false, error: 'Validation error', details: error.errors }, { status: 400 });
+      return attachSupabaseCookies(NextResponse.json({ success: false, error: 'Validation error', details: error.errors }, { status: 400 }), response);
     }
-    return NextResponse.json({ success: false, error: 'Failed to create payment' }, { status: 500 });
+    return attachSupabaseCookies(NextResponse.json({ success: false, error: 'Failed to create payment' }, { status: 500 }), response);
   }
 }
 
 export async function PUT(request: NextRequest) {
+  const { user, error: userError, response } = await getRouteHandlerSupabaseSession(request);
+  if (!user || userError) {
+    response.headers.set('Cache-Control', 'no-store, max-age=0');
+    return attachSupabaseCookies(NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 }), response);
+  }
+
   try {
     const body = paymentSchema.extend({ id: z.string().uuid() }).parse(await request.json());
     const { id, guestId, reservationId, amount, method, status, reference, notes, extraCharges } = body;
     const admin = getSupabaseAdmin();
-    const actor = await getAuditActor(request);
-    const actorId = actor?.id ?? null;
+    await getAuditActor(request);
 
     const { data: existingPayment, error: existingError } = await admin
       .from('payments')
@@ -195,18 +254,28 @@ export async function PUT(request: NextRequest) {
       if (extrasError) throw extrasError;
     }
 
-    return NextResponse.json({ success: true, data });
+    return attachSupabaseCookies(NextResponse.json({ success: true, data }), response);
   } catch (error) {
+    response.headers.set('Cache-Control', 'no-store, max-age=0');
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ success: false, error: 'Validation error', details: error.errors }, { status: 400 });
+      return attachSupabaseCookies(NextResponse.json({ success: false, error: 'Validation error', details: error.errors }, { status: 400 }), response);
     }
-    return NextResponse.json({ success: false, error: 'Failed to update payment' }, { status: 500 });
+    return attachSupabaseCookies(NextResponse.json({ success: false, error: 'Failed to update payment' }, { status: 500 }), response);
   }
 }
 
-export async function DELETE() {
-  return NextResponse.json(
-    { success: false, error: 'Payments are immutable and cannot be deleted' },
-    { status: 405 },
+export async function DELETE(request: NextRequest) {
+  const { user, error: userError, response } = await getRouteHandlerSupabaseSession(request);
+  if (!user || userError) {
+    response.headers.set('Cache-Control', 'no-store, max-age=0');
+    return attachSupabaseCookies(NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 }), response);
+  }
+
+  return attachSupabaseCookies(
+    NextResponse.json(
+      { success: false, error: 'Payments are immutable and cannot be deleted' },
+      { status: 405 },
+    ),
+    response,
   );
 }

@@ -1,14 +1,14 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { attachSupabaseCookies, getRouteHandlerSupabaseSession } from '@/lib/supabase-server';
 
 type EventRow = {
   guest_id: string;
   activity_id: string;
   points: number;
-  carbon_offset_kg: number | string;
-  earned_at: string;
-  sustainability_activities?: { name?: string; color?: string } | { name?: string; color?: string }[] | null;
-  guests?: { first_name?: string | null; last_name?: string | null } | { first_name?: string | null; last_name?: string | null }[] | null;
+  carbon_offset_kg?: number | string;
+  earned_at?: string;
+  created_at?: string;
 };
 
 type TierRow = {
@@ -17,18 +17,18 @@ type TierRow = {
   sort_order: number;
 };
 
-function pickOne<T>(value: T | T[] | null | undefined): T | null {
-  if (!value) return null;
-  return Array.isArray(value) ? value[0] ?? null : value;
-}
+type ActivityRow = {
+  id: string;
+  name?: string | null;
+  color?: string | null;
+  carbon_offset_kg?: number | string;
+};
 
-function activityFromEvent(row: EventRow) {
-  return pickOne(row.sustainability_activities);
-}
-
-function guestFromEvent(row: EventRow) {
-  return pickOne(row.guests);
-}
+type GuestRow = {
+  id: string;
+  first_name?: string | null;
+  last_name?: string | null;
+};
 
 function initials(first?: string | null, last?: string | null) {
   const parts = [first?.[0], last?.[0]].filter(Boolean);
@@ -56,7 +56,7 @@ function splitByPeriod(rows: EventRow[]) {
   const previous: EventRow[] = [];
 
   for (const row of rows) {
-    const time = new Date(row.earned_at).getTime();
+    const time = new Date(row.earned_at || row.created_at || 0).getTime();
     if (time >= currentStart) current.push(row);
     else if (time >= previousStart && time < currentStart) previous.push(row);
   }
@@ -76,14 +76,62 @@ function lastSixMonths() {
   return months;
 }
 
-export async function GET() {
+function emptySustainabilityPayload() {
+  return {
+    summary: {
+      totalEcoPoints: 0,
+      totalEcoPointsTrend: null,
+      activeParticipants: 0,
+      activeParticipantsTrend: null,
+      carbonOffsetKg: 0,
+      carbonOffsetTrend: null,
+    },
+    leaderboard: [],
+    activityDistribution: [],
+    monthlyTrend: lastSixMonths().map((month) => ({ month: month.label, points: 0 })),
+  };
+}
+
+async function loadGuestNames(guestIds: string[]): Promise<Map<string, GuestRow>> {
+  if (!guestIds.length) return new Map<string, GuestRow>();
+
+  const { data, error } = await getSupabaseAdmin()
+    .from('guests')
+    .select('id, first_name, last_name')
+    .in('id', guestIds);
+
+  if (error?.code === 'PGRST205') return new Map<string, GuestRow>();
+  if (error) throw error;
+  return new Map((data ?? []).map((guest) => [guest.id, guest] as const));
+}
+
+async function loadActivities(activityIds: string[]): Promise<Map<string, ActivityRow>> {
+  if (!activityIds.length) return new Map<string, ActivityRow>();
+
+  const { data, error } = await getSupabaseAdmin()
+    .from('sustainability_activities')
+    .select('id, name, color')
+    .in('id', activityIds);
+
+  if (error?.code === 'PGRST205') return new Map<string, ActivityRow>();
+  if (error) throw error;
+  return new Map((data ?? []).map((activity) => [activity.id, activity] as const));
+}
+
+export async function GET(request: NextRequest) {
+  const { user, error: userError, response } = await getRouteHandlerSupabaseSession(request);
+  if (!user || userError) {
+    response.headers.set('Cache-Control', 'no-store, max-age=0');
+    return attachSupabaseCookies(NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 }), response);
+  }
+
   try {
     const admin = getSupabaseAdmin();
 
     const [eventsResult, tiersResult, activitiesResult] = await Promise.all([
       admin
         .from('guest_eco_point_events')
-        .select('guest_id, activity_id, points, carbon_offset_kg, earned_at, sustainability_activities(name, color), guests(first_name, last_name)'),
+        .select('guest_id, activity_id, points, created_at'),
       admin.from('eco_tiers').select('name, min_points, sort_order').order('sort_order', { ascending: true }),
       admin.from('sustainability_activities').select('id, name, color').eq('is_active', true),
     ]);
@@ -94,35 +142,27 @@ export async function GET() {
         String((eventsResult.error as { message?: string }).message ?? '').includes("'public.guest_eco_point_events'");
 
       if (missingEventsTable) {
-        return NextResponse.json({
+        return attachSupabaseCookies(NextResponse.json({
           success: true,
-          data: {
-            summary: {
-              totalEcoPoints: 0,
-              totalEcoPointsTrend: null,
-              activeParticipants: 0,
-              activeParticipantsTrend: null,
-              carbonOffsetKg: 0,
-              carbonOffsetTrend: null,
-            },
-            leaderboard: [],
-            activityDistribution: [],
-            monthlyTrend: lastSixMonths().map((month) => ({ month: month.label, points: 0 })),
-          },
-        });
+          data: emptySustainabilityPayload(),
+        }), response);
       }
 
       throw eventsResult.error;
     }
-    if (tiersResult.error) throw tiersResult.error;
-    if (activitiesResult.error) throw activitiesResult.error;
+    const tiers = tiersResult.error?.code === 'PGRST205' ? [] : tiersResult.error ? (() => { throw tiersResult.error; })() : (tiersResult.data ?? []) as TierRow[];
+    const activitiesFromTable = activitiesResult.error?.code === 'PGRST205' ? [] : activitiesResult.error ? (() => { throw activitiesResult.error; })() : (activitiesResult.data ?? []) as ActivityRow[];
 
     const events = (eventsResult.data ?? []) as EventRow[];
-    const tiers = (tiersResult.data ?? []) as TierRow[];
-    const activities = activitiesResult.data ?? [];
+
+    const guestIds = [...new Set(events.map((row) => row.guest_id))];
+    const activityIds = [...new Set(events.map((row) => row.activity_id))];
+    const [guestsByName, activitiesByName] = await Promise.all([
+      loadGuestNames(guestIds),
+      loadActivities(activityIds),
+    ]);
 
     const totalPoints = events.reduce((sum, row) => sum + row.points, 0);
-    const totalCarbon = events.reduce((sum, row) => sum + Number(row.carbon_offset_kg), 0);
     const activeParticipants = new Set(events.map((row) => row.guest_id)).size;
 
     const { current: recentEvents, previous: priorEvents } = splitByPeriod(events);
@@ -131,8 +171,11 @@ export async function GET() {
     const priorPoints = priorEvents.reduce((sum, row) => sum + row.points, 0);
     const recentParticipants = new Set(recentEvents.map((row) => row.guest_id)).size;
     const priorParticipants = new Set(priorEvents.map((row) => row.guest_id)).size;
-    const recentCarbon = recentEvents.reduce((sum, row) => sum + Number(row.carbon_offset_kg), 0);
-    const priorCarbon = priorEvents.reduce((sum, row) => sum + Number(row.carbon_offset_kg), 0);
+
+    const eventCarbon = (row: EventRow) => Number(row.carbon_offset_kg ?? activitiesByName.get(row.activity_id)?.carbon_offset_kg ?? 0);
+    const totalCarbon = events.reduce((sum, row) => sum + eventCarbon(row), 0);
+    const recentCarbon = recentEvents.reduce((sum, row) => sum + eventCarbon(row), 0);
+    const priorCarbon = priorEvents.reduce((sum, row) => sum + eventCarbon(row), 0);
 
     const summary = {
       totalEcoPoints: totalPoints,
@@ -145,7 +188,7 @@ export async function GET() {
 
     const guestTotals = new Map<string, { points: number; firstName?: string | null; lastName?: string | null }>();
     for (const row of events) {
-      const guest = guestFromEvent(row);
+      const guest = guestsByName.get(row.guest_id);
       const existing = guestTotals.get(row.guest_id) ?? {
         points: 0,
         firstName: guest?.first_name,
@@ -168,16 +211,16 @@ export async function GET() {
       .map((entry, index) => ({ rank: index + 1, ...entry }));
 
     const activityTotals = new Map<string, { name: string; color: string; points: number }>();
-    for (const activity of activities) {
+    for (const activity of activitiesFromTable) {
       activityTotals.set(activity.id, {
-        name: activity.name,
+        name: activity.name ?? 'Unknown',
         color: activity.color ?? '#10b981',
         points: 0,
       });
     }
 
     for (const row of events) {
-      const activity = activityFromEvent(row);
+      const activity = activitiesByName.get(row.activity_id);
       const bucket = activityTotals.get(row.activity_id) ?? {
         name: activity?.name ?? 'Other',
         color: activity?.color ?? '#64748b',
@@ -193,7 +236,7 @@ export async function GET() {
 
     const monthBuckets = new Map<string, number>();
     for (const row of events) {
-      const date = new Date(row.earned_at);
+      const date = new Date(row.earned_at || row.created_at || 0);
       const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
       monthBuckets.set(key, (monthBuckets.get(key) ?? 0) + row.points);
     }
@@ -203,17 +246,21 @@ export async function GET() {
       points: monthBuckets.get(month.key) ?? 0,
     }));
 
-    return NextResponse.json({
+    const payload = emptySustainabilityPayload();
+
+    return attachSupabaseCookies(NextResponse.json({
       success: true,
       data: {
+        ...payload,
         summary,
         leaderboard,
         activityDistribution,
         monthlyTrend,
       },
-    });
+    }), response);
   } catch (error) {
+    response.headers.set('Cache-Control', 'no-store, max-age=0');
     console.error('GET /api/sustainability', error);
-    return NextResponse.json({ success: false, error: 'Failed to fetch sustainability data' }, { status: 500 });
+    return attachSupabaseCookies(NextResponse.json({ success: false, error: 'Failed to fetch sustainability data' }, { status: 500 }), response);
   }
 }

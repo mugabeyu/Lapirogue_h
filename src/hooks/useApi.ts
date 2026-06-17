@@ -25,7 +25,7 @@ export function useApi<T>(url: string | null, options?: { revalidateOnMount?: bo
   return {
     data: data?.success !== false ? data?.data : undefined,
     error: apiError ?? (error instanceof Error ? error.message : null),
-  
+    isLoading,
     mutate,
     success: data?.success ?? false,
   };

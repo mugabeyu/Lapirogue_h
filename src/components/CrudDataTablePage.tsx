@@ -330,6 +330,7 @@ export default function CrudDataTablePage({
           title="Delete Record"
           message="Are you sure you want to delete this record? This action cannot be undone."
           confirmLabel="Delete"
+          isLoading={isDeleting}
         />
       )}
     </div>

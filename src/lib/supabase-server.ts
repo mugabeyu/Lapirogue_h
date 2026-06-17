@@ -4,7 +4,12 @@ import { getSupabaseConfig } from './supabase-config';
 
 type ResponseCookieOptions = NonNullable<Parameters<NextResponse['cookies']['set']>[2]>;
 
-export function createRouteHandlerSupabaseContext(request: NextRequest) {
+export type RouteHandlerSupabaseContext = {
+  supabase: ReturnType<typeof createServerClient>;
+  response: NextResponse;
+};
+
+export function createRouteHandlerSupabaseContext(request: NextRequest): RouteHandlerSupabaseContext {
   const { url, anonKey } = getSupabaseConfig();
 
   const response = NextResponse.next({
@@ -31,6 +36,21 @@ export function createRouteHandlerSupabaseContext(request: NextRequest) {
 
 export function getRouteHandlerSupabaseClient(request: NextRequest) {
   return createRouteHandlerSupabaseContext(request).supabase;
+}
+
+export async function getRouteHandlerSupabaseSession(request: NextRequest) {
+  const { supabase, response } = createRouteHandlerSupabaseContext(request);
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  return {
+    user: user ?? null,
+    error: error ?? null,
+    supabase,
+    response,
+  };
 }
 
 export function attachSupabaseCookies(response: NextResponse, source: NextResponse) {

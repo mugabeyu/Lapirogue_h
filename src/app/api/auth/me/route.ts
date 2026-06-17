@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { getRouteHandlerSupabaseClient } from '@/lib/supabase-server';
+import { attachSupabaseCookies, getRouteHandlerSupabaseSession } from '@/lib/supabase-server';
 import { INTERNATIONAL_PHONE_DISPLAY_PATTERN } from '@/lib/phone';
 
 export const dynamic = 'force-dynamic';
@@ -10,9 +10,107 @@ export const revalidate = 0;
 const userCache = new Map<string, { data: unknown; timestamp: number }>();
 const USER_CACHE_TTL_MS = 60000;
 
-function normalizeRole(role?: string | null) {
-  if (role === 'MAIN_RECEPTIONIST') return 'MAIN_RECEPTIONIST' as const;
-  return 'RECEPTIONIST' as const;
+type ProfileRow = {
+  auth_id?: string;
+  email: string | null;
+  full_name: string | null;
+  phone: string | null;
+  avatar_url: string | null;
+  role: string | null;
+  is_main: boolean | null;
+  is_active: boolean | null;
+  created_at: string | null;
+  updated_at: string | null;
+};
+
+type StaffRow = {
+  auth_user_id: string;
+  email: string | null;
+  full_name: string | null;
+  image_path: string | null;
+  status: string | null;
+};
+
+type SessionData = {
+  id: string;
+  email: string;
+  name: string;
+  role: 'MAIN_RECEPTIONIST' | 'RECEPTIONIST';
+  phone: string | null;
+  avatarUrl: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+function normalizeRole(role?: string | null): SessionData['role'] {
+  if (role === 'MAIN_RECEPTIONIST') return 'MAIN_RECEPTIONIST';
+  return 'RECEPTIONIST';
+}
+
+function normalizeVal(value: string | null | undefined): string | null {
+  if (value === undefined || value === null) return null;
+  if (typeof value === 'string' && value.trim() === '') return null;
+  return value;
+}
+
+function normalizeStorageUrl(admin: ReturnType<typeof getSupabaseAdmin>, value: string | null | undefined) {
+  if (!value) return null;
+  if (/^https?:\/\//i.test(value)) return value;
+
+  let path = value;
+  const marker = '/storage/v1/object/public/staff-avatars/';
+  const markerIndex = path.indexOf(marker);
+  if (markerIndex !== -1) {
+    path = decodeURIComponent(path.slice(markerIndex + marker.length));
+  }
+  if (path.startsWith('staff-avatars/')) {
+    path = path.replace(/^staff-avatars\//, '');
+  }
+
+  return admin.storage.from('staff-avatars').getPublicUrl(path).data.publicUrl ?? value;
+}
+
+function deriveNameFromEmail(email: string) {
+  const local = email.split('@')[0] ?? '';
+  return (
+    local
+      .replace(/[._\-]+/g, ' ')
+      .split(' ')
+      .filter(Boolean)
+      .map((part) => `${part[0]?.toUpperCase() ?? ''}${part.slice(1).toLowerCase()}`)
+      .join(' ') || email
+  );
+}
+
+function buildSessionData(params: {
+  userId: string;
+  userCreatedAt?: string;
+  userUpdatedAt?: string;
+  userMetadata?: Record<string, unknown>;
+  profile: ProfileRow | null;
+  staff: StaffRow | null;
+  admin: ReturnType<typeof getSupabaseAdmin>;
+}): SessionData {
+  const { userId, userCreatedAt, userUpdatedAt, userMetadata, profile, staff, admin } = params;
+  const email = profile?.email || staff?.email || '';
+  const name =
+    profile?.full_name ||
+    staff?.full_name ||
+    (typeof userMetadata?.full_name === 'string' ? userMetadata.full_name : null) ||
+    (email ? deriveNameFromEmail(email) : '');
+
+  return {
+    id: profile?.auth_id || staff?.auth_user_id || userId,
+    email,
+    name,
+    role: profile?.is_main ? 'MAIN_RECEPTIONIST' : normalizeRole(profile?.role ?? (userMetadata?.role as string | undefined)),
+    phone: profile?.phone ?? null,
+    avatarUrl: normalizeStorageUrl(admin, profile?.avatar_url) || normalizeStorageUrl(admin, staff?.image_path),
+    isActive: profile?.is_active !== false,
+    createdAt: profile?.created_at || userCreatedAt || '',
+    updatedAt: profile?.updated_at || userUpdatedAt || '',
+  };
 }
 
 const profileSchema = z.object({
@@ -22,147 +120,105 @@ const profileSchema = z.object({
   phone: z.string().regex(INTERNATIONAL_PHONE_DISPLAY_PATTERN, 'Use Mauritian format like (+230) 1234 5678').optional().nullable(),
 });
 
-function normalizeVal(value: string | null | undefined): string | null {
-  if (value === undefined || value === null) return null;
-  if (typeof value === 'string' && value.trim() === '') return null;
-  return value;
-}
-
 export async function GET(request: NextRequest) {
-  const authClient = getRouteHandlerSupabaseClient(request);
-  const { data: { user }, error: userError } = await authClient.auth.getUser();
+  const { user, error: userError, response } = await getRouteHandlerSupabaseSession(request);
   if (!user || userError) {
-    const response = NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 });
     response.headers.set('Cache-Control', 'no-store, max-age=0');
-    return response;
+    return attachSupabaseCookies(NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 }), response);
   }
 
   const cacheKey = `user-${user.id}`;
   const cached = userCache.get(cacheKey);
   if (cached && Date.now() - cached.timestamp < USER_CACHE_TTL_MS) {
-    const response = NextResponse.json({ success: true, data: cached.data }, {
-      headers: { 'Cache-Control': 'private, max-age=60' },
-    });
-    return response;
+    response.headers.set('Cache-Control', 'private, max-age=60');
+    return attachSupabaseCookies(NextResponse.json({ success: true, data: cached.data }, { status: 200 }), response);
   }
 
-  const adminClient = getSupabaseAdmin();
+  const admin = getSupabaseAdmin();
 
   const [profileResult, staffResult, guestResult] = await Promise.all([
-    adminClient
+    admin
       .from('profiles')
       .select('auth_id, email, full_name, phone, avatar_url, role, is_main, is_active, created_at, updated_at')
       .eq('auth_id', user.id)
       .maybeSingle(),
-    adminClient
+    admin
       .from('staff')
-      .select('auth_user_id, full_name, image_path, status')
+      .select('auth_user_id, email, full_name, image_path, status')
       .eq('auth_user_id', user.id)
       .maybeSingle(),
-    adminClient
+    admin
       .from('guests')
       .select('id')
       .eq('auth_id', user.id)
       .maybeSingle(),
   ]);
 
+  if (profileResult.error) throw profileResult.error;
+  if (staffResult.error) throw staffResult.error;
+  if (guestResult.error) throw guestResult.error;
+
   if (guestResult.data) {
-    return NextResponse.json({ success: false, error: 'Guests must access via the mobile app' }, { status: 403 });
+    return attachSupabaseCookies(
+      NextResponse.json({ success: false, error: 'Guests must access via the mobile app' }, { status: 403 }),
+      response,
+    );
   }
 
-  const profileRow = profileResult.data
+  const profileRow = profileResult.data as ProfileRow | null;
+  const staffRow = staffResult.data as StaffRow | null;
+
+  if (profileRow?.is_active === false || (staffRow?.status && staffRow.status.toUpperCase() !== 'ACTIVE')) {
+    return attachSupabaseCookies(
+      NextResponse.json({ success: false, error: 'This staff account is blocked' }, { status: 403 }),
+      response,
+    );
+  }
+
+  const normalizedProfileRow: ProfileRow | null = profileRow
     ? {
-        ...profileResult.data,
-        email: normalizeVal(profileResult.data.email),
-        full_name: normalizeVal(profileResult.data.full_name),
-        phone: normalizeVal(profileResult.data.phone),
-        avatar_url: normalizeVal(profileResult.data.avatar_url),
-        role: normalizeVal(profileResult.data.role),
+        auth_id: profileRow.auth_id,
+        email: normalizeVal(profileRow.email),
+        full_name: normalizeVal(profileRow.full_name),
+        phone: normalizeVal(profileRow.phone),
+        avatar_url: normalizeVal(profileRow.avatar_url),
+        role: normalizeVal(profileRow.role),
+        is_main: profileRow.is_main,
+        is_active: profileRow.is_active,
+        created_at: profileRow.created_at,
+        updated_at: profileRow.updated_at,
       }
     : null;
-  const staffRow = staffResult.data;
 
-  if (profileRow?.is_active === false) {
-    return NextResponse.json({ success: false, error: 'This staff account is blocked' }, { status: 403 });
-  }
+  let responseData = buildSessionData({
+    userId: user.id,
+    userCreatedAt: user.created_at,
+    userUpdatedAt: user.updated_at,
+    userMetadata: user.user_metadata ?? {},
+    profile: normalizedProfileRow,
+    staff: staffRow,
+    admin,
+  });
 
-  const email = profileRow?.email || user.email || '';
-
-  let name = profileRow?.full_name || staffRow?.full_name || (user.user_metadata?.full_name as string | undefined) || null;
-
-  if (!name && email) {
-    const local = email.split('@')[0] ?? '';
-    const derived = local
-      .replace(/[._\-]+/g, ' ')
-      .split(' ')
-      .filter(Boolean)
-      .map((p: string) => p[0]?.toUpperCase() + p.slice(1).toLowerCase())
-      .join(' ');
-    name = derived || email;
+  if (!responseData.name && responseData.email) {
+    responseData = { ...responseData, name: deriveNameFromEmail(responseData.email) };
     try {
-      await adminClient.from('profiles').upsert({ auth_id: user.id, full_name: name }, { onConflict: 'auth_id' });
+      await admin.from('profiles').upsert({ auth_id: user.id, full_name: responseData.name }, { onConflict: 'auth_id' });
     } catch {
-      // ignore
+      // Ignore profile backfill failures so session lookup still works.
     }
   }
-
-  const role = profileRow?.is_main
-    ? ('MAIN_RECEPTIONIST' as const)
-    : normalizeRole(profileRow?.role || (user.user_metadata?.role as string | undefined));
-
-  let avatarUrl: string | null = null;
-  const tryToMakePublic = async (maybePathOrUrl: string | null | undefined) => {
-    if (!maybePathOrUrl) return null;
-    if (/^https?:\/\//i.test(maybePathOrUrl)) return maybePathOrUrl;
-    try {
-      let path = maybePathOrUrl;
-      const marker = '/storage/v1/object/public/staff-avatars/';
-      const idx = path.indexOf(marker);
-      if (idx !== -1) {
-        path = decodeURIComponent(path.slice(idx + marker.length));
-      }
-      if (path.startsWith('staff-avatars/')) {
-        path = path.replace(/^staff-avatars\//, '');
-      }
-
-      const { data: publicData } = await adminClient.storage.from('staff-avatars').getPublicUrl(path);
-      return publicData?.publicUrl ?? maybePathOrUrl;
-    } catch {
-      return maybePathOrUrl;
-    }
-  };
-
-  avatarUrl = await tryToMakePublic(profileRow?.avatar_url ?? null) || (await tryToMakePublic(staffRow?.image_path ?? null));
-
-  const responseData = {
-    id: profileRow?.auth_id || user.id,
-    email,
-    name,
-    role,
-    phone: profileRow?.phone ?? null,
-    avatarUrl,
-    isActive: profileRow?.is_active !== false,
-    createdAt: profileRow?.created_at || user.created_at || '',
-    updatedAt: profileRow?.updated_at || user.updated_at || '',
-  };
 
   userCache.set(cacheKey, { data: responseData, timestamp: Date.now() });
-
-  const response = NextResponse.json({
-    success: true,
-    data: responseData,
-  });
   response.headers.set('Cache-Control', 'private, max-age=60');
-  return response;
+  return attachSupabaseCookies(NextResponse.json({ success: true, data: responseData }), response);
 }
 
 export async function PUT(request: NextRequest) {
-  const authClient = getRouteHandlerSupabaseClient(request);
-  const { data: { user }, error: userError } = await authClient.auth.getUser();
+  const { user, error: userError, response, supabase } = await getRouteHandlerSupabaseSession(request);
   if (!user || userError) {
-    const response = NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 });
     response.headers.set('Cache-Control', 'no-store, max-age=0');
-    return response;
+    return attachSupabaseCookies(NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 }), response);
   }
 
   userCache.delete(`user-${user.id}`);
@@ -170,16 +226,30 @@ export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
     const validatedData = profileSchema.parse(body);
+    const admin = getSupabaseAdmin();
 
-    const { data, error } = await authClient
+    const { data: existingProfile } = await admin
+      .from('profiles')
+      .select('email, full_name, phone, avatar_url, role, is_main, is_active, created_at, updated_at')
+      .eq('auth_id', user.id)
+      .maybeSingle();
+
+    const resolvedEmail = validatedData.email || existingProfile?.email || user.email || '';
+    const resolvedFullName =
+      validatedData.fullName ?? existingProfile?.full_name ?? (user.user_metadata?.full_name as string | null) ?? null;
+    const resolvedPhone = validatedData.phone ?? existingProfile?.phone ?? null;
+    const resolvedAvatarUrl = validatedData.avatarUrl !== undefined ? validatedData.avatarUrl : existingProfile?.avatar_url ?? null;
+
+    const { data, error } = await admin
       .from('profiles')
       .upsert(
         {
           auth_id: user.id,
-          full_name: validatedData.fullName,
-          email: validatedData.email,
-          phone: validatedData.phone ?? null,
-          avatar_url: validatedData.avatarUrl ?? null,
+          email: resolvedEmail,
+          full_name: resolvedFullName,
+          phone: resolvedPhone,
+          avatar_url: resolvedAvatarUrl,
+          is_active: existingProfile?.is_active ?? true,
         },
         { onConflict: 'auth_id' },
       )
@@ -188,30 +258,39 @@ export async function PUT(request: NextRequest) {
 
     if (error) throw error;
 
-    const response = NextResponse.json({
-      success: true,
-      data: {
-        id: data.auth_id,
-        email: data.email,
-        name: data.full_name,
-        role: data.is_main ? 'MAIN_RECEPTIONIST' : data.role,
-        phone: data.phone,
-        avatarUrl: data.avatar_url,
-        isActive: data.is_active !== false,
-        createdAt: data.created_at,
-        updatedAt: data.updated_at,
-      },
+    const metadata: Record<string, string> = {};
+    if (resolvedFullName) metadata.full_name = resolvedFullName;
+    if (resolvedPhone) metadata.phone = resolvedPhone;
+    if (resolvedAvatarUrl) metadata.avatar_url = resolvedAvatarUrl;
+
+    if (Object.keys(metadata).length > 0) {
+      await supabase.auth.updateUser({ data: metadata });
+    }
+
+    const responseData = buildSessionData({
+      userId: user.id,
+      userCreatedAt: user.created_at,
+      userUpdatedAt: user.updated_at,
+      userMetadata: { ...(user.user_metadata ?? {}), ...metadata },
+      profile: data as ProfileRow,
+      staff: null,
+      admin,
     });
+
     response.headers.set('Cache-Control', 'no-store, max-age=0');
-    return response;
+    return attachSupabaseCookies(NextResponse.json({ success: true, data: responseData }), response);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const response = NextResponse.json({ success: false, error: 'Validation error', details: error.errors }, { status: 400 });
       response.headers.set('Cache-Control', 'no-store, max-age=0');
-      return response;
+      return attachSupabaseCookies(
+        NextResponse.json({ success: false, error: 'Validation error', details: error.errors }, { status: 400 }),
+        response,
+      );
     }
-    const response = NextResponse.json({ success: false, error: 'Failed to update profile' }, { status: 500 });
     response.headers.set('Cache-Control', 'no-store, max-age=0');
-    return response;
+    return attachSupabaseCookies(
+      NextResponse.json({ success: false, error: error instanceof Error ? error.message : 'Failed to update profile' }, { status: 500 }),
+      response,
+    );
   }
 }

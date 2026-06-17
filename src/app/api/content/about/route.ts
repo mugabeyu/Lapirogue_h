@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { getRouteHandlerSupabaseClient } from '@/lib/supabase-server';
+import { attachSupabaseCookies, getRouteHandlerSupabaseSession } from '@/lib/supabase-server';
 import { z } from 'zod';
 import { handleError, validationErrorResponse } from '@/lib/api-response';
 
@@ -82,18 +82,18 @@ function isMissingColumnError(error: { code?: string; message?: string; details?
 
 export async function GET(request: NextRequest) {
   try {
-    const authClient = getRouteHandlerSupabaseClient(request);
+    const { user, error: userError, response } = await getRouteHandlerSupabaseSession(request);
     const adminClient = getSupabaseAdmin();
-    const { data: { user }, error: userError } = await authClient.auth.getUser();
 
     if (!user || userError) {
-      return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 });
+      response.headers.set('Cache-Control', 'no-store, max-age=0');
+      return attachSupabaseCookies(NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 }), response);
     }
 
     const { data, error } = await adminClient.from('site_content_pages').select('*').eq('slug', 'about').maybeSingle();
     if (error) throw error;
 
-    return NextResponse.json({ success: true, data: normalizeContentRow((data ?? null) as SiteContentRow | null) });
+    return attachSupabaseCookies(NextResponse.json({ success: true, data: normalizeContentRow((data ?? null) as SiteContentRow | null) }), response);
   } catch (error) {
     return handleError(error, 'Failed to fetch about content');
   }
@@ -101,12 +101,12 @@ export async function GET(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const authClient = getRouteHandlerSupabaseClient(request);
+    const { user, error: userError, response } = await getRouteHandlerSupabaseSession(request);
     const adminClient = getSupabaseAdmin();
-    const { data: { user }, error: userError } = await authClient.auth.getUser();
 
     if (!user || userError) {
-      return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 });
+      response.headers.set('Cache-Control', 'no-store, max-age=0');
+      return attachSupabaseCookies(NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 }), response);
     }
 
     const body = contentSchema.parse(await request.json());
@@ -165,7 +165,8 @@ export async function PUT(request: NextRequest) {
 
     if (error) throw error;
 
-    return NextResponse.json({ success: true, data: normalizeContentRow(data) });
+    response.headers.set('Cache-Control', 'no-store, max-age=0');
+    return attachSupabaseCookies(NextResponse.json({ success: true, data: normalizeContentRow(data) }), response);
   } catch (error) {
     const validationResponse = validationErrorResponse(error);
     if (validationResponse) return validationResponse;

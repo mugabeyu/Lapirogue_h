@@ -4,14 +4,12 @@ import { ReactNode } from 'react';
 import Sidebar from './Sidebar';
 import Topbar from './Topbar';
 import { SidebarProvider, useSidebar } from '@/contexts/SidebarContext';
-import { User } from '@/types';
 
 interface LayoutProps {
   children: ReactNode;
-  user: User;
 }
 
-function LayoutShell({ children, user }: LayoutProps) {
+function LayoutShell({ children }: LayoutProps) {
   const { collapsed } = useSidebar();
 
   return (
@@ -29,10 +27,10 @@ function LayoutShell({ children, user }: LayoutProps) {
   );
 }
 
-export default function Layout({ children, user }: LayoutProps) {
+export default function Layout({ children }: LayoutProps) {
   return (
     <SidebarProvider>
-      <LayoutShell user={user}>{children}</LayoutShell>
+      <LayoutShell>{children}</LayoutShell>
     </SidebarProvider>
   );
 }

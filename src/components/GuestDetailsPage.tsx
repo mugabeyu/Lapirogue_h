@@ -158,7 +158,7 @@ export default function GuestDetailsPage() {
         title="Delete Guest"
         message={`Are you sure you want to permanently delete ${guest.firstName} ${guest.lastName}? This action cannot be undone.`}
         confirmLabel="Delete Guest"
-    
+        isLoading={isDeleting}
       />
     </div>
   );

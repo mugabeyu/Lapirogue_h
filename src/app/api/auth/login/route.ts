@@ -67,18 +67,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: signInError.message }, { status: 401 });
     }
 
-const userId = signInData.user?.id ?? '';
+    const userId = signInData.user?.id ?? '';
     const metadata = signInData.user?.user_metadata ?? {};
 
+    const [{ data: profileRow }, { data: staffRow }] = await Promise.all([
+      authClient
+        .from('profiles')
+        .select('auth_id, is_active')
+        .eq('auth_id', userId)
+        .maybeSingle(),
+      authClient
+        .from('staff')
+        .select('auth_user_id, status')
+        .eq('auth_user_id', userId)
+        .maybeSingle(),
+    ]);
 
-    // Check if this is a staff user
-    const { data: profileRow } = await authClient
-      .from('profiles')
-      .select('auth_id, is_active')
-      .eq('auth_id', userId)
-      .maybeSingle();
-
-    if (profileRow?.is_active === false) {
+    if (profileRow?.is_active === false || (staffRow?.status && staffRow.status.toUpperCase() !== 'ACTIVE')) {
       await authClient.auth.signOut();
       return NextResponse.json({ success: false, error: 'This staff account is blocked' }, { status: 403 });
     }

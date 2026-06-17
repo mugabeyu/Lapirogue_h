@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { z } from 'zod';
 import { getAuditActor, recordAuditLog } from '@/lib/audit';
-import { getRouteHandlerSupabaseClient } from '@/lib/supabase-server';
+import { attachSupabaseCookies, getRouteHandlerSupabaseSession } from '@/lib/supabase-server';
 import { validationErrorResponse } from '@/lib/api-response';
 
 type MessageRow = {
@@ -14,7 +14,6 @@ type MessageRow = {
   is_read?: boolean | null;
   attachment_url?: string | null;
   created_at?: string | null;
-  guests?: { first_name?: string | null; last_name?: string | null } | null;
 };
 
 const messageSchema = z.object({
@@ -25,22 +24,53 @@ const messageSchema = z.object({
   attachmentUrl: z.string().optional().nullable(),
 });
 
-async function requireAuth(request: NextRequest) {
-  const { data: { user } } = await getRouteHandlerSupabaseClient(request).auth.getUser();
-  return user ?? null;
+async function loadGuestNames(guestIds: string[]) {
+  if (!guestIds.length) return new Map<string, string>();
+
+  const { data, error } = await getSupabaseAdmin()
+    .from('guests')
+    .select('id, first_name, last_name')
+    .in('id', guestIds);
+
+  if (error) throw error;
+
+  return new Map(
+    (data ?? []).map((guest) => [
+      guest.id,
+      `${guest.first_name ?? ''} ${guest.last_name ?? ''}`.trim() || null,
+    ]),
+  );
+}
+
+async function mapMessages(messages: MessageRow[]) {
+  const guestIds = [...new Set(messages.map((message) => message.guest_id).filter((id): id is string => Boolean(id)))];
+  const guestNames = await loadGuestNames(guestIds);
+
+  return messages.map((message) => ({
+    id: message.id,
+    guestId: message.guest_id ?? null,
+    guestName: message.guest_id ? guestNames.get(message.guest_id) ?? null : null,
+    messageType: message.message_type ?? null,
+    subject: message.subject ?? null,
+    content: message.content ?? null,
+    attachmentUrl: message.attachment_url ?? null,
+    isRead: !!message.is_read,
+    createdAt: message.created_at ?? null,
+  }));
 }
 
 export async function GET(request: NextRequest) {
-  const user = await requireAuth(request);
-  if (!user) {
-    return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 });
+  const { user, error: userError, response } = await getRouteHandlerSupabaseSession(request);
+  if (!user || userError) {
+    response.headers.set('Cache-Control', 'no-store, max-age=0');
+    return attachSupabaseCookies(NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 }), response);
   }
 
   try {
     const guestId = request.nextUrl.searchParams.get('guestId');
     let query = getSupabaseAdmin()
       .from('messages')
-      .select('id, guest_id, message_type, subject, content, is_read, attachment_url, created_at, guests(first_name,last_name)')
+      .select('id, guest_id, message_type, subject, content, is_read, attachment_url, created_at')
       .order('created_at', { ascending: false });
 
     if (guestId) {
@@ -50,29 +80,26 @@ export async function GET(request: NextRequest) {
     const { data, error } = await query;
     if (error) throw error;
 
-    return NextResponse.json({
-      success: true,
-      data: ((data ?? []) as MessageRow[]).map((message) => ({
-        id: message.id,
-        guestId: message.guest_id ?? null,
-        guestName: message.guests ? `${message.guests.first_name ?? ''} ${message.guests.last_name ?? ''}`.trim() : null,
-        messageType: message.message_type ?? null,
-        subject: message.subject ?? null,
-        content: message.content ?? null,
-        attachmentUrl: message.attachment_url ?? null,
-        isRead: !!message.is_read,
-        createdAt: message.created_at ?? null,
-      })),
-    });
-  } catch {
-    return NextResponse.json({ success: false, error: 'Failed to fetch messages' }, { status: 500 });
+    return attachSupabaseCookies(
+      NextResponse.json({
+        success: true,
+        data: await mapMessages((data ?? []) as MessageRow[]),
+      }),
+      response,
+    );
+  } catch (error) {
+    return attachSupabaseCookies(
+      NextResponse.json({ success: false, error: error instanceof Error ? error.message : 'Failed to fetch messages' }, { status: 500 }),
+      response,
+    );
   }
 }
 
 export async function POST(request: NextRequest) {
-  const user = await requireAuth(request);
-  if (!user) {
-    return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 });
+  const { user, error: userError, response } = await getRouteHandlerSupabaseSession(request);
+  if (!user || userError) {
+    response.headers.set('Cache-Control', 'no-store, max-age=0');
+    return attachSupabaseCookies(NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 }), response);
   }
 
   try {
@@ -91,30 +118,29 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) throw error;
-    return NextResponse.json({ success: true, data }, { status: 201 });
+    return attachSupabaseCookies(NextResponse.json({ success: true, data }, { status: 201 }), response);
   } catch (error) {
     const validationResponse = validationErrorResponse(error);
-    if (validationResponse) return validationResponse;
-    console.error('POST /api/messages failed', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to create message',
-        details: process.env.NODE_ENV === 'production'
-          ? undefined
-          : error instanceof Error
-            ? error.message
-            : JSON.stringify(error),
-      },
-      { status: 500 },
+    if (validationResponse) return attachSupabaseCookies(validationResponse, response);
+    return attachSupabaseCookies(
+      NextResponse.json(
+        {
+          success: false,
+          error: 'Failed to create message',
+          details: process.env.NODE_ENV === 'production' ? undefined : error instanceof Error ? error.message : JSON.stringify(error),
+        },
+        { status: 500 },
+      ),
+      response,
     );
   }
 }
 
 export async function PATCH(request: NextRequest) {
-  const user = await requireAuth(request);
-  if (!user) {
-    return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 });
+  const { user, error: userError, response } = await getRouteHandlerSupabaseSession(request);
+  if (!user || userError) {
+    response.headers.set('Cache-Control', 'no-store, max-age=0');
+    return attachSupabaseCookies(NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 }), response);
   }
 
   try {
@@ -143,23 +169,27 @@ export async function PATCH(request: NextRequest) {
       if (error) throw error;
     }
 
-    return NextResponse.json({ success: true });
-  } catch {
-    return NextResponse.json({ success: false, error: 'Failed to update messages' }, { status: 500 });
+    return attachSupabaseCookies(NextResponse.json({ success: true }), response);
+  } catch (error) {
+    return attachSupabaseCookies(
+      NextResponse.json({ success: false, error: error instanceof Error ? error.message : 'Failed to update messages' }, { status: 500 }),
+      response,
+    );
   }
 }
 
 export async function DELETE(request: NextRequest) {
-  const user = await requireAuth(request);
-  if (!user) {
-    return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 });
+  const { user, error: userError, response } = await getRouteHandlerSupabaseSession(request);
+  if (!user || userError) {
+    response.headers.set('Cache-Control', 'no-store, max-age=0');
+    return attachSupabaseCookies(NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 }), response);
   }
 
   try {
     const { searchParams } = request.nextUrl;
     const id = searchParams.get('id');
     if (!id) {
-      return NextResponse.json({ success: false, error: 'ID required' }, { status: 400 });
+      return attachSupabaseCookies(NextResponse.json({ success: false, error: 'ID required' }, { status: 400 }), response);
     }
     const supabase = getSupabaseAdmin();
     const actor = await getAuditActor(request);
@@ -177,8 +207,11 @@ export async function DELETE(request: NextRequest) {
 
     const { error } = await supabase.from('messages').delete().eq('id', id);
     if (error) throw error;
-    return NextResponse.json({ success: true, message: 'Message deleted' });
-  } catch {
-    return NextResponse.json({ success: false, error: 'Failed to delete message' }, { status: 500 });
+    return attachSupabaseCookies(NextResponse.json({ success: true, message: 'Message deleted' }), response);
+  } catch (error) {
+    return attachSupabaseCookies(
+      NextResponse.json({ success: false, error: error instanceof Error ? error.message : 'Failed to delete message' }, { status: 500 }),
+      response,
+    );
   }
 }

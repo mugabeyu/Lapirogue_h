@@ -24,21 +24,16 @@ function isPublicRoute(pathname: string) {
   return PUBLIC_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`));
 }
 
-export async function middleware(request: NextRequest) {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-
-  const response = NextResponse.next({
+function nextResponse(request: NextRequest) {
+  return NextResponse.next({
     request: {
       headers: request.headers,
     },
   });
+}
 
-  if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY environment variables');
-  }
-
-  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+function createSupabase(request: NextRequest, response: NextResponse, supabaseUrl: string, supabaseAnonKey: string) {
+  return createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
       getAll() {
         return request.cookies.getAll();
@@ -50,32 +45,58 @@ export async function middleware(request: NextRequest) {
       },
     },
   });
+}
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+export async function middleware(request: NextRequest) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY environment variables');
+  }
 
   const { pathname } = request.nextUrl;
 
   if (pathname.startsWith('/api/')) {
     if (isPublicApi(pathname)) {
-      return response;
+      return nextResponse(request);
     }
+
+    const response = nextResponse(request);
+    const {
+      data: { user },
+    } = await createSupabase(request, response, supabaseUrl, supabaseAnonKey).auth.getUser();
+
     if (!user) {
       return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 });
     }
+
+    return response;
+  }
+
+  if (isAuthRoute(pathname)) {
+    const response = nextResponse(request);
+    const {
+      data: { user },
+    } = await createSupabase(request, response, supabaseUrl, supabaseAnonKey).auth.getUser();
+
+    if (user) {
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
+
     return response;
   }
 
   if (isPublicRoute(pathname)) {
-    return response;
+    return nextResponse(request);
   }
 
-  if (user && isAuthRoute(pathname)) {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
-  }
+  const response = nextResponse(request);
+  const {
+    data: { user },
+  } = await createSupabase(request, response, supabaseUrl, supabaseAnonKey).auth.getUser();
 
-  if (!user && !isAuthRoute(pathname)) {
+  if (!user) {
     const loginUrl = new URL('/login', request.url);
     if (pathname !== '/') {
       loginUrl.searchParams.set('next', pathname);
@@ -83,7 +104,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  if (user && pathname === '/') {
+  if (pathname === '/') {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
@@ -92,7 +113,7 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$|api/auth/(?:login|forgot-password|verify|password-sync|me)|staff/onboarding|login|forgot-password|reset-password|register|$).*)',
   ],
 };
 
