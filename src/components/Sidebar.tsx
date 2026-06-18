@@ -36,7 +36,7 @@ type NavItem = {
 };
 
 const navItems: NavItem[] = [
-  { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboardIcon },
+  { path: '/', label: 'Dashboard', icon: LayoutDashboardIcon },
   { path: '/guests', label: 'Guests', icon: UsersIcon },
   {
     path: '/rooms',
@@ -132,29 +132,29 @@ return (
         </div>
       </div>
 
-      <nav className="custom-scrollbar flex-1 overflow-y-auto py-4">
-        <ul className={`space-y-1 ${collapsed ? 'px-2' : 'px-3'}`}>
-          {navItems.map((item) => {
-            const sectionActive = isSectionActive(item);
-            const exactActive = pathname === item.path;
-            return (
-              <li key={item.path}>
+<nav className="custom-scrollbar flex-1 overflow-y-auto py-4">
+         <ul className={`space-y-1 ${collapsed ? 'px-2' : 'px-3'}`}>
+           {navItems.map((item) => {
+             const sectionActive = isSectionActive(item);
+             const exactActive = pathname === item.path;
+             return (
+               <li key={item.path}>
 <Link
-                    href={item.path}
-                    title={collapsed ? item.label : undefined}
-                    className={`flex items-center rounded-xl text-sm font-semibold transition-all duration-200 ${
-                      collapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2.5'
-          } ${
-                      exactActive
-                         ? 'bg-[var(--color-nav-active)] text-white'
-                      : sectionActive
-                         ? 'bg-[var(--color-nav-active)]/20 text-white'
-                      : 'text-white/80 hover:bg-[var(--color-nav-active)] hover:text-white'
-                      }`}
-                  >
-                    <item.icon className="h-5 w-5 shrink-0 text-icon-body" strokeWidth={1.5} />
-                    {!collapsed && <span className="truncate">{item.label}</span>}
-                  </Link>
+                     href={item.path}
+                     title={collapsed ? item.label : undefined}
+                     className={`flex items-center rounded-xl text-sm font-medium transition-all duration-200 ${
+                       collapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2.5'
+           } ${
+                       exactActive
+                          ? 'bg-[var(--color-nav-active)] text-white font-semibold'
+                       : sectionActive
+                          ? 'bg-[var(--color-nav-active)]/20 text-white font-medium'
+                       : 'text-white/90 hover:bg-[var(--color-nav-active)] hover:text-white'
+                       }`}
+                   >
+                     <item.icon className="h-5 w-5 shrink-0 text-icon-body" strokeWidth={1.5} />
+                     {!collapsed && <span className="truncate">{item.label}</span>}
+                   </Link>
 
                 {!collapsed && (
                   <AnimatePresence initial={false}>
@@ -166,18 +166,18 @@ return (
                         transition={{ duration: 0.2 }}
                         className="mt-1 space-y-0.5 overflow-hidden"
                       >
-                        {item.children.map((child) => (
+{item.children.map((child) => (
                           <li key={child.path}>
 <Link
-                                href={child.path}
-                                className={`flex items-center gap-3 rounded-xl py-2 pl-11 pr-3 text-xs font-medium transition-all duration-200 ${
-                                    pathname === child.path
-                                      ? 'text-[var(--color-nav-active)] font-semibold'
-                                      : 'text-white/70 hover:text-[var(--color-nav-active)]'
-                                }`}
-                              >
-                                {child.label}
-                            </Link>
+                                    href={child.path}
+                                    className={`flex items-center gap-3 rounded-xl py-2 pl-11 pr-3 text-xs font-medium transition-all duration-200 ${
+                                      pathname === child.path
+                                        ? 'text-[var(--color-nav-active)] font-semibold'
+                                        : 'text-white/80 font-medium hover:text-white'
+                                    }`}
+                                  >
+                                    {child.label}
+                                  </Link>
                           </li>
                         ))}
                       </motion.ul>

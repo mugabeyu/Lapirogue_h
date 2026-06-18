@@ -130,7 +130,7 @@ export default function CrudDataTablePage({
     const deleteUrl = deleteEndpoint
       ? deleteEndpoint(String(deleteRow.id))
       : `${endpoint.split('?')[0]}?id=${deleteRow.id}`;
-    const response = await fetch(deleteUrl, { method: 'DELETE' });
+    const response = await fetch(deleteUrl, { method: 'DELETE', credentials: 'include' });
     setIsDeleting(false);
 
     if (!response.ok) {

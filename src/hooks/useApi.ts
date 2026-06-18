@@ -16,7 +16,7 @@ export function useApi<T>(url: string | null, options?: { revalidateOnMount?: bo
       revalidateOnReconnect: false,
       dedupingInterval: 60_000,
       keepPreviousData: true,
-      revalidateOnMount: options?.revalidateOnMount ?? false,
+      revalidateOnMount: options?.revalidateOnMount ?? true,
     },
   );
 
@@ -35,12 +35,13 @@ export function useApiMutation(url: string) {
   const mutate = async (body: unknown, method: 'POST' | 'PATCH' | 'PUT' | 'DELETE' = 'POST') => {
     const response = await fetch(url, {
       method,
+      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(body),
     });
-    
+     
     return response.json();
   };
 

@@ -70,7 +70,7 @@ export default function RoomsPage() {
   async function handleDelete() {
     if (!deleteRow?.id) return;
     setIsDeleting(true);
-    const response = await fetch(`/api/rooms?id=${deleteRow.id}`, { method: 'DELETE' });
+    const response = await fetch(`/api/rooms?id=${deleteRow.id}`, { method: 'DELETE', credentials: 'include' });
     setIsDeleting(false);
 
     if (!response.ok) return;

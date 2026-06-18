@@ -124,7 +124,7 @@ export default function SchedulePage() {
   const [slot, setSlot] = useState<CreateSlot | null>(null);
 
   const scheduleUrl = `/api/schedule?weekStart=${weekStart}${selectedGuestId ? `&guestId=${selectedGuestId}` : ''}`;
-  const { data,  mutate } = useApi<ScheduleResponse>(scheduleUrl);
+  const { data, mutate } = useApi<ScheduleResponse>(scheduleUrl, { revalidateOnMount: true });
 
   // Auto-select first guest only on initial data load
   useEffect(() => {

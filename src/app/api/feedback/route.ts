@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { attachSupabaseCookies, getRouteHandlerSupabaseSession } from '@/lib/supabase-server';
 
 type GuestJoin = { first_name?: string | null; last_name?: string | null };
 
@@ -92,6 +93,12 @@ function buildDistribution(rows: StatRow[]) {
 }
 
 export async function GET(request: NextRequest) {
+  const { user, error: userError, response } = await getRouteHandlerSupabaseSession(request);
+  if (!user || userError) {
+    response.headers.set('Cache-Control', 'no-store, max-age=0');
+    return attachSupabaseCookies(NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 }), response);
+  }
+
   try {
     const params = request.nextUrl.searchParams;
     const page = Math.max(1, Number(params.get('page') ?? '1') || 1);
@@ -112,7 +119,8 @@ export async function GET(request: NextRequest) {
         String((statError as { message?: string }).message ?? '').includes("'public.guest_feedback'");
 
       if (missingFeedbackTable) {
-        return NextResponse.json({
+        response.headers.set('Cache-Control', 'no-store, max-age=0');
+        return attachSupabaseCookies(NextResponse.json({
           success: true,
           data: {
             summary: {
@@ -132,7 +140,7 @@ export async function GET(request: NextRequest) {
               totalPages: 1,
             },
           },
-        });
+        }), response);
       }
       throw statError;
     }
@@ -196,7 +204,8 @@ export async function GET(request: NextRequest) {
     const total = count ?? 0;
     const totalPages = Math.max(1, Math.ceil(total / limit));
 
-    return NextResponse.json({
+    response.headers.set('Cache-Control', 'no-store, max-age=0');
+    return attachSupabaseCookies(NextResponse.json({
       success: true,
       data: {
         summary,
@@ -209,9 +218,10 @@ export async function GET(request: NextRequest) {
           totalPages,
         },
       },
-    });
+    }), response);
   } catch (error) {
     console.error('GET /api/feedback', error);
-    return NextResponse.json({ success: false, error: 'Failed to fetch feedback' }, { status: 500 });
+    response.headers.set('Cache-Control', 'no-store, max-age=0');
+    return attachSupabaseCookies(NextResponse.json({ success: false, error: 'Failed to fetch feedback' }, { status: 500 }), response);
   }
 }

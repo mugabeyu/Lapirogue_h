@@ -1,6 +1,14 @@
 import './globals.css';
 import type { Metadata } from 'next';
 import { Toaster } from 'sonner';
+import { Inter } from 'next/font/google';
+
+const inter = Inter({ 
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700', '800'],
+  variable: '--font-inter',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: 'La Pirogue Hotel Operations',
@@ -14,7 +22,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="font-sans antialiased">
+      <body className={`${inter.variable} font-sans antialiased`}>
         {children}
         <Toaster position="top-center" richColors />
       </body>

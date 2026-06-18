@@ -12,10 +12,8 @@ type MessageRow = {
   id: string;
   guestId: string;
   guestName?: string;
-  messageType: 'guest' | 'receptionist' | 'admin';
-  subject?: string | null;
+  senderType: 'guest' | 'staff' | 'admin' | 'receptionist';
   content: string;
-  attachmentUrl?: string | null;
   isRead: boolean;
   createdAt: string;
 };
@@ -51,7 +49,7 @@ export default function MessagesPage() {
 
   const rows = useMemo(() => data ?? [], [data]);
   const guests = useMemo(() => guestsData ?? [], [guestsData]);
-  const unreadCount = rows.filter((row) => row.messageType === 'guest' && !row.isRead).length;
+  const unreadCount = rows.filter((row) => row.senderType === 'guest' && !row.isRead).length;
 
   const conversations = useMemo<ConversationSummary[]>(() => {
     const map = new Map<
@@ -63,7 +61,7 @@ export default function MessagesPage() {
       const current = map.get(row.guestId);
       if (current) {
         current.messages.push(row);
-        if (row.messageType === 'guest' && !row.isRead) {
+        if (row.senderType === 'guest' && !row.isRead) {
           current.unreadCount += 1;
         }
 
@@ -79,7 +77,7 @@ export default function MessagesPage() {
         guestId: row.guestId,
         guestName: row.guestName || row.guestId,
         lastMessage: row,
-        unreadCount: row.messageType === 'guest' && !row.isRead ? 1 : 0,
+        unreadCount: row.senderType === 'guest' && !row.isRead ? 1 : 0,
         messages: [row],
       });
     });
@@ -171,7 +169,7 @@ export default function MessagesPage() {
     if (!selectedConversation) return;
     if (selectedConversation.unreadCount === 0) return;
 
-    fetch(`/api/messages?guestId=${selectedConversation.guestId}`, { method: 'PATCH' })
+    fetch(`/api/messages?guestId=${selectedConversation.guestId}`, { method: 'PATCH', credentials: 'include' })
       .then(() => mutate())
       .catch(() => null);
   }, [mutate, selectedConversation]);
@@ -192,9 +190,10 @@ export default function MessagesPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         guestId,
-        messageType: 'admin',
+        senderType: 'admin',
         content: draft.trim(),
       }),
+      credentials: 'include',
     });
 
     setIsSending(false);
@@ -210,7 +209,7 @@ export default function MessagesPage() {
   }
 
   async function markAllAsRead() {
-    await fetch('/api/messages?all=true', { method: 'PATCH' });
+    await fetch('/api/messages?all=true', { method: 'PATCH', credentials: 'include' });
     mutate();
   }
 
@@ -379,16 +378,11 @@ export default function MessagesPage() {
             ) : (
               <div className="space-y-4">
                 {selectedMessages.map((message) => {
-                  const isReceptionist = message.messageType !== 'guest';
+                  const isReceptionist = message.senderType !== 'guest';
 
                   return (
                     <div key={message.id} className={`flex ${isReceptionist ? 'justify-end' : 'justify-start'}`}>
                       <div className={`max-w-[82%] rounded-[24px] px-4 py-3 shadow-sm ${isReceptionist ? 'rounded-br-md bg-primary text-white' : 'rounded-bl-md bg-surface text-[var(--color-text-primary)]'}`}>
-                        {message.subject ? (
-                          <div className={`mb-1 text-xs uppercase tracking-[0.2em] ${isReceptionist ? 'text-white/65' : 'text-[var(--color-text-secondary)]'}`}>
-                            {message.subject}
-                          </div>
-                        ) : null}
                         <p className="text-sm leading-6">{message.content}</p>
                         <div className={`mt-2 text-[11px] ${isReceptionist ? 'text-white/65' : 'text-[var(--color-text-secondary)]'}`}>
                           {new Date(message.createdAt).toLocaleString([], { hour: '2-digit', minute: '2-digit', month: 'short', day: 'numeric' })}

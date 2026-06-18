@@ -4,7 +4,7 @@ import { BellIcon, MenuIcon, PlusIcon, UserIcon, UsersIcon } from 'lucide-react'
 
 import { User } from '@/types';
 import { useSidebar } from '@/contexts/SidebarContext';
-import { useApi } from '@/hooks/useApi';
+import useSWR from 'swr';
 import { AddGuestModal } from '@/components/modals/AddGuestModal';
 import { useState } from 'react';
 import Link from 'next/link';
@@ -12,7 +12,7 @@ import Link from 'next/link';
 
 function formatRole(role?: string) {
   if (!role) return '';
-  if (role === 'MAIN_RECEPTIONIST') return 'Main receptionist';
+  if (role === 'MAIN_RECEPTIONIST') return 'Main Receptionist';
   if (role === 'RECEPTIONIST') return 'Receptionist';
   return role
     .toLowerCase()
@@ -38,8 +38,18 @@ function formatTodayLabel(date: Date) {
   return `${weekday}, ${day} ${month} ${year}`;
 }
 
+async function fetcher(url: string) {
+  const response = await fetch(url, { credentials: 'include' });
+  return response.json();
+}
+
 export default function Topbar() {
-  const { data: user } = useApi<User>('/api/auth/me');
+  const { data: apiResponse } = useSWR<{ success: boolean; data: User }>('/api/auth/me', fetcher, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    dedupingInterval: 60000,
+  });
+  const user = apiResponse?.data;
   const { collapsed, toggle } = useSidebar();
   const [isGuestModalOpen, setIsGuestModalOpen] = useState(false);
 
@@ -69,7 +79,7 @@ export default function Topbar() {
           >
             <MenuIcon className="h-5 w-5 text-icon-body" strokeWidth={1.5} />
           </button>
-          <div className="hidden sm:flex items-center gap-2 text-sm text-[var(--color-black)]">
+          <div className="hidden sm:flex items-center gap-2 text-sm text-[var(--color-text-secondary)]">
             <span>{todayLabel}</span>
           </div>
         </div>
@@ -77,7 +87,7 @@ export default function Topbar() {
         <nav className="flex items-center gap-3">
           <Link
             href="/reservations/new"
-            className="inline-flex items-center gap-2 rounded-xl bg-[var(--color-button-primary)] px-4 py-2 text-sm font-medium text-[var(--color-black)] transition-colors hover:bg-[var(--color-button-primary-hover)] active:bg-[var(--color-button-primary-active)]"
+            className="inline-flex items-center gap-2 rounded-xl bg-[var(--color-button-primary)] px-4 py-2 text-sm font-medium text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-button-primary-hover)] active:bg-[var(--color-button-primary-active)]"
           >
             <PlusIcon className="h-4 w-4" />
             <span className="hidden sm:inline">Add Reservation</span>

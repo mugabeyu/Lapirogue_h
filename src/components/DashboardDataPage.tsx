@@ -4,7 +4,13 @@ import Link from 'next/link';
 import { Bed, Calendar, CreditCard } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { StatCard } from '@/components/StatCard';
-import { useApi } from '@/hooks/useApi';
+import useSWR from 'swr';
+import { ApiResponse } from '@/types';
+
+async function dashboardFetcher(url: string) {
+  const response = await fetch(url, { credentials: 'include' });
+  return response.json();
+}
 
 type DashboardData = {
   stats: {
@@ -54,10 +60,14 @@ function formatShortDate(value?: string | null) {
 }
 
 export default function DashboardDataPage() {
-  const { data,error } = useApi<DashboardData>('/api/dashboard');
-  const stats = data?.stats;
-  const todaysCheckins = data?.todaysCheckins ?? [];
-  const todaysCheckouts = data?.todaysCheckouts ?? [];
+  const { data, error, isLoading } = useSWR<ApiResponse<DashboardData>>('/api/dashboard', dashboardFetcher, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    dedupingInterval: 30000,
+  });
+  const stats = data?.data?.stats;
+  const todaysCheckins = data?.data?.todaysCheckins ?? [];
+  const todaysCheckouts = data?.data?.todaysCheckouts ?? [];
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -69,7 +79,7 @@ export default function DashboardDataPage() {
         </div>
       )}
 
-      { !data && (
+      {isLoading && !data && (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
           {Array.from({ length: 8 }).map((_, i) => (
             <div key={i} className="card p-6 animate-pulse">
@@ -141,7 +151,7 @@ export default function DashboardDataPage() {
                   </div>
                   <div>
                     <div className="text-sm text-[var(--color-text-secondary)] mb-1">Pending Payments</div>
-                    <div className="font-display text-3xl text-[var(--color-amber-500)]">{formatCurrency(stats.pendingPayments)}</div>
+                    <div className="font-display text-3xl text-amber-500">{formatCurrency(stats.pendingPayments)}</div>
                     <div className="text-xs text-[var(--color-text-secondary)] mt-1">payments awaiting processing</div>
                   </div>
                 </div>

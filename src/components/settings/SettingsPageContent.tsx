@@ -65,10 +65,10 @@ export default function SettingsPageContent() {
     imagePath: '',
   });
 
-  useEffect(() => {
+useEffect(() => {
     async function loadAboutContent() {
       try {
-        const response = await fetch('/api/content/about');
+        const response = await fetch('/api/content/about', { credentials: 'include' });
         if (!response.ok) {
           const message = await readErrorMessage(response, 'Unable to load hotel info');
           toast.error(message);
@@ -115,6 +115,7 @@ export default function SettingsPageContent() {
 
     const response = await fetch('/api/settings/profile', {
       method: 'PUT',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         fullName: profileForm.fullName,
@@ -153,6 +154,7 @@ export default function SettingsPageContent() {
     setIsSaving(true);
     const response = await fetch('/api/settings/password', {
       method: 'PUT',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         currentPassword: passwordData.currentPassword,
@@ -188,6 +190,7 @@ export default function SettingsPageContent() {
 
     const response = await fetch('/api/settings/profile', {
       method: 'PUT',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
@@ -236,7 +239,7 @@ export default function SettingsPageContent() {
     toast.success('Hotel image uploaded');
   }
 
-  async function handleHotelSave(event: FormEvent<HTMLFormElement>) {
+async function handleHotelSave(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsSaving(true);
 
@@ -257,6 +260,7 @@ export default function SettingsPageContent() {
 
     const response = await fetch('/api/content/about', {
       method: 'PUT',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         title: aboutData.title,

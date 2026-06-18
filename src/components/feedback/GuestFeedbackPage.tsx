@@ -40,7 +40,7 @@ type FeedbackResponse = {
 };
 
 async function fetchFeedback(url: string) {
-  const response = await fetch(url);
+  const response = await fetch(url, { credentials: 'include' });
   return response.json() as Promise<FeedbackResponse>;
 }
 

@@ -9,6 +9,7 @@ const PUBLIC_API_PREFIXES = [
   '/api/auth/forgot-password',
   '/api/auth/verify',
   '/api/auth/password-sync',
+  '/api/auth/me',
   '/api/staff/onboarding',
 ];
 
@@ -81,7 +82,7 @@ export async function middleware(request: NextRequest) {
     } = await createSupabase(request, response, supabaseUrl, supabaseAnonKey).auth.getUser();
 
     if (user) {
-      return NextResponse.redirect(new URL('/dashboard', request.url));
+      return NextResponse.redirect(new URL('/', request.url));
     }
 
     return response;
@@ -104,16 +105,14 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  if (pathname === '/') {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
-  }
-
   return response;
 }
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$|api/auth/(?:login|forgot-password|verify|password-sync|me)|staff/onboarding|login|forgot-password|reset-password|register|$).*)',
+    '/',
+    '/(login|forgot-password|reset-password|register)(/.*)?',
+    '/((?!api/auth/(?:login|forgot-password|verify|password-sync|me)|staff/onboarding|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };
 

@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { toDateKey, addDays } from '@/lib/date-utils';
+import { attachSupabaseCookies, getRouteHandlerSupabaseSession } from '@/lib/supabase-server';
 
 const dashboardCache = new Map<string, { data: unknown; timestamp: number }>();
 const CACHE_TTL_MS = 30000;
@@ -21,7 +22,12 @@ function setCachedResponse<T>(key: string, data: T): void {
   dashboardCache.set(key, { data, timestamp: Date.now() });
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const { user, error: userError, response } = await getRouteHandlerSupabaseSession(request);
+  if (!user || userError) {
+    return attachSupabaseCookies(NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 }), response);
+  }
+
   try {
     const today = toDateKey(new Date());
     const cacheKey = `dashboard-${today}`;
@@ -32,9 +38,8 @@ export async function GET() {
     }>(cacheKey);
 
     if (cached) {
-      return NextResponse.json({ success: true, data: cached }, {
-        headers: { 'Cache-Control': 'private, max-age=30' },
-      });
+      response.headers.set('Cache-Control', 'private, max-age=30');
+      return attachSupabaseCookies(NextResponse.json({ success: true, data: cached }), response);
     }
 
     const supabase = getSupabaseAdmin();
@@ -192,14 +197,16 @@ export async function GET() {
 
     setCachedResponse(cacheKey, responseData);
 
-    return NextResponse.json({ success: true, data: responseData }, {
-      headers: { 'Cache-Control': 'private, max-age=30' },
-    });
+    response.headers.set('Cache-Control', 'private, max-age=30');
+    return attachSupabaseCookies(NextResponse.json({ success: true, data: responseData }), response);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to fetch dashboard data';
-    return NextResponse.json(
-      { success: false, error: message },
-      { status: 500 }
+    return attachSupabaseCookies(
+      NextResponse.json(
+        { success: false, error: message },
+        { status: 500 }
+      ),
+      response
     );
   }
 }

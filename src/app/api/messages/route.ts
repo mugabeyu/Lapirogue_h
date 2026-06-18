@@ -8,20 +8,16 @@ import { validationErrorResponse } from '@/lib/api-response';
 type MessageRow = {
   id: string;
   guest_id?: string | null;
-  message_type?: string | null;
-  subject?: string | null;
+  sender_type?: string | null;
   content?: string | null;
   is_read?: boolean | null;
-  attachment_url?: string | null;
   created_at?: string | null;
 };
 
 const messageSchema = z.object({
   guestId: z.string().uuid(),
-  messageType: z.enum(['guest', 'receptionist', 'admin']).default('admin'),
-  subject: z.string().optional().nullable(),
+  senderType: z.enum(['guest', 'staff', 'admin', 'receptionist']).default('admin'),
   content: z.string().min(1),
-  attachmentUrl: z.string().optional().nullable(),
 });
 
 async function loadGuestNames(guestIds: string[]) {
@@ -50,10 +46,8 @@ async function mapMessages(messages: MessageRow[]) {
     id: message.id,
     guestId: message.guest_id ?? null,
     guestName: message.guest_id ? guestNames.get(message.guest_id) ?? null : null,
-    messageType: message.message_type ?? null,
-    subject: message.subject ?? null,
+    senderType: message.sender_type ?? null,
     content: message.content ?? null,
-    attachmentUrl: message.attachment_url ?? null,
     isRead: !!message.is_read,
     createdAt: message.created_at ?? null,
   }));
@@ -70,7 +64,7 @@ export async function GET(request: NextRequest) {
     const guestId = request.nextUrl.searchParams.get('guestId');
     let query = getSupabaseAdmin()
       .from('messages')
-      .select('id, guest_id, message_type, subject, content, is_read, attachment_url, created_at')
+      .select('id, guest_id, sender_type, content, is_read, created_at')
       .order('created_at', { ascending: false });
 
     if (guestId) {
@@ -108,13 +102,11 @@ export async function POST(request: NextRequest) {
       .from('messages')
       .insert({
         guest_id: body.guestId,
-        message_type: body.messageType,
-        subject: body.subject ?? null,
+        sender_type: body.senderType,
         content: body.content.trim(),
-        attachment_url: body.attachmentUrl ?? null,
-        is_read: body.messageType === 'receptionist',
+        is_read: body.senderType !== 'guest',
       })
-      .select('id, guest_id, message_type, subject, content, is_read, attachment_url, created_at')
+      .select('id, guest_id, sender_type, content, is_read, created_at')
       .single();
 
     if (error) throw error;
@@ -154,7 +146,7 @@ export async function PATCH(request: NextRequest) {
         .from('messages')
         .update({ is_read: true })
         .eq('is_read', false)
-        .eq('message_type', 'guest');
+        .eq('sender_type', 'guest');
       if (error) throw error;
     } else if (guestId) {
       const { error } = await getSupabaseAdmin()
@@ -162,7 +154,7 @@ export async function PATCH(request: NextRequest) {
         .update({ is_read: true })
         .eq('guest_id', guestId)
         .eq('is_read', false)
-        .eq('message_type', 'guest');
+        .eq('sender_type', 'guest');
       if (error) throw error;
     } else if (id) {
       const { error } = await getSupabaseAdmin().from('messages').update({ is_read: true }).eq('id', id);

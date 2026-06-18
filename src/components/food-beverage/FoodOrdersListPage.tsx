@@ -44,7 +44,7 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 async function fetchOrders(url: string) {
-  const response = await fetch(url);
+  const response = await fetch(url, { credentials: 'include' });
   return response.json() as Promise<OrdersResponse>;
 }
 

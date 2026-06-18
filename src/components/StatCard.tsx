@@ -47,8 +47,8 @@ export function StatCard({
 
   return (
     <div className={`${base} ${interactive}`} onClick={onClick}>
-      <div className="text-sm text-[var(--color-text-secondary)]">{label}</div>
-      <div className="mt-2 mb-1 font-display text-2xl text-[var(--color-text-primary)]">{value}</div>
+      <div className="text-sm font-medium text-[var(--color-text-secondary)]">{label}</div>
+      <div className="mt-2 mb-1 font-display text-2xl font-semibold text-[var(--color-text-primary)]">{value}</div>
 
       {trend !== undefined && (
         <div className="mt-1 flex items-center gap-2 text-sm font-medium">
@@ -58,11 +58,11 @@ export function StatCard({
           <span className={`${isPositive ? 'text-[var(--color-success)]' : isNegative ? 'text-[var(--color-danger)]' : 'text-[var(--color-text-secondary)]'}`}>
             {isPositive ? '+' : ''}{trend}%
           </span>
-          <span className="text-[var(--color-text-secondary)]">{trendLabel ?? 'vs last week'}</span>
+          <span className="text-[var(--color-text-secondary)] font-medium">{trendLabel ?? 'vs last week'}</span>
         </div>
       )}
 
-      {subtext && <div className="mt-3 text-xs text-[var(--color-text-secondary)]">{subtext}</div>}
+      {subtext && <div className="mt-3 text-xs font-medium text-[var(--color-text-secondary)]">{subtext}</div>}
     </div>
   );
 }

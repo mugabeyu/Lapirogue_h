@@ -4,12 +4,12 @@ interface StatusBadgeProps {
 
 const statusStyles: Record<string, string> = {
   AVAILABLE: 'bg-success/10 text-success',
-  OCCUPIED: 'bg-button-primary/10 text-button-primary',
+  OCCUPIED: 'bg-primary/10 text-primary',
   CLEANING: 'bg-warning/10 text-warning',
   MAINTENANCE: 'bg-danger/10 text-danger',
   CHECKED_IN: 'bg-success/10 text-success',
   CHECKED_OUT: 'bg-surface-secondary text-[var(--color-text-secondary)]',
-  RESERVED: 'bg-button-primary/10 text-button-primary',
+  RESERVED: 'bg-primary/10 text-primary',
   CONFIRMED: 'bg-success/10 text-success',
   CANCELLED: 'bg-danger/10 text-danger',
   PENDING: 'bg-warning/10 text-warning',
@@ -21,7 +21,7 @@ const statusStyles: Record<string, string> = {
   INACTIVE: 'bg-surface-secondary text-[var(--color-text-secondary)]',
   FULL: 'bg-warning/10 text-warning',
   READ: 'bg-surface-secondary text-[var(--color-text-secondary)]',
-  UNREAD: 'bg-button-primary/10 text-button-primary',
+  UNREAD: 'bg-primary/10 text-primary',
   UNAVAILABLE: 'bg-danger/10 text-danger',
   DEFAULT: 'bg-surface-secondary text-[var(--color-text-secondary)]',
 };

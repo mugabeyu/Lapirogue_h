@@ -14,17 +14,17 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
 
   function getRedirectPath() {
-    if (typeof window === 'undefined') return '/dashboard';
+    if (typeof window === 'undefined') return '/';
     const next = new URLSearchParams(window.location.search).get('next');
     if (next && next.startsWith('/') && !next.startsWith('/login')) {
       return next;
     }
-    return '/dashboard';
+    return '/';
   }
 
   useEffect(() => {
     let cancelled = false;
-    fetch('/api/auth/me')
+    fetch('/api/auth/me', { credentials: 'include' })
       .then((response) => (response.ok ? response.json() : null))
       .then((result) => {
         if (!cancelled && result?.success) {

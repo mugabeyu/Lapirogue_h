@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from '@/lib/supabase';
 import { getAuditActor, recordAuditLog } from '@/lib/audit';
 import { z } from 'zod';
 import { createApiResponse } from '@/lib/api-response';
+import { attachSupabaseCookies, getRouteHandlerSupabaseSession } from '@/lib/supabase-server';
 
 const roomSchema = z.object({
   roomNumber: z.string().min(1),
@@ -76,6 +77,12 @@ function toRoom(row: RoomRow) {
 }
 
 export async function GET(request: NextRequest) {
+  const { user, error: userError, response } = await getRouteHandlerSupabaseSession(request);
+  if (!user || userError) {
+    response.headers.set('Cache-Control', 'no-store, max-age=0');
+    return attachSupabaseCookies(NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 }), response);
+  }
+
   try {
     const searchParams = request.nextUrl.searchParams;
     const page = parseInt(searchParams.get('page') || '1');
@@ -113,7 +120,8 @@ export async function GET(request: NextRequest) {
       const availableRooms = (data ?? []) as RoomRow[];
       const filtered = availableRooms.filter((r) => !occupiedRoomIds.has(r.id));
 
-      return NextResponse.json({
+      response.headers.set('Cache-Control', 'no-store, max-age=0');
+      return attachSupabaseCookies(NextResponse.json({
         success: true,
         data: filtered.map((row) => toRoom(row)),
         pagination: {
@@ -122,7 +130,7 @@ export async function GET(request: NextRequest) {
           limit: filtered.length,
           totalPages: 1,
         },
-      });
+      }), response);
     }
 
     let query = supabase
@@ -153,7 +161,8 @@ export async function GET(request: NextRequest) {
       });
     const total = count ?? 0;
 
-    return NextResponse.json({
+    response.headers.set('Cache-Control', 'no-store, max-age=0');
+    return attachSupabaseCookies(NextResponse.json({
       success: true,
       data: mapped,
       pagination: {
@@ -162,13 +171,20 @@ export async function GET(request: NextRequest) {
         limit,
         totalPages: Math.ceil(total / limit),
       },
-    });
+    }), response);
   } catch {
-    return roomErrorResponse(new Error('Failed to fetch rooms'), 'Failed to fetch rooms');
+    response.headers.set('Cache-Control', 'no-store, max-age=0');
+    return attachSupabaseCookies(roomErrorResponse(new Error('Failed to fetch rooms'), 'Failed to fetch rooms'), response);
   }
 }
 
 export async function POST(request: NextRequest) {
+  const { user, error: userError, response } = await getRouteHandlerSupabaseSession(request);
+  if (!user || userError) {
+    response.headers.set('Cache-Control', 'no-store, max-age=0');
+    return attachSupabaseCookies(NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 }), response);
+  }
+
   try {
     const body = await request.json();
     const validatedData = roomSchema.parse(body);
@@ -196,23 +212,30 @@ export async function POST(request: NextRequest) {
       throw error;
     }
 
-    return NextResponse.json({
+    return attachSupabaseCookies(NextResponse.json({
       success: true,
       data: toRoom(data),
-    }, { status: 201 });
+    }, { status: 201 }), response);
   } catch (error) {
+    response.headers.set('Cache-Control', 'no-store, max-age=0');
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
+      return attachSupabaseCookies(NextResponse.json(
         { success: false, error: 'Validation error', details: error.errors },
-        { status: 400 }
-      );
+        { status: 400 },
+      ), response);
     }
 
-    return roomErrorResponse(error, 'Failed to create room');
+    return attachSupabaseCookies(roomErrorResponse(error, 'Failed to create room'), response);
   }
 }
 
 export async function PUT(request: NextRequest) {
+  const { user, error: userError, response } = await getRouteHandlerSupabaseSession(request);
+  if (!user || userError) {
+    response.headers.set('Cache-Control', 'no-store, max-age=0');
+    return attachSupabaseCookies(NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 }), response);
+  }
+
   try {
     const body = await request.json();
     const validatedData = roomSchema.extend({ id: z.string().uuid() }).parse(body);
@@ -242,27 +265,36 @@ export async function PUT(request: NextRequest) {
       throw error;
     }
 
-    return NextResponse.json({
+    response.headers.set('Cache-Control', 'no-store, max-age=0');
+    return attachSupabaseCookies(NextResponse.json({
       success: true,
       data: toRoom(data),
-    });
+    }), response);
   } catch (error) {
+    response.headers.set('Cache-Control', 'no-store, max-age=0');
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
+      return attachSupabaseCookies(NextResponse.json(
         { success: false, error: 'Validation error', details: error.errors },
-        { status: 400 }
-      );
+        { status: 400 },
+      ), response);
     }
-    return roomErrorResponse(error, 'Failed to update room');
+    return attachSupabaseCookies(roomErrorResponse(error, 'Failed to update room'), response);
   }
 }
 
 export async function DELETE(request: NextRequest) {
+  const { user, error: userError, response } = await getRouteHandlerSupabaseSession(request);
+  if (!user || userError) {
+    response.headers.set('Cache-Control', 'no-store, max-age=0');
+    return attachSupabaseCookies(NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 }), response);
+  }
+
   try {
     const { searchParams } = request.nextUrl;
     const id = searchParams.get('id');
     if (!id) {
-      return NextResponse.json({ success: false, error: 'ID required' }, { status: 400 });
+      response.headers.set('Cache-Control', 'no-store, max-age=0');
+      return attachSupabaseCookies(NextResponse.json({ success: false, error: 'ID required' }, { status: 400 }), response);
     }
     const supabase = getSupabaseAdmin();
     const actor = await getAuditActor(request);
@@ -270,7 +302,8 @@ export async function DELETE(request: NextRequest) {
 
     const { data: room } = await supabase.from('rooms').select('*').eq('id', id).maybeSingle();
     if (!room) {
-      return createApiResponse(false, 'Room not found', { status: 404 });
+      response.headers.set('Cache-Control', 'no-store, max-age=0');
+      return attachSupabaseCookies(createApiResponse(false, 'Room not found', { status: 404 }), response);
     }
 
     const { count: reservationCount } = await supabase
@@ -280,7 +313,8 @@ export async function DELETE(request: NextRequest) {
       .neq('status', 'CANCELLED');
 
     if (reservationCount && reservationCount > 0) {
-      return createApiResponse(false, `Cannot delete room: referenced by ${reservationCount} active reservation(s). Reassign or complete those reservations first.`, { status: 409 });
+      response.headers.set('Cache-Control', 'no-store, max-age=0');
+      return attachSupabaseCookies(createApiResponse(false, `Cannot delete room: referenced by ${reservationCount} active reservation(s). Reassign or complete those reservations first.`, { status: 409 }), response);
     }
 
     const { count: foodOrderCount } = await supabase
@@ -289,7 +323,8 @@ export async function DELETE(request: NextRequest) {
       .eq('room_id', id);
 
     if (foodOrderCount && foodOrderCount > 0) {
-      return createApiResponse(false, `Cannot delete room: referenced by ${foodOrderCount} food order(s).`, { status: 409 });
+      response.headers.set('Cache-Control', 'no-store, max-age=0');
+      return attachSupabaseCookies(createApiResponse(false, `Cannot delete room: referenced by ${foodOrderCount} food order(s).`, { status: 409 }), response);
     }
 
     if (room) {
@@ -299,9 +334,14 @@ export async function DELETE(request: NextRequest) {
     }
 
     const { error } = await supabase.from('rooms').delete().eq('id', id);
-    if (error) return createApiResponse(false, 'Failed to delete room', { status: 500 });
-    return createApiResponse(true, { message: 'Room deleted' });
+    if (error) {
+      response.headers.set('Cache-Control', 'no-store, max-age=0');
+      return attachSupabaseCookies(createApiResponse(false, 'Failed to delete room', { status: 500 }), response);
+    }
+    response.headers.set('Cache-Control', 'no-store, max-age=0');
+    return attachSupabaseCookies(createApiResponse(true, { message: 'Room deleted' }), response);
   } catch {
-    return createApiResponse(false, 'Failed to delete room', { status: 500 });
+    response.headers.set('Cache-Control', 'no-store, max-age=0');
+    return attachSupabaseCookies(createApiResponse(false, 'Failed to delete room', { status: 500 }), response);
   }
 }

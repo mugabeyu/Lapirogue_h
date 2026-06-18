@@ -29,7 +29,7 @@ type ActivitiesResponse = {
 type ViewMode = 'list' | 'grid';
 
 async function fetchActivities(url: string) {
-  const response = await fetch(url);
+  const response = await fetch(url, { credentials: 'include' });
   return response.json() as Promise<ActivitiesResponse>;
 }
 

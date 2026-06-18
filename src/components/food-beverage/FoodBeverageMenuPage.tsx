@@ -20,7 +20,7 @@ type MenuResponse = {
 };
 
 async function fetchMenu(url: string) {
-  const response = await fetch(url);
+  const response = await fetch(url, { credentials: 'include' });
   return response.json() as Promise<MenuResponse>;
 }
 
@@ -133,6 +133,7 @@ export default function FoodBeverageMenuPage() {
   async function handleToggleAvailability(item: MenuItemRecord) {
     const response = await fetch('/api/menu-items', {
       method: 'PUT',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: item.id, isAvailable: !item.isAvailable }),
     });

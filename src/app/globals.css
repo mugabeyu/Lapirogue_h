@@ -3,57 +3,57 @@
 @tailwind components;
 @tailwind utilities;
 
-/* END TAILWIND IMPORTS — ALL OTHER CSS MUST GO BELOW THIS LINE */
+/* END TAILWIND IMPORTS */
 
 :root {
   /* Color tokens - New Color Scheme */
   /* Button colors */
   --color-button-primary: #A1C181;
-  --color-button-primary-hover: #FE7F2D;
-  --color-button-primary-active: #FE7F2D;
+  --color-button-primary-hover: #8AA070;
+  --color-button-primary-active: #8AA070;
+  
+  /* Primary for other uses */
+  --color-primary: #A1C181;
+  --color-accent: #FE7F2D;
   
   /* Sidebar background */
   --color-sidebar-bg: #619B8A;
   --color-sidebar-border: #619B8A;
   --color-sidebar-hover: #FE7F2D;
   
-  --image-background: url('/images/background.png');
   /* Icon colors */
-  --color-icon-body: #FCCA46;
+  --color-icon-body: #374151;
   
   /* Date/Status colors */
   --color-checkout-date: #FCCA46;
   
   /* Card/Table border */
-  --color-card-border: #A1C181;
+  --color-card-border: #E5E7EB;
+  --color-border: #E5E7EB;
   
   /* Search bar border */
-  --color-search-border: #233D4D;
+  --color-search-border: #D1D5DB;
   
   /* Sidebar nav active/hover */
   --color-nav-active: #A1C181;
   
   /* Keep danger red for delete/logout buttons */
   --color-danger: #EF4444;
+  --color-success: #10B981;
+  --color-warning: #F59E0B;
   
   /* Keep date */
   --color-black: #000000;
   
-
-  /* Status colors */
-  --color-success: #10B981;
-  --color-warning: #F59E0B;
-  
   /* Text colors */
   --color-text-primary: #1F2937;
-  --color-text-secondary: #000000;
+  --color-text-secondary: #4A4A4A;
+  --color-text-tertiary: #6B7280;
   --color-link: #2563EB;
   /* Background colors */
   --color-background: #FAFAFA;
   --color-surface: #FFFFFF;
   --color-surface-secondary: #F3F4F6;
-  
-  --image-background: url('/images/background.png');
   
   /* Spacing */
   --space-1: 4px;
@@ -74,19 +74,18 @@
 
 @layer base {
    body {
-    
-        background-color:   var(--color-background);
-    color: var(--color-black);
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-  }
-  h1, h2, h3, h4, h5, h6 {
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    font-weight: 500 !important;
-    font-size: 1.05em;
-    line-height: 1.2;
-  }
+     background-color: var(--color-background);
+     color: var(--color-black);
+     font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+     -webkit-font-smoothing: antialiased;
+     -moz-osx-font-smoothing: grayscale;
+   }
+   h1, h2, h3, h4, h5, h6 {
+     font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+     font-weight: 600 !important;
+     font-size: 1.05em;
+     line-height: 1.2;
+   }
 }
 
 @layer components {
