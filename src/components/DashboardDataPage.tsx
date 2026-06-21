@@ -75,9 +75,7 @@ export default function DashboardDataPage() {
       <PageHeader title="Dashboard" subtitle="Overview of today's operations" />
 
       {error && (
-        <div className="card border-danger/30 bg-danger/5 p-4 text-sm text-[var(--color-danger)]">
-          {error}
-        </div>
+        <p className="text-sm text-red-500">{error}</p>
       )}
 
       {isLoading && !data && (

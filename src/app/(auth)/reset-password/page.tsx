@@ -154,13 +154,13 @@ export default function ResetPasswordPage() {
       <div className="card p-8 w-full max-w-md">
         <h1 className="text-2xl font-semibold text-center mb-6 text-[var(--color-text-primary)]">Reset Password</h1>
         {!hasSupabaseConfig ? (
-          <div className="rounded-xl border border-border bg-surface-secondary p-4 text-sm text-[var(--color-text-primary)] mb-4">
+          <p className="text-sm text-red-500 mb-4">
             Missing Supabase public configuration. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY to use password reset.
-          </div>
+          </p>
         ) : !isReady ? (
-          <div className="rounded-xl border border-border bg-surface-secondary p-4 text-sm text-[var(--color-text-primary)] mb-4">
+          <p className="text-sm text-red-500 mb-4">
             Open the password reset link from your email first. This page needs the Supabase recovery session from that link.
-          </div>
+          </p>
         ) : null}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

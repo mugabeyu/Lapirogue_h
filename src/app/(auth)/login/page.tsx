@@ -111,16 +111,7 @@ export default function LoginPage() {
             </h1>
 
             {errorMessage ? (
-              <div
-                className="mb-5 flex items-start gap-3 rounded-xl border border-border bg-surface-secondary px-4 py-3 text-sm leading-6 text-[var(--color-text-primary)] shadow-sm"
-                role="alert"
-                aria-live="polite"
-              >
-                <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-xl border border-border text-[12px] font-bold">
-                  !
-                </span>
-                <p>{errorMessage}</p>
-              </div>
+              <p className="mb-5 text-sm text-red-500" role="alert">{errorMessage}</p>
             ) : null}
 
             <form onSubmit={handleLogin} className="space-y-5">

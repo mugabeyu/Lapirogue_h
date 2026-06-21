@@ -71,9 +71,7 @@ export default function DataTablePage({
 
       <div className="card">
         {apiError && (
-          <div className="border-b border-danger/30 bg-danger/5 px-6 py-3 text-sm text-[var(--color-danger)]">
-            {apiError}
-          </div>
+          <p className="px-6 py-3 text-sm text-red-500">{apiError}</p>
         )}
         <div className="px-4 py-4">
           <label htmlFor={`${title}-search`} className="sr-only">

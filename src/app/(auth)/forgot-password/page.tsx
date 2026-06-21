@@ -25,15 +25,10 @@ function StatusAlert({ message, type }: { message: string; type: StatusType }) {
     return null;
   }
 
-  const variantClasses =
-    type === 'success'
-      ? 'border-border bg-surface-secondary text-[var(--color-text-primary)]'
-      : 'border-border bg-surface-secondary text-[var(--color-text-primary)]';
+  const colorClass = type === 'error' ? 'text-red-500' : 'text-green-500';
 
   return (
-    <div className={`rounded-xl border px-4 py-3 text-sm ${variantClasses}`}>
-      {message}
-    </div>
+    <p className={`text-sm ${colorClass}`}>{message}</p>
   );
 }
 
