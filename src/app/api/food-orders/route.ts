@@ -72,16 +72,19 @@ export async function GET(request: NextRequest) {
     const roomIds = Array.from(new Set(orders.map((order) => order.room_id).filter((id): id is string => Boolean(id))));
     const [guestsResult, roomsResult] = await Promise.all([
       guestIds.length > 0
-        ? supabase.from('guests').select('id,first_name,last_name').in('id', guestIds)
+        ? supabase.from('guests').select('id,first_name,last_name,image_path').in('id', guestIds)
         : Promise.resolve({ data: [] }),
       roomIds.length > 0
         ? supabase.from('rooms').select('id,room_number').in('id', roomIds)
         : Promise.resolve({ data: [] }),
     ]);
     const guestById = new Map(
-      ((guestsResult.data ?? []) as Array<{ id: string; first_name?: string | null; last_name?: string | null }>).map((guest) => [
+      ((guestsResult.data ?? []) as Array<{ id: string; first_name?: string | null; last_name?: string | null; image_path?: string | null }>).map((guest) => [
         guest.id,
-        `${guest.first_name ?? ''} ${guest.last_name ?? ''}`.trim() || null,
+        {
+          name: `${guest.first_name ?? ''} ${guest.last_name ?? ''}`.trim() || null,
+          imagePath: guest.image_path ?? null,
+        },
       ]),
     );
     const roomById = new Map(
@@ -93,7 +96,8 @@ export async function GET(request: NextRequest) {
     const mapped = orders.map((order) => ({
       id: order.id,
       orderId: order.order_id ?? null,
-      guest: order.guest_id ? guestById.get(order.guest_id) ?? null : null,
+      guest: order.guest_id ? guestById.get(order.guest_id)?.name ?? null : null,
+      guestImagePath: order.guest_id ? guestById.get(order.guest_id)?.imagePath ?? null : null,
       room: order.room_id ? roomById.get(order.room_id) ?? null : null,
       itemsSummary: itemsSummary(order.items),
       subtotal: order.subtotal === undefined || order.subtotal === null ? 0 : Number(order.subtotal),

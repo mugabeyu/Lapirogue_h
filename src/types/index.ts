@@ -201,6 +201,7 @@ export interface FoodOrder {
   orderId: string;
   roomId?: string;
   guestId?: string;
+  guestImagePath?: string | null;
   items: OrderItem[];
   subtotal?: number;
   serviceCharge?: number;

@@ -1,10 +1,13 @@
 'use client';
 
-import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { CheckCheckIcon, MessageSquareIcon, RefreshCwIcon, SearchIcon, SendIcon } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { CheckCheckIcon, PaperclipIcon, RefreshCwIcon, SearchIcon, SendIcon, XIcon } from 'lucide-react';
 import { useApi } from '@/hooks/useApi';
 import { PageHeader } from '@/components/PageHeader';
+import { GuestNameCell } from '@/components/ui/GuestNameCell';
 import { getSupabaseBrowserClient } from '@/lib/supabase-browser';
+import { uploadImage } from '@/lib/upload-image';
 import { toast } from 'sonner';
 import { Guest } from '@/types';
 
@@ -16,11 +19,22 @@ type MessageRow = {
   content: string;
   isRead: boolean;
   createdAt: string;
+  fileUrl?: string | null;
+  fileName?: string | null;
+  fileType?: string | null;
+  fileSize?: number | null;
+};
+
+type MessageInsertResponse = {
+  success: boolean;
+  data?: MessageRow | null;
+  error?: string;
 };
 
 type ConversationSummary = {
   guestId: string;
   guestName: string;
+  guestImagePath?: string | null;
   lastMessage: MessageRow;
   unreadCount: number;
   messages: MessageRow[];
@@ -41,20 +55,25 @@ function formatDayTime(value: string) {
 export default function MessagesPage() {
   const { data, mutate, isLoading } = useApi<MessageRow[]>('/api/messages');
   const { data: guestsData } = useApi<Guest[]>('/api/guests?limit=100');
+  const searchParams = useSearchParams();
   const [isSending, setIsSending] = useState(false);
   const [selectedGuestId, setSelectedGuestId] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [tab, setTab] = useState<'all' | 'unread'>('all');
   const [draft, setDraft] = useState('');
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const rows = useMemo(() => data ?? [], [data]);
   const guests = useMemo(() => guestsData ?? [], [guestsData]);
+  const guestById = useMemo(() => new Map(guests.map((guest) => [guest.id, guest])), [guests]);
   const unreadCount = rows.filter((row) => row.senderType === 'guest' && !row.isRead).length;
 
   const conversations = useMemo<ConversationSummary[]>(() => {
     const map = new Map<
       string,
-      { guestId: string; guestName: string; lastMessage: MessageRow; unreadCount: number; messages: MessageRow[] }
+      { guestId: string; guestName: string; guestImagePath?: string | null; lastMessage: MessageRow; unreadCount: number; messages: MessageRow[] }
     >();
 
     rows.forEach((row) => {
@@ -68,6 +87,7 @@ export default function MessagesPage() {
         if (new Date(row.createdAt).getTime() > new Date(current.lastMessage.createdAt).getTime()) {
           current.lastMessage = row;
           current.guestName = row.guestName || current.guestName;
+          current.guestImagePath = guestById.get(row.guestId)?.imagePath ?? current.guestImagePath ?? null;
         }
 
         return;
@@ -76,6 +96,7 @@ export default function MessagesPage() {
       map.set(row.guestId, {
         guestId: row.guestId,
         guestName: row.guestName || row.guestId,
+        guestImagePath: guestById.get(row.guestId)?.imagePath ?? null,
         lastMessage: row,
         unreadCount: row.senderType === 'guest' && !row.isRead ? 1 : 0,
         messages: [row],
@@ -92,7 +113,7 @@ export default function MessagesPage() {
       .sort(
       (left, right) => new Date(right.lastMessage.createdAt).getTime() - new Date(left.lastMessage.createdAt).getTime(),
       );
-  }, [rows]);
+  }, [guestById, rows]);
 
   const visibleConversations = conversations.filter((conversation) => {
     const haystack = `${conversation.guestName} ${conversation.guestId} ${conversation.lastMessage.content}`.toLowerCase();
@@ -118,15 +139,34 @@ export default function MessagesPage() {
       .map((guest) => ({
         id: guest.id,
         name: `${guest.firstName} ${guest.lastName}`.trim() || guest.guestId,
+        imagePath: guest.imagePath ?? null,
       }));
   }, [conversationGuestIds, guests, searchTerm, tab]);
 
-  const selectedConversation =
-    conversations.find((conversation) => conversation.guestId === selectedGuestId) ?? conversations[0] ?? null;
+  const selectedConversation = conversations.find((conversation) => conversation.guestId === selectedGuestId) ?? (selectedGuestId ? null : conversations[0] ?? null);
   const selectedGuest = guests.find((guest) => guest.id === selectedGuestId) ?? null;
-  const selectedMessages = selectedConversation?.messages ?? [];
+  const selectedMessages = selectedGuestId
+    ? rows
+      .filter((message) => message.guestId === selectedGuestId)
+      .sort((left, right) => new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime())
+    : selectedConversation?.messages ?? [];
+  const activeGuestName = selectedConversation?.guestName ?? (selectedGuest ? `${selectedGuest.firstName} ${selectedGuest.lastName}`.trim() : null) ?? selectedMessages.find((message) => message.guestName)?.guestName ?? 'Select a conversation';
 
   useEffect(() => {
+    const guestIdFromUrl = searchParams.get('guestId');
+    const tabFromUrl = searchParams.get('tab');
+
+    if (tabFromUrl === 'unread') {
+      setTab('unread');
+    } else if (tabFromUrl === 'all') {
+      setTab('all');
+    }
+
+    if (guestIdFromUrl) {
+      setSelectedGuestId(guestIdFromUrl);
+      return;
+    }
+
     if (!selectedGuestId) {
       if (conversations[0]) {
         setSelectedGuestId(conversations[0].guestId);
@@ -137,7 +177,7 @@ export default function MessagesPage() {
         setSelectedGuestId(guests[0].id);
       }
     }
-  }, [conversations, guests, selectedGuestId]);
+  }, [conversations, guests, searchParams, selectedGuestId]);
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
@@ -174,16 +214,50 @@ export default function MessagesPage() {
       .catch(() => null);
   }, [mutate, selectedConversation]);
 
+  async function uploadFile(file: File): Promise<{ url: string; name: string; type: string } | null> {
+    setUploadingFile(true);
+    try {
+      const result = await uploadImage({
+        file,
+        bucket: 'chat_uploads',
+        id: `msg_${Date.now()}`,
+        target: 'message',
+      });
+      return { url: result, name: file.name, type: file.type };
+    } catch (e) {
+      toast.error('Failed to upload file');
+      return null;
+    } finally {
+      setUploadingFile(false);
+    }
+  }
+
   async function handleSend(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const guestId = selectedGuestId;
 
-    if (!guestId || !draft.trim()) {
-      toast.error('Select a conversation and enter a message first.');
+    if (!guestId || (!draft.trim() && !pendingFile)) {
+      toast.error('Select a conversation and enter a message or attach a file.');
       return;
     }
 
     setIsSending(true);
+
+    let fileUrl: string | null = null;
+    let fileName: string | null = null;
+    let fileType: string | null = null;
+    let fileSize: number | null = null;
+
+    if (pendingFile) {
+      const result = await uploadFile(pendingFile);
+      if (result) {
+        fileUrl = result.url;
+        fileName = result.name;
+        fileType = result.type;
+        fileSize = pendingFile.size;
+      }
+      setPendingFile(null);
+    }
 
     const response = await fetch('/api/messages', {
       method: 'POST',
@@ -192,20 +266,50 @@ export default function MessagesPage() {
         guestId,
         senderType: 'admin',
         content: draft.trim(),
+        fileUrl,
+        fileName,
+        fileType,
+        fileSize,
       }),
       credentials: 'include',
     });
 
+    const payload = await response.json().catch(() => ({})) as MessageInsertResponse;
     setIsSending(false);
 
     if (!response.ok) {
-      const payload = await response.json().catch(() => ({}));
       toast.error(payload.error || 'Failed to send message');
       return;
     }
 
+    if (payload.data) {
+      const savedMessage: MessageRow = {
+        id: payload.data.id,
+        guestId: payload.data.guestId,
+        guestName: payload.data.guestName,
+        senderType: payload.data.senderType,
+        content: payload.data.content,
+        isRead: payload.data.isRead,
+        createdAt: payload.data.createdAt,
+        fileUrl: payload.data.fileUrl,
+        fileName: payload.data.fileName,
+        fileType: payload.data.fileType,
+        fileSize: payload.data.fileSize,
+      };
+
+      const nextRows = rows.some((message) => message.id === savedMessage.id) ? rows : [savedMessage, ...rows];
+      await mutate(
+        {
+          success: true,
+          data: nextRows,
+        },
+        { revalidate: false },
+      );
+    } else {
+      await mutate();
+    }
+
     setDraft('');
-    mutate();
   }
 
   async function markAllAsRead() {
@@ -278,17 +382,11 @@ export default function MessagesPage() {
                 <div className="p-5 text-sm text-[var(--color-text-secondary)]">No messages or guests found.</div>
             ) : (
                 <>
-                  {visibleConversations.map((conversation) => {
-                    const selected = conversation.guestId === selectedGuestId;
-                    const lastMessagePreview = conversation.lastMessage.content.slice(0, 70);
-                    const initials = conversation.guestName
-                      .split(' ')
-                      .map((part) => part.charAt(0))
-                      .slice(0, 2)
-                      .join('');
+                   {visibleConversations.map((conversation) => {
+                     const selected = conversation.guestId === selectedGuestId;
 
-                    return (
-                      <button
+                     return (
+                       <button
                         key={conversation.guestId}
                         type="button"
                         onClick={() => {
@@ -296,52 +394,41 @@ export default function MessagesPage() {
                         }}
                         className={`flex w-full items-start gap-3 border-b border-border px-5 py-4 text-left transition-colors ${selected ? 'bg-primary/5' : 'hover:bg-surface-secondary'}`}
                       >
-                        <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-border bg-surface-secondary text-sm font-semibold text-[var(--color-text-primary)]">
-                          {initials || '?'}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="truncate font-medium text-[var(--color-text-primary)]">{conversation.guestName}</div>
-                            <span className="text-[11px] text-[var(--color-text-secondary)]">{formatTime(conversation.lastMessage.createdAt)}</span>
-                          </div>
-                          <div className="mt-1 flex items-center justify-between gap-3">
-                            <p className="truncate text-sm text-[var(--color-text-secondary)]">{lastMessagePreview}</p>
-                            {conversation.unreadCount > 0 ? (
-                              <span className="rounded-xl border border-border bg-surface-secondary px-2 py-0.5 text-[11px] font-semibold text-[var(--color-text-primary)]">
-                                {conversation.unreadCount}
-                              </span>
-                            ) : null}
-                          </div>
+                        <GuestNameCell
+                          name={conversation.guestName}
+                          imageUrl={conversation.guestImagePath ?? null}
+                          size="lg"
+                          className="min-w-0 flex-1"
+                        />
+                        <div className="flex shrink-0 flex-col items-end gap-1">
+                          <span className="text-[11px] text-[var(--color-text-secondary)]">{formatTime(conversation.lastMessage.createdAt)}</span>
+                          {conversation.unreadCount > 0 ? (
+                            <span className="rounded-xl border border-border bg-surface-secondary px-2 py-0.5 text-[11px] font-semibold text-[var(--color-primary)]">
+                              {conversation.unreadCount}
+                            </span>
+                          ) : null}
                         </div>
                       </button>
                     );
                   })}
 
-                  {searchableGuests.map((guest) => {
-                    const selected = guest.id === selectedGuestId;
-                    const initials = guest.name
-                      .split(' ')
-                      .map((part) => part.charAt(0))
-                      .slice(0, 2)
-                      .join('');
+                   {searchableGuests.map((guest) => {
+                     const selected = guest.id === selectedGuestId;
 
-                    return (
-                      <button
+                     return (
+                       <button
                         key={guest.id}
                         type="button"
                         onClick={() => setSelectedGuestId(guest.id)}
                         className={`flex w-full items-start gap-3 border-b border-border px-5 py-4 text-left transition-colors ${selected ? 'bg-primary/5' : 'hover:bg-surface-secondary'}`}
                       >
-                        <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-border bg-surface-secondary text-sm font-semibold text-[var(--color-text-primary)]">
-                          {initials || '?'}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="truncate font-medium text-[var(--color-text-primary)]">{guest.name}</div>
-                            <span className="text-[11px] text-[var(--color-text-secondary)]">New</span>
-                          </div>
-                          <div className="mt-1 text-sm text-[var(--color-text-secondary)]">Start a new conversation</div>
-                        </div>
+                        <GuestNameCell
+                          name={guest.name}
+                          imageUrl={guest.imagePath ?? null}
+                          size="lg"
+                          className="min-w-0 flex-1"
+                        />
+                        <span className="shrink-0 text-[11px] text-[var(--color-text-secondary)]">New</span>
                       </button>
                     );
                   })}
@@ -352,16 +439,20 @@ export default function MessagesPage() {
 
         <section className="card flex min-h-[760px] flex-col overflow-hidden">
           <div className="flex items-center justify-between border-b border-border bg-surface px-5 py-4">
-            <div>
-              <div className="mt-1 text-lg font-semibold text-[var(--color-text-primary)]">
-                {selectedConversation ? selectedConversation.guestName : selectedGuest ? `${selectedGuest.firstName} ${selectedGuest.lastName}`.trim() : 'Select a conversation'}
-              </div>
-              <div className="text-sm text-[var(--color-text-secondary)]">
-                {selectedConversation
-                  ? `${formatDayTime(selectedConversation.lastMessage.createdAt)} · Guest ID ${selectedConversation.guestId}`
-                  : selectedGuestId
-                    ? `Guest ID ${selectedGuestId}`
-                    : 'Choose a guest to continue the conversation.'}
+            <div className="flex items-center gap-3">
+              <GuestNameCell
+                name={activeGuestName}
+                imageUrl={selectedConversation ? (selectedConversation.guestImagePath ?? null) : (selectedGuest?.imagePath ?? null)}
+                size="lg"
+              />
+              <div>
+                <div className="text-sm text-[var(--color-text-secondary)]">
+                  {selectedConversation
+                    ? `${formatDayTime(selectedConversation.lastMessage.createdAt)} · Guest ID ${selectedConversation.guestId}`
+                    : selectedGuestId
+                      ? `Guest ID ${selectedGuestId}`
+                      : 'Choose a guest to continue the conversation.'}
+                </div>
               </div>
             </div>
             <div className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface-secondary px-3 py-1 text-xs font-medium text-[var(--color-text-secondary)]">
@@ -371,9 +462,9 @@ export default function MessagesPage() {
           </div>
 
           <div className="flex-1 overflow-y-auto bg-surface p-5">
-            {!selectedConversation ? (
+            {!selectedGuestId && !selectedConversation ? (
               <div className="flex h-full min-h-[420px] items-center justify-center text-center text-[var(--color-text-secondary)]">
-                {selectedGuestId ? 'No messages yet. Send the first message to start this thread.' : 'Pick a guest from the inbox to view the thread.'}
+                {'Pick a guest from the inbox to view the thread.'}
               </div>
             ) : (
               <div className="space-y-4">
@@ -382,9 +473,28 @@ export default function MessagesPage() {
 
                   return (
                     <div key={message.id} className={`flex ${isReceptionist ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`max-w-[82%] rounded-[24px] px-4 py-3 shadow-sm ${isReceptionist ? 'rounded-br-md bg-primary text-white' : 'rounded-bl-md bg-surface text-[var(--color-text-primary)]'}`}>
-                        <p className="text-sm leading-6">{message.content}</p>
-                        <div className={`mt-2 text-[11px] ${isReceptionist ? 'text-white/65' : 'text-[var(--color-text-secondary)]'}`}>
+                        <div className={`max-w-[82%] rounded-[24px] px-4 py-3 shadow-sm ${isReceptionist ? 'rounded-br-md bg-primary text-[var(--color-text-primary)]' : 'rounded-bl-md bg-surface text-[var(--color-text-primary)]'}`}>
+                          {message.fileUrl && (
+                            <div className="mb-2">
+                              {message.fileType?.startsWith('image/') ? (
+                                <a href={message.fileUrl} target="_blank" rel="noopener noreferrer">
+                                  <img src={message.fileUrl} alt={message.fileName ?? 'Image'} className="max-w-[200px] max-h-[150px] rounded-lg object-cover" />
+                                </a>
+                              ) : (
+                                <a
+                                  href={message.fileUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm underline ${isReceptionist ? 'bg-white/10 text-white' : 'bg-primary/10 text-primary'}`}
+                                >
+                                  <PaperclipIcon className="h-4 w-4" />
+                                  {message.fileName ?? 'Attachment'}
+                                </a>
+                              )}
+                            </div>
+                          )}
+                          {message.content && <p className="text-sm leading-6">{message.content}</p>}
+                          <div className={`mt-2 text-[11px] ${isReceptionist ? 'text-[var(--color-text-secondary)]' : 'text-[var(--color-text-secondary)]'}`}>
                           {new Date(message.createdAt).toLocaleString([], { hour: '2-digit', minute: '2-digit', month: 'short', day: 'numeric' })}
                         </div>
                       </div>
@@ -396,19 +506,50 @@ export default function MessagesPage() {
           </div>
 
           <form onSubmit={handleSend} className="border-t border-border bg-surface p-5">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-              <textarea
-                className="input-field min-h-28 flex-1 resize-none"
-                placeholder={selectedGuestId ? 'Type your message...' : 'Select a conversation to start messaging...'}
-                value={draft}
-                onChange={(event) => setDraft(event.target.value)}
-                disabled={!selectedGuestId}
-                required
-              />
-              <button type="submit" disabled={isSending || !selectedGuestId} className="btn-primary inline-flex items-center justify-center gap-2 disabled:opacity-50 sm:min-w-36">
-                <SendIcon className="h-4 w-4" />
-                {isSending ? 'Sending...' : 'Send'}
-              </button>
+            <div className="flex flex-col gap-3">
+              {pendingFile && (
+                <div className="flex items-center gap-2 rounded-xl border border-border bg-surface-secondary px-3 py-2">
+                  <PaperclipIcon className="h-4 w-4 text-[var(--color-text-secondary)]" />
+                  <span className="flex-1 truncate text-sm text-[var(--color-text-primary)]">{pendingFile.name}</span>
+                  <span className="text-xs text-[var(--color-text-secondary)]">{(pendingFile.size / 1024).toFixed(0)} KB</span>
+                  <button type="button" onClick={() => setPendingFile(null)} className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]">
+                    <XIcon className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                <div className="relative flex-1">
+                  <textarea
+                    className="input-field min-h-28 w-full resize-none pr-10"
+                    placeholder={selectedGuestId ? 'Type your message...' : 'Select a conversation to start messaging...'}
+                    value={draft}
+                    onChange={(event) => setDraft(event.target.value)}
+                    disabled={!selectedGuestId}
+                  />
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) setPendingFile(file);
+                      e.target.value = '';
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={!selectedGuestId || uploadingFile}
+                    className="absolute bottom-3 right-3 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] disabled:opacity-50"
+                  >
+                    <PaperclipIcon className="h-5 w-5" />
+                  </button>
+                </div>
+                <button type="submit" disabled={isSending || uploadingFile || !selectedGuestId || (!draft.trim() && !pendingFile)} className="btn-primary inline-flex items-center justify-center gap-2">
+                  <SendIcon className="h-4 w-4" />
+                  {isSending || uploadingFile ? 'Sending...' : 'Send'}
+                </button>
+              </div>
             </div>
           </form>
         </section>

@@ -22,111 +22,245 @@ export type InvoicePdfInput = {
   payments: Array<{ paymentId: string; amount: number; method: string; status: string }>;
 };
 
+const pageWidth = 595.28;
+const pageHeight = 841.89;
+const margin = 36;
+const contentWidth = pageWidth - margin * 2;
+const tableLineHeight = 11;
+
+function currency(value: number) {
+  return `Rs ${value.toLocaleString()}`;
+}
+
+function text(value: string | number | null | undefined, fallback = 'N/A') {
+  return String(value ?? '').trim() || fallback;
+}
+
+function split(pdf: jsPDF, value: string | number | null | undefined, width: number) {
+  return pdf.splitTextToSize(text(value), width);
+}
+
 export function buildInvoicePdfBase64(input: InvoicePdfInput) {
   const pdf = new jsPDF({ unit: 'pt', format: 'a4' });
-  const margin = 42;
-  const rightX = 553;
-  let y = 48;
+  let y = margin;
 
-  const writeLine = (label: string, value: string, nextGap = 16) => {
-    pdf.setFont('helvetica', 'normal');
-    pdf.text(label, margin, y);
-    pdf.text(value, rightX, y, { align: 'right' });
-    y += nextGap;
-  };
-
-  const ensureSpace = (required = 28) => {
-    if (y + required <= 760) return;
+  const addPageIfNeeded = (required: number) => {
+    if (y + required <= pageHeight - margin) return;
     pdf.addPage();
-    y = 48;
+    y = margin;
   };
 
+  const drawHorizontalLine = (yy: number) => {
+    pdf.setDrawColor(229, 231, 235);
+    pdf.line(margin, yy, margin + contentWidth, yy);
+  };
+
+  const write = (
+    value: string | number | null | undefined,
+    x: number,
+    yy: number,
+    width: number,
+    size = 9,
+    style: 'normal' | 'bold' = 'normal',
+    align?: 'left' | 'right',
+  ) => {
+    pdf.setFont('helvetica', style);
+    pdf.setFontSize(size);
+    const lines = split(pdf, value, width);
+    pdf.text(lines, x, yy, { align });
+    return yy + lines.length * tableLineHeight * (size / 9);
+  };
+
+  const writeBlockTitle = (title: string, yy: number) => {
+    pdf.setFillColor(29, 58, 50);
+    pdf.rect(margin, yy - 10, contentWidth, 18, 'F');
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(10.5);
+    pdf.setTextColor(255, 255, 255);
+    pdf.text(title, margin + 8, yy + 3);
+    pdf.setTextColor(31, 41, 55);
+    return yy + 24;
+  };
+
+  const drawTableHeader = (yy: number) => {
+    pdf.setFillColor(243, 244, 246);
+    pdf.rect(margin, yy - 13, contentWidth, 18, 'F');
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(8);
+    pdf.setTextColor(75, 85, 99);
+    pdf.text('Description', margin, yy);
+    pdf.text('Date', margin + contentWidth * 0.42, yy, { align: 'right' });
+    pdf.text('Qty', margin + contentWidth * 0.55, yy, { align: 'right' });
+    pdf.text('Rate (Rs)', margin + contentWidth * 0.63, yy, { align: 'right' });
+    pdf.text('Amount (Rs)', margin + contentWidth * 0.80, yy, { align: 'right' });
+    pdf.setTextColor(31, 41, 55);
+  };
+
+  // Header in the style of the Payment Details receipt.
   pdf.setFillColor(29, 58, 50);
-  pdf.rect(0, 0, 595, 96, 'F');
-  pdf.setFont('helvetica', 'bold');
+  pdf.rect(0, 0, pageWidth, 112, 'F');
   pdf.setTextColor(255, 255, 255);
+  pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(22);
-  pdf.text('La Pirogue Hotel', margin, 32);
+  pdf.text('La Pirogue', margin, 34);
+  pdf.setFontSize(9.5);
+  pdf.text('Wolmar, Flic en Flac, Mauritius', margin, 52);
+  pdf.text('Tel: +230 403 3900 | info@lapirogue.mu', margin, 68);
+  pdf.text('VAT No: 12345678', margin, 84);
+
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(20);
+  pdf.text('INVOICE', margin + contentWidth, 34, { align: 'right' });
+  pdf.setFontSize(9.5);
+  pdf.text(`Invoice No: #${input.invoiceReference}`, margin + contentWidth, 58, { align: 'right' });
+  pdf.text(`Issue Date: ${new Date(input.generatedAt).toLocaleDateString()}`, margin + contentWidth, 74, { align: 'right' });
+
+  const status = input.invoiceStatus.replace(/_/g, ' ');
+  const statusWidth = Math.min(120, Math.max(72, pdf.getTextWidth(status) + 18));
+  pdf.setFillColor(243, 244, 246);
+  pdf.roundedRect(margin + contentWidth - statusWidth, 86, statusWidth, 18, 4, 4, 'F');
+  pdf.setTextColor(31, 41, 55);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(8.5);
+  pdf.text(status, margin + contentWidth - statusWidth / 2, 98, { align: 'center' });
+
+  pdf.setTextColor(31, 41, 55);
+  y = 134;
+  y = writeBlockTitle('Bill To', y);
+
+  // Bill To and invoice metadata.
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(14);
+  pdf.setTextColor(31, 41, 55);
+  y = write(input.guestName, margin, y, contentWidth * 0.62, 14, 'bold');
+  y += 4;
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(9.5);
+  y = write(input.guestEmail, margin, y, contentWidth * 0.62, 9.5);
+  y = write(input.guestPhone, margin, y, contentWidth * 0.62, 9.5);
+  y = write(`Passport: ${text(input.guestPassport)}`, margin, y, contentWidth * 0.62, 9.5);
+  y = write(`Nationality: ${text(input.guestNationality)}`, margin, y, contentWidth * 0.62, 9.5);
+  y = write(`Reservation: ${text(input.reservationLabel, 'Walk-in / Guest charge')}`, margin, y, contentWidth * 0.62, 9.5);
+  y += 8;
+
+  const metaRight = margin + contentWidth * 0.66;
+  const metaWidth = contentWidth * 0.34;
+  y = Math.max(y, 184);
+  y = write('Payment method', metaRight, y, metaWidth, 8.5, 'bold');
+  y = write(input.paymentMethod, metaRight, y, metaWidth, 8.5);
+  y = write('Payment status', metaRight, y, metaWidth, 8.5, 'bold');
+  y = write(input.paymentStatus, metaRight, y, metaWidth, 8.5);
+  y = write('Payment reference', metaRight, y, metaWidth, 8.5, 'bold');
+  y = write(text(input.paymentReference), metaRight, y, metaWidth, 8.5);
+  y += 8;
+
+  // Itemized charges table.
+  y += 8;
+  y = writeBlockTitle('Itemized charges', y);
+  drawTableHeader(y);
+  y += 8;
+
+  const descWidth = contentWidth * 0.42;
+  const dateWidth = contentWidth * 0.13;
+  const qtyWidth = contentWidth * 0.08;
+  const rateWidth = contentWidth * 0.17;
+  const amountWidth = contentWidth * 0.20;
+  const xDate = margin + descWidth;
+  const xQty = xDate + dateWidth;
+  const xRate = xQty + qtyWidth;
+  const xAmount = xRate + rateWidth;
+
+  if (input.items.length === 0) {
+    addPageIfNeeded(42);
+    y = write('No itemized charges found.', margin, y, contentWidth, 9.5);
+    y += 12;
+  } else {
+    input.items.forEach((item, index) => {
+      const lineDate = item.createdAt ? new Date(item.createdAt).toLocaleDateString() : '-';
+      const description = `${index + 1}. ${item.label} (${item.category})`;
+      const descLines = split(pdf, description, descWidth - 6);
+      const dateLines = split(pdf, lineDate, dateWidth - 6);
+      const qtyLines = split(pdf, '1', qtyWidth - 6);
+      const rateLines = split(pdf, currency(Number(item.amount)), rateWidth - 6);
+      const amountLines = split(pdf, currency(Number(item.amount)), amountWidth - 6);
+      const maxLines = Math.max(descLines.length, dateLines.length, qtyLines.length, rateLines.length, amountLines.length);
+      const rowHeight = maxLines * tableLineHeight + 10;
+
+      addPageIfNeeded(rowHeight + 12);
+      if (y < 150) drawTableHeader(y);
+
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(8.5);
+      pdf.setTextColor(31, 41, 55);
+      pdf.text(descLines, margin + 3, y);
+      pdf.text(dateLines, xDate + dateWidth - 3, y, { align: 'right' });
+      pdf.text(qtyLines, xQty + qtyWidth - 3, y, { align: 'right' });
+      pdf.text(rateLines, xRate + rateWidth - 3, y, { align: 'right' });
+      pdf.text(amountLines, xAmount + amountWidth - 3, y, { align: 'right' });
+      y += rowHeight;
+      drawHorizontalLine(y);
+      y += 4;
+    });
+  }
+
+  // Payment history snapshot, compact and wrapped.
+  if (input.payments.length > 0) {
+    y += 8;
+    addPageIfNeeded(44);
+    y = writeBlockTitle('Payment history snapshot', y);
+    input.payments.slice(0, 12).forEach((payment, index) => {
+      addPageIfNeeded(42);
+      y = write(`${index + 1}. ${payment.paymentId}`, margin, y, contentWidth * 0.55, 9, 'bold');
+      y = write(`${payment.method} · ${payment.status}`, margin, y, contentWidth * 0.55, 9);
+      y = write(currency(Number(payment.amount)), margin + contentWidth * 0.62, y - tableLineHeight, contentWidth * 0.38, 9, 'bold', 'right');
+      y += 4;
+    });
+    if (input.payments.length > 12) {
+      y = write('Additional payment records are available in the guest account.', margin, y, contentWidth, 8.5);
+      y += 8;
+    }
+  }
+
+  // Footer: notes/reference on left, totals on right.
+  addPageIfNeeded(150);
+  y += 8;
+  y = writeBlockTitle('Payment Notes', y);
+  const footerTop = y;
+  const leftWidth = contentWidth * 0.58;
+  const rightWidth = contentWidth * 0.38;
+  const rightX = margin + contentWidth - rightWidth;
+
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(9);
+  y = write(text(input.paymentNotes, 'Payment is due upon receipt. We accept major cards, bank transfers, and cash.'), margin, y, leftWidth, 9);
+  y = write(`Reference: ${text(input.paymentReference)}`, margin, y, leftWidth, 9);
+  y = write(`Recorded by: ${text(input.paymentNotes, 'Recorded in system')}`, margin, y, leftWidth, 9);
+
+  let totalsY = footerTop;
+  const totals: Array<[string, number, boolean?]> = [
+    ['Subtotal', input.totalCharges],
+    ['Total Paid', input.totalPaid],
+    ['Balance Due', input.balanceDue, true],
+  ];
+
+  totals.forEach(([label, value, bold = false]) => {
+    pdf.setFont('helvetica', bold ? 'bold' : 'normal');
+    pdf.setFontSize(bold ? 11 : 9);
+    pdf.text(label, rightX, totalsY, { align: 'left' });
+    pdf.text(currency(value), rightX + rightWidth, totalsY, { align: 'right' });
+    totalsY += bold ? 24 : 18;
+    if (bold) {
+      pdf.setDrawColor(229, 231, 235);
+      pdf.line(rightX, totalsY - 8, rightX + rightWidth, totalsY - 8);
+    }
+  });
+  y = Math.max(y, totalsY + 8);
+
+  y += 12;
+  pdf.setFont('helvetica', 'italic');
   pdf.setFontSize(10);
-  pdf.setFont('helvetica', 'normal');
-  pdf.text('Guest invoice and billing summary', margin, 50);
-  pdf.text(`Invoice reference: ${input.invoiceReference}`, margin, 68);
-  pdf.text(`Generated: ${new Date(input.generatedAt).toLocaleString()}`, margin, 84);
-
-  pdf.setTextColor(25, 31, 36);
-  y = 118;
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(13);
-  pdf.text('Guest and reservation details', margin, y);
-  y += 18;
-  writeLine('Guest', input.guestName);
-  writeLine('Email', input.guestEmail ?? 'N/A');
-  writeLine('Phone', input.guestPhone ?? 'N/A');
-  writeLine('Passport', input.guestPassport ?? 'N/A');
-  writeLine('Nationality', input.guestNationality ?? 'N/A');
-  writeLine('Reservation', input.reservationLabel ?? 'Walk-in / Guest charge');
-  writeLine('Payment method', input.paymentMethod);
-  writeLine('Payment status', input.paymentStatus);
-  writeLine('Ledger status', input.invoiceStatus.replace('_', ' '));
-
-  y += 8;
-  pdf.setFont('helvetica', 'bold');
-  pdf.text('Itemized charges', margin, y);
-  y += 18;
-  pdf.setFont('helvetica', 'normal');
-
-  input.items.forEach((item) => {
-    ensureSpace(24);
-    const lineDate = item.createdAt ? new Date(item.createdAt).toLocaleDateString() : '-';
-    pdf.text(`${item.label} (${item.category})`, margin, y);
-    pdf.text(lineDate, 340, y, { align: 'right' });
-    pdf.text(`Rs ${item.amount.toLocaleString()}`, rightX, y, { align: 'right' });
-    y += 15;
-  });
-
-  y += 8;
-  ensureSpace(100);
-  pdf.setFont('helvetica', 'bold');
-  pdf.text('Totals', margin, y);
-  y += 18;
-  pdf.setFont('helvetica', 'normal');
-  writeLine('Room charges', `Rs ${(input.totals['Room charges'] ?? 0).toLocaleString()}`);
-  writeLine('Food & Beverage orders', `Rs ${(input.totals['Food & Beverage orders'] ?? 0).toLocaleString()}`);
-  writeLine('Tours and activities', `Rs ${(input.totals['Tours and activities'] ?? 0).toLocaleString()}`);
-  writeLine('Transport services', `Rs ${(input.totals['Transport services'] ?? 0).toLocaleString()}`);
-  writeLine('Laundry/services', `Rs ${(input.totals['Laundry/services'] ?? 0).toLocaleString()}`);
-  writeLine('Additional hotel purchases', `Rs ${(input.totals['Additional hotel purchases'] ?? 0).toLocaleString()}`);
-  writeLine('Taxes and service charges', `Rs ${(input.totals['Taxes and service charges'] ?? 0).toLocaleString()}`);
-  pdf.setFont('helvetica', 'bold');
-  writeLine('Total charges', `Rs ${input.totalCharges.toLocaleString()}`);
-  writeLine('Total paid', `Rs ${input.totalPaid.toLocaleString()}`);
-  writeLine('Balance due', `Rs ${input.balanceDue.toLocaleString()}`);
-
-  y += 8;
-  ensureSpace(90);
-  pdf.setFont('helvetica', 'bold');
-  pdf.text('Payment history snapshot', margin, y);
-  y += 18;
-  pdf.setFont('helvetica', 'normal');
-  input.payments.slice(0, 6).forEach((payment) => {
-    ensureSpace(18);
-    pdf.text(`${payment.paymentId} · ${payment.method} · ${payment.status}`, margin, y);
-    pdf.text(`Rs ${payment.amount.toLocaleString()}`, rightX, y, { align: 'right' });
-    y += 15;
-  });
-
-  y += 8;
-  ensureSpace(72);
-  pdf.setFont('helvetica', 'bold');
-  pdf.text('Reference', margin, y);
-  y += 16;
-  pdf.setFont('courier', 'normal');
-  pdf.text(input.invoiceReference, margin, y);
-  y += 18;
-  pdf.setFont('helvetica', 'normal');
-  pdf.text(`Payment reference: ${input.paymentReference ?? 'N/A'}`, margin, y, { maxWidth: 512 });
-  y += 16;
-  pdf.text(`Recorded by: ${input.paymentNotes ?? 'Recorded in system'}`, margin, y, { maxWidth: 512 });
+  pdf.setTextColor(100, 116, 139);
+  y = write('Thank you for staying with La Pirogue Hotel. We hope to welcome you back soon.', margin, y, contentWidth, 10);
 
   const output = pdf.output('arraybuffer');
   return Buffer.from(output).toString('base64');

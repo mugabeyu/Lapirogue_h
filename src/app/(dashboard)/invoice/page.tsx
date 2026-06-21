@@ -11,7 +11,7 @@ export default function InvoicePage() {
       searchPlaceholder="Search invoices..."
       columns={[
         { key: 'paymentId', label: 'Invoice reference' },
-        { key: 'guest', label: 'Guest name' },
+        { key: 'guest', label: 'Guest name', type: 'guest' },
         { key: 'amount', label: 'Amount (Rs)', type: 'currency' },
         { key: 'status', label: 'Invoice status', type: 'status' },
         { key: 'createdAt', label: 'Issue date', type: 'date' },

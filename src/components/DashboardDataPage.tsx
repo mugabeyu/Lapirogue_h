@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Bed, Calendar, CreditCard } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { StatCard } from '@/components/StatCard';
+import { GuestNameCell } from '@/components/ui/GuestNameCell';
 import useSWR from 'swr';
 import { ApiResponse } from '@/types';
 
@@ -35,14 +36,14 @@ type DashboardData = {
     id: string;
     check_in?: string | null;
     check_out?: string | null;
-    guests?: { first_name?: string | null; last_name?: string | null } | null;
+    guests?: { first_name?: string | null; last_name?: string | null; image_path?: string | null } | null;
     rooms?: { room_number?: string | null; type?: string | null } | null;
   }>;
   todaysCheckouts: Array<{
     id: string;
     check_in?: string | null;
     check_out?: string | null;
-    guests?: { first_name?: string | null; last_name?: string | null } | null;
+    guests?: { first_name?: string | null; last_name?: string | null; image_path?: string | null } | null;
     rooms?: { room_number?: string | null; type?: string | null } | null;
   }>;
 };
@@ -249,16 +250,20 @@ export default function DashboardDataPage() {
                           key={checkin.id}
                           className="flex items-center justify-between gap-4 p-4 transition-colors hover:bg-surface-secondary"
                         >
-                          <div>
-                            <div className="font-medium text-[var(--color-text-primary)]">{guestName}</div>
-                            <div className="mt-1 text-sm text-[var(--color-text-secondary)]">
-                              {roomLabel} &middot; {roomType}
-                            </div>
-                            <div className="mt-2 flex items-center gap-3 text-xs text-[var(--color-text-secondary)]">
-                              <span>Check-in {formatShortDate(checkin.check_in)}</span>
-                              <span>Check-out {formatShortDate(checkin.check_out)}</span>
-                            </div>
+                        <div>
+                          <GuestNameCell
+                            name={guestName}
+                            imageUrl={checkin.guests?.image_path ?? null}
+                            size="sm"
+                          />
+                          <div className="mt-1 text-sm text-[var(--color-text-secondary)]">
+                            {roomLabel} &middot; {roomType}
                           </div>
+                          <div className="mt-2 flex items-center gap-3 text-xs text-[var(--color-text-secondary)]">
+                            <span>Check-in {formatShortDate(checkin.check_in)}</span>
+                            <span>Check-out {formatShortDate(checkin.check_out)}</span>
+                          </div>
+                        </div>
                           <div className="rounded-xl border border-card-border bg-surface-secondary px-3 py-1 text-xs font-medium text-[var(--color-success)]">
                             Arrival
                           </div>
@@ -299,16 +304,20 @@ export default function DashboardDataPage() {
                           key={checkout.id}
                           className="flex items-center justify-between gap-4 p-4 transition-colors hover:bg-surface-secondary"
                         >
-                          <div>
-                            <div className="font-medium text-[var(--color-text-primary)]">{guestName}</div>
-                            <div className="mt-1 text-sm text-[var(--color-text-secondary)]">
-                              {roomLabel} &middot; {roomType}
-                            </div>
-                            <div className="mt-2 flex items-center gap-3 text-xs text-[var(--color-text-secondary)]">
-                              <span>Check-in {formatShortDate(checkout.check_in)}</span>
-                              <span>Check-out {formatShortDate(checkout.check_out)}</span>
-                            </div>
+                        <div>
+                          <GuestNameCell
+                            name={guestName}
+                            imageUrl={checkout.guests?.image_path ?? null}
+                            size="sm"
+                          />
+                          <div className="mt-1 text-sm text-[var(--color-text-secondary)]">
+                            {roomLabel} &middot; {roomType}
                           </div>
+                          <div className="mt-2 flex items-center gap-3 text-xs text-[var(--color-text-secondary)]">
+                            <span>Check-in {formatShortDate(checkout.check_in)}</span>
+                            <span>Check-out {formatShortDate(checkout.check_out)}</span>
+                          </div>
+                        </div>
                           <div className="rounded-xl border border-card-border bg-surface-secondary px-3 py-1 text-xs font-medium text-amber-500">
                             Departure
                           </div>

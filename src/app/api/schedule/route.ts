@@ -9,6 +9,7 @@ type GuestRow = {
   last_name: string;
   status: string;
   vip: boolean;
+  image_path?: string | null;
 };
 
 type ScheduleRow = {
@@ -82,7 +83,7 @@ export async function GET(request: NextRequest) {
     const [guestsResult, reservationsResult] = await Promise.all([
       supabase
         .from('guests')
-        .select('id, guest_id, first_name, last_name, status, vip')
+        .select('id, guest_id, first_name, last_name, status, vip, image_path')
         .order('first_name', { ascending: true }),
       supabase
         .from('reservations')
@@ -122,6 +123,7 @@ export async function GET(request: NextRequest) {
       lastName: guest.last_name,
       status: guest.status,
       vip: guest.vip,
+      imagePath: guest.image_path ?? null,
       roomNumber: roomMap.get(guest.id) ?? null,
     }));
 
@@ -357,6 +359,36 @@ function isWithinRegistrationCutoff(startAt: string) {
   const scheduledAt = new Date(startAt);
   if (Number.isNaN(scheduledAt.getTime())) return false;
   return scheduledAt.getTime() - Date.now() < 10 * 60 * 1000;
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const action = body.action as string;
+
+    if (action === 'auto-complete') {
+      const supabase = getSupabaseAdmin();
+      const { data, error } = await supabase.rpc('auto_complete_schedule_items');
+      if (error) throw error;
+      return NextResponse.json({ success: true, data });
+    }
+
+    if (action === 'mark-completed') {
+      const itemId = body.itemId as string;
+      if (!itemId) {
+        return NextResponse.json({ success: false, error: 'itemId required' }, { status: 400 });
+      }
+      const supabase = getSupabaseAdmin();
+      const { data, error } = await supabase.rpc('mark_schedule_item_completed', { p_item_id: itemId });
+      if (error) throw error;
+      return NextResponse.json({ success: true, data });
+    }
+
+    return NextResponse.json({ success: false, error: 'Invalid action' }, { status: 400 });
+  } catch (error) {
+    console.error('Schedule PATCH Error:', error);
+    return NextResponse.json({ success: false, error: 'Failed to update schedule' }, { status: 500 });
+  }
 }
 
 export async function POST(request: NextRequest) {

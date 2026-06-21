@@ -31,6 +31,7 @@ type ReservationRow = {
   guests?: {
     first_name?: string | null;
     last_name?: string | null;
+    image_path?: string | null;
     email?: string | null;
     auth_id?: string | null;
   } | null;
@@ -52,7 +53,7 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from("reservations")
       .select(
-        "id,reservation_id,guest_id,room_id,check_in,check_out,adults,children,status,total_amount,guests(first_name,last_name,email),rooms(room_number,type)",
+        "id,reservation_id,guest_id,room_id,check_in,check_out,adults,children,status,total_amount,guests(first_name,last_name,image_path,email),rooms(room_number,type)",
       )
       .order("created_at", { ascending: false });
 
@@ -76,6 +77,7 @@ export async function GET(request: NextRequest) {
       guest: reservation.guests
         ? `${reservation.guests.first_name || ""} ${reservation.guests.last_name || ""}`.trim()
         : null,
+      guestImagePath: reservation.guests?.image_path ?? null,
       room: reservation.rooms?.room_number,
       roomType: reservation.rooms?.type,
       checkIn: reservation.check_in,
@@ -214,7 +216,7 @@ export async function PUT(request: NextRequest) {
       await supabase
         .from("reservations")
         .select(
-          "id,reservation_id,guest_id,room_id,check_in,check_out,status,guests(first_name,last_name,email),rooms(room_number,type)",
+            "id,reservation_id,guest_id,room_id,check_in,check_out,status,guests(first_name,last_name,email),rooms(room_number,type)",
         )
         .eq("id", id)
         .maybeSingle();

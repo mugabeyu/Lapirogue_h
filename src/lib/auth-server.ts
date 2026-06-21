@@ -72,7 +72,7 @@ export async function getServerSession(): Promise<User | null> {
     return null;
   }
 
-  const [profileResult, staffResult] = await Promise.all([
+  const [profileResult, staffResult, guestResult] = await Promise.all([
     admin
       .from('profiles')
       .select('email, full_name, phone, avatar_url, role, is_main, is_active, created_at, updated_at')
@@ -83,13 +83,21 @@ export async function getServerSession(): Promise<User | null> {
       .select('email, full_name, phone, image_path, status, created_at, updated_at')
       .eq('auth_user_id', user.id)
       .maybeSingle(),
+    admin
+      .from('guests')
+      .select('id')
+      .eq('auth_id', user.id)
+      .maybeSingle(),
   ]);
 
   if (profileResult.error) return null;
   if (staffResult.error) return null;
+  if (guestResult.error) return null;
 
   const profileRow = profileResult.data as ProfileRow | null;
   const staffRow = staffResult.data as StaffRow | null;
+
+  if (guestResult.data) return null;
 
   if (profileRow?.is_active === false) return null;
   if (staffRow?.status && staffRow.status.toUpperCase() !== 'ACTIVE') return null;

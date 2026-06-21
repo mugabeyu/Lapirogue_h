@@ -12,20 +12,28 @@ type MessageRow = {
   content?: string | null;
   is_read?: boolean | null;
   created_at?: string | null;
+  file_url?: string | null;
+  file_name?: string | null;
+  file_type?: string | null;
+  file_size?: number | null;
 };
 
 const messageSchema = z.object({
   guestId: z.string().uuid(),
   senderType: z.enum(['guest', 'staff', 'admin', 'receptionist']).default('admin'),
   content: z.string().min(1),
+  fileUrl: z.string().url().optional().nullable(),
+  fileName: z.string().optional().nullable(),
+  fileType: z.string().optional().nullable(),
+  fileSize: z.number().int().optional().nullable(),
 });
 
 async function loadGuestNames(guestIds: string[]) {
-  if (!guestIds.length) return new Map<string, string>();
+  if (!guestIds.length) return new Map<string, { name: string | null; imagePath: string | null }>();
 
   const { data, error } = await getSupabaseAdmin()
     .from('guests')
-    .select('id, first_name, last_name')
+    .select('id, first_name, last_name, image_path')
     .in('id', guestIds);
 
   if (error) throw error;
@@ -33,7 +41,10 @@ async function loadGuestNames(guestIds: string[]) {
   return new Map(
     (data ?? []).map((guest) => [
       guest.id,
-      `${guest.first_name ?? ''} ${guest.last_name ?? ''}`.trim() || null,
+      {
+        name: `${guest.first_name ?? ''} ${guest.last_name ?? ''}`.trim() || null,
+        imagePath: guest.image_path ?? null,
+      },
     ]),
   );
 }
@@ -42,15 +53,23 @@ async function mapMessages(messages: MessageRow[]) {
   const guestIds = [...new Set(messages.map((message) => message.guest_id).filter((id): id is string => Boolean(id)))];
   const guestNames = await loadGuestNames(guestIds);
 
-  return messages.map((message) => ({
-    id: message.id,
-    guestId: message.guest_id ?? null,
-    guestName: message.guest_id ? guestNames.get(message.guest_id) ?? null : null,
-    senderType: message.sender_type ?? null,
-    content: message.content ?? null,
-    isRead: !!message.is_read,
-    createdAt: message.created_at ?? null,
-  }));
+  return messages.map((message) => {
+    const guest = message.guest_id ? guestNames.get(message.guest_id) : null;
+    return {
+      id: message.id,
+      guestId: message.guest_id ?? null,
+      guestName: guest?.name ?? null,
+      guestImagePath: guest?.imagePath ?? null,
+      senderType: message.sender_type ?? null,
+      content: message.content ?? null,
+      isRead: !!message.is_read,
+      createdAt: message.created_at ?? null,
+      fileUrl: message.file_url ?? null,
+      fileName: message.file_name ?? null,
+      fileType: message.file_type ?? null,
+      fileSize: message.file_size ?? null,
+    };
+  });
 }
 
 export async function GET(request: NextRequest) {
@@ -64,7 +83,7 @@ export async function GET(request: NextRequest) {
     const guestId = request.nextUrl.searchParams.get('guestId');
     let query = getSupabaseAdmin()
       .from('messages')
-      .select('id, guest_id, sender_type, content, is_read, created_at')
+      .select('id, guest_id, sender_type, content, is_read, created_at, file_url, file_name, file_type, file_size')
       .order('created_at', { ascending: false });
 
     if (guestId) {
@@ -105,12 +124,17 @@ export async function POST(request: NextRequest) {
         sender_type: body.senderType,
         content: body.content.trim(),
         is_read: body.senderType !== 'guest',
+        file_url: body.fileUrl ?? null,
+        file_name: body.fileName ?? null,
+        file_type: body.fileType ?? null,
+        file_size: body.fileSize ?? null,
       })
-      .select('id, guest_id, sender_type, content, is_read, created_at')
+      .select('id, guest_id, sender_type, content, is_read, created_at, file_url, file_name, file_type, file_size')
       .single();
 
     if (error) throw error;
-    return attachSupabaseCookies(NextResponse.json({ success: true, data }, { status: 201 }), response);
+    const mapped = await mapMessages((data ? [data] : []) as MessageRow[]);
+    return attachSupabaseCookies(NextResponse.json({ success: true, data: mapped[0] ?? null }, { status: 201 }), response);
   } catch (error) {
     const validationResponse = validationErrorResponse(error);
     if (validationResponse) return attachSupabaseCookies(validationResponse, response);

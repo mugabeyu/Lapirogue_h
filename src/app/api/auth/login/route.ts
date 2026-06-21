@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
     const userId = signInData.user?.id ?? '';
     const metadata = signInData.user?.user_metadata ?? {};
 
-    const [{ data: profileRow }, { data: staffRow }] = await Promise.all([
+    const [{ data: profileRow }, { data: staffRow }, { data: guestRow }] = await Promise.all([
       authClient
         .from('profiles')
         .select('auth_id, is_active')
@@ -81,7 +81,17 @@ export async function POST(request: NextRequest) {
         .select('auth_user_id, status')
         .eq('auth_user_id', userId)
         .maybeSingle(),
+      authClient
+        .from('guests')
+        .select('id')
+        .eq('auth_id', userId)
+        .maybeSingle(),
     ]);
+
+    if (guestRow) {
+      await authClient.auth.signOut();
+      return NextResponse.json({ success: false, error: 'Guests must access via the mobile app' }, { status: 403 });
+    }
 
     if (profileRow?.is_active === false || (staffRow?.status && staffRow.status.toUpperCase() !== 'ACTIVE')) {
       await authClient.auth.signOut();

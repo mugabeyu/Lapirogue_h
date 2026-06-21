@@ -48,6 +48,15 @@ function createSupabase(request: NextRequest, response: NextResponse, supabaseUr
   });
 }
 
+async function isGuestUser(supabase: ReturnType<typeof createServerClient>, userId: string): Promise<boolean> {
+  const { data: guest } = await supabase
+    .from('guests')
+    .select('id')
+    .eq('auth_id', userId)
+    .maybeSingle();
+  return !!guest;
+}
+
 export async function middleware(request: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
@@ -64,12 +73,17 @@ export async function middleware(request: NextRequest) {
     }
 
     const response = nextResponse(request);
+    const supabase = createSupabase(request, response, supabaseUrl, supabaseAnonKey);
     const {
       data: { user },
-    } = await createSupabase(request, response, supabaseUrl, supabaseAnonKey).auth.getUser();
+    } = await supabase.auth.getUser();
 
     if (!user) {
       return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 });
+    }
+
+    if (await isGuestUser(supabase, user.id)) {
+      return NextResponse.json({ success: false, error: 'Guests must access via the mobile app' }, { status: 403 });
     }
 
     return response;
@@ -77,11 +91,17 @@ export async function middleware(request: NextRequest) {
 
   if (isAuthRoute(pathname)) {
     const response = nextResponse(request);
+    const supabase = createSupabase(request, response, supabaseUrl, supabaseAnonKey);
     const {
       data: { user },
-    } = await createSupabase(request, response, supabaseUrl, supabaseAnonKey).auth.getUser();
+    } = await supabase.auth.getUser();
 
     if (user) {
+      if (await isGuestUser(supabase, user.id)) {
+        const loginUrl = new URL('/login', request.url);
+        await supabase.auth.signOut();
+        return NextResponse.redirect(loginUrl);
+      }
       return NextResponse.redirect(new URL('/', request.url));
     }
 
@@ -93,15 +113,22 @@ export async function middleware(request: NextRequest) {
   }
 
   const response = nextResponse(request);
+  const supabase = createSupabase(request, response, supabaseUrl, supabaseAnonKey);
   const {
     data: { user },
-  } = await createSupabase(request, response, supabaseUrl, supabaseAnonKey).auth.getUser();
+  } = await supabase.auth.getUser();
 
   if (!user) {
     const loginUrl = new URL('/login', request.url);
     if (pathname !== '/') {
       loginUrl.searchParams.set('next', pathname);
     }
+    return NextResponse.redirect(loginUrl);
+  }
+
+  if (await isGuestUser(supabase, user.id)) {
+    const loginUrl = new URL('/login', request.url);
+    await supabase.auth.signOut();
     return NextResponse.redirect(loginUrl);
   }
 

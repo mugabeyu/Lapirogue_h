@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { attachSupabaseCookies, getRouteHandlerSupabaseSession } from '@/lib/supabase-server';
 
-type GuestJoin = { first_name?: string | null; last_name?: string | null };
+type GuestJoin = { first_name?: string | null; last_name?: string | null; image_path?: string | null };
 
 type FeedbackListRow = {
   id: string;
@@ -171,13 +171,13 @@ export async function GET(request: NextRequest) {
 
     let listQuery = admin
       .from('guest_feedback')
-      .select('id, rating, category, comment, created_at, guests(first_name, last_name)', { count: 'exact' })
+      .select('id, rating, category, comment, created_at, guests(first_name, last_name, image_path)', { count: 'exact' })
       .order(sortColumn, { ascending: order === 'asc' });
 
     if (sortKey === 'guest') {
       listQuery = admin
         .from('guest_feedback')
-        .select('id, rating, category, comment, created_at, guests(first_name, last_name)', { count: 'exact' })
+        .select('id, rating, category, comment, created_at, guests(first_name, last_name, image_path)', { count: 'exact' })
         .order('created_at', { ascending: order === 'asc' });
     }
 
@@ -185,14 +185,18 @@ export async function GET(request: NextRequest) {
 
     if (listError) throw listError;
 
-    let reviews = ((listRows ?? []) as FeedbackListRow[]).map((row) => ({
-      id: row.id,
-      guest: guestName(row),
-      rating: row.rating,
-      category: row.category,
-      comment: row.comment ?? '',
-      date: formatDate(row.created_at),
-    }));
+    let reviews = ((listRows ?? []) as FeedbackListRow[]).map((row) => {
+      const guest = Array.isArray(row.guests) ? row.guests[0] : row.guests;
+      return {
+        id: row.id,
+        guest: guestName(row),
+        guestImagePath: guest?.image_path ?? null,
+        rating: row.rating,
+        category: row.category,
+        comment: row.comment ?? '',
+        date: formatDate(row.created_at),
+      };
+    });
 
     if (sortKey === 'guest') {
       reviews = reviews.sort((a, b) => {

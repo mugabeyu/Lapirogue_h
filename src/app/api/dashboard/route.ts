@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
         .in('status', ['CONFIRMED', 'CHECKED_IN']),
       supabase
         .from('reservations')
-        .select('id, check_in, check_out, guests(first_name, last_name), rooms(room_number, type)')
+        .select('id, check_in, check_out, guests(first_name, last_name, image_path), rooms(room_number, type)')
         .in('status', ['CONFIRMED', 'CHECKED_IN'])
         .or(`check_in.gte.${today},check_in.lt.${tomorrow},check_out.gte.${today},check_out.lt.${tomorrow}`)
         .order('check_in', { ascending: true })

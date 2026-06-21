@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { CalendarDays, ChevronLeft, ChevronRight, Download, Plus, Search } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { CreateScheduleItemModal } from '@/components/modals/CreateScheduleItemModal';
+import { GuestNameCell } from '@/components/ui/GuestNameCell';
 import { useApi } from '@/hooks/useApi';
 import { addDays, parseDateKey, startOfWeek, toDateKey } from '@/lib/date-utils';
 
@@ -15,6 +16,7 @@ type Guest = {
   roomNumber: string | null;
   status: string;
   vip: boolean;
+  imagePath?: string | null;
 };
 
 type SelectedGuest = Guest & {
@@ -108,10 +110,6 @@ function shiftWeek(weekStart: string, direction: -1 | 1) {
   return toDateInput(date);
 }
 
-function guestInitials(guest: Guest) {
-  return `${guest.firstName.charAt(0)}${guest.lastName.charAt(0) || ''}`.toUpperCase();
-}
-
 function formatGuestStatus(status: string) {
   return status.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
 }
@@ -125,6 +123,15 @@ export default function SchedulePage() {
 
   const scheduleUrl = `/api/schedule?weekStart=${weekStart}${selectedGuestId ? `&guestId=${selectedGuestId}` : ''}`;
   const { data, mutate } = useApi<ScheduleResponse>(scheduleUrl, { revalidateOnMount: true });
+
+  // Auto-complete overdue items on load
+  useEffect(() => {
+    fetch('/api/schedule', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'auto-complete' }),
+    }).catch(() => null);
+  }, []);
 
   // Auto-select first guest only on initial data load
   useEffect(() => {
@@ -242,20 +249,19 @@ export default function SchedulePage() {
                   onClick={() => setSelectedGuestId(guest.id)}
                   className={`relative w-full rounded-xl border px-3 py-3 text-left transition-colors ${
                     active
-                      ? 'border-border bg-surface-secondary shadow-sm before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:rounded-r-full before:bg-accent'
+                      ? 'border-border bg-surface-secondary shadow-sm before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:rounded-r-full before:bg-[#FE7F2D]'
                       : 'border-border bg-surface hover:bg-surface-secondary'
-                  }`} 
+                  }`}
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
-                      {guestInitials(guest)}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate font-medium text-[var(--color-text-primary)]">{formatGuestName(guest)}</div>
-                      <div className="text-xs text-[var(--color-text-secondary)]">
-                        {guest.roomNumber ? `Room ${guest.roomNumber}` : guest.guestId} · {formatGuestStatus(guest.status)}
-                      </div>
-                    </div>
+                  <div className="min-w-0 flex-1">
+                  <GuestNameCell
+                    name={formatGuestName(guest)}
+                    imageUrl={guest.imagePath ?? null}
+                    size="md"
+                  />
+                  <div className="mt-1 text-xs text-[var(--color-text-secondary)]">
+                    {guest.roomNumber ? `Room ${guest.roomNumber}` : guest.guestId} · {formatGuestStatus(guest.status)}
+                  </div>
                   </div>
                 </button>
               );
@@ -266,13 +272,13 @@ export default function SchedulePage() {
         <section className="card overflow-hidden">
             <div className="flex flex-col gap-4 border-b border-border bg-surface px-5 py-5 lg:flex-row lg:items-start lg:justify-between">
             <div className="flex items-center gap-4">
-              <div className="flex h-14 w-14 items-center justify-center rounded-full border border-border bg-primary/10 text-lg font-semibold text-primary shadow-sm">
-                {selectedGuest ? guestInitials(selectedGuest) : '?'}
-              </div>
+              <GuestNameCell
+                name={selectedGuest ? formatGuestName(selectedGuest) : 'Select a guest'}
+                imageUrl={selectedGuest?.imagePath ?? null}
+                size="lg"
+                className="min-w-0 flex-1"
+              />
               <div>
-                <h2 className="font-display text-2xl text-[var(--color-text-primary)]">
-                  {selectedGuest ? formatGuestName(selectedGuest) : 'Select a guest'}
-                </h2>
                 <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-[var(--color-text-secondary)]">
                   <span>{selectedGuest?.roomNumber ? `Room ${selectedGuest.roomNumber}` : 'No room linked'}</span>
                   {selectedGuest?.stay?.checkIn && selectedGuest?.stay?.checkOut ? (
@@ -377,7 +383,7 @@ export default function SchedulePage() {
 <button
                     key={item.id}
                     type="button"
-                    className={`absolute left-2 right-2 z-10 rounded-xl border border-card-border px-3 py-2 text-left transition-transform`}
+                    className={`absolute left-2 right-2 z-10 rounded-xl border border-[#FE7F2D] bg-[#FE7F2D]/10 px-3 py-2 text-left transition-transform`}
                     style={{ top: `${top}px`, height: `${height}px` }}
                   >
                             <div className="text-xs font-semibold text-[var(--color-text-primary)]">{item.title}</div>

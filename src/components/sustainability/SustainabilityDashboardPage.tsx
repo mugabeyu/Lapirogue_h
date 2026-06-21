@@ -14,6 +14,7 @@ import {
   YAxis,
 } from 'recharts';
 import { PageHeader } from '@/components/PageHeader';
+import { GuestNameCell } from '@/components/ui/GuestNameCell';
 
 type SustainabilityResponse = {
   success: boolean;
@@ -31,6 +32,7 @@ type SustainabilityResponse = {
       guestId: string;
       name: string;
       initials: string;
+      imagePath: string | null;
       tier: string;
       points: number;
     }>;
@@ -139,14 +141,14 @@ export default function SustainabilityDashboardPage() {
             {leaderboard.map((entry) => (
               <li key={entry.guestId} className="flex items-center gap-3">
                 <span className="w-8 text-sm font-medium text-ink-500">#{entry.rank}</span>
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
-                  {entry.initials}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium text-[var(--color-text-primary)]">{entry.name}</p>
-                  <p className="text-xs text-[var(--color-text-secondary)]">{entry.tier} Tier</p>
-                </div>
-                <span className="shrink-0 font-semibold text-primary">{formatPoints(entry.points)} pts</span>
+                <GuestNameCell
+                  name={entry.name}
+                  imageUrl={entry.imagePath}
+                  fallback={entry.initials}
+                  size="sm"
+                  className="min-w-0 flex-1"
+                />
+                <span className="shrink-0 rounded-xl px-2 py-1 text-xs font-semibold eco-points-value">{formatPoints(entry.points)} pts</span>
               </li>
             ))}
           </ol>

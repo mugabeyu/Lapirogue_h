@@ -106,13 +106,14 @@ export async function POST(request: NextRequest) {
       .from('guests')
       .update({
         auth_id: authUser.user.id,
-        temporary_password: null,
-        is_temp_password_changed: true,
       })
       .eq('id', guestRow.id);
 
     if (updateError) {
-      await supabase.auth.admin.deleteUser(authUser.user.id);
+      console.error('Guest auth link update failed', updateError);
+      await supabase.auth.admin.deleteUser(authUser.user.id).catch((deleteError) => {
+        console.error('Failed to roll back auth user after guest link failure', deleteError);
+      });
       return createApiResponse(false, 'Failed to link auth account to guest', { status: 500 });
     }
 

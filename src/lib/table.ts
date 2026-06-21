@@ -1,4 +1,4 @@
-export type TableColumnType = 'text' | 'currency' | 'date' | 'status' | 'number' | 'image';
+export type TableColumnType = 'text' | 'currency' | 'date' | 'status' | 'number' | 'image' | 'guest';
 
 export function getTableValue(row: Record<string, unknown>, key: string) {
   return key.split('.').reduce<unknown>((value, part) => {
@@ -11,6 +11,10 @@ export function formatTableValue(value: unknown, type: TableColumnType | undefin
   if (value === null || value === undefined || value === '') return '-';
 
   if (type === 'image') {
+    return String(value);
+  }
+
+  if (type === 'guest') {
     return String(value);
   }
 

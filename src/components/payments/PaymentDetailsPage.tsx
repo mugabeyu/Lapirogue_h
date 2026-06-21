@@ -1,6 +1,5 @@
 'use client';
 
-import { useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import { Download, Printer } from 'lucide-react';
 import { jsPDF } from 'jspdf';
@@ -46,10 +45,17 @@ type PaymentDetailResponse = {
 type PdfHtmlOptions = {
   margin: [number, number, number, number];
   autoPaging: 'text';
+  x: number;
+  y: number;
+  width: number;
+  windowWidth: number;
   html2canvas: {
     scale: number;
     useCORS: boolean;
     backgroundColor: string;
+    scrollX: number;
+    scrollY: number;
+    logging: boolean;
   };
 };
 
@@ -57,19 +63,51 @@ type HtmlCapablePdf = jsPDF & {
   html: (element: HTMLElement, options: PdfHtmlOptions) => Promise<jsPDF>;
 };
 
+function cloneInvoiceForPdf(invoiceElement: HTMLElement) {
+  const clonedElement = invoiceElement.cloneNode(true) as HTMLElement;
+  clonedElement.id = '';
+  clonedElement.style.position = 'relative';
+  clonedElement.style.left = '0';
+  clonedElement.style.top = '0';
+  clonedElement.style.width = '900px';
+  clonedElement.style.maxWidth = '900px';
+  clonedElement.style.margin = '0';
+  clonedElement.style.background = '#ffffff';
+  clonedElement.style.transform = 'none';
+  clonedElement.style.webkitTransform = 'none';
+  clonedElement.style.webkitTransformOrigin = 'top left';
+
+  Array.from(clonedElement.querySelectorAll<HTMLElement>('*')).forEach((element) => {
+    element.style.overflowX = 'visible';
+    element.style.overflowY = 'visible';
+  });
+
+  const wrapper = document.createElement('div');
+  wrapper.appendChild(clonedElement);
+  wrapper.style.position = 'fixed';
+  wrapper.style.left = '0';
+  wrapper.style.top = '-20000px';
+  wrapper.style.width = '900px';
+  wrapper.style.height = 'auto';
+  wrapper.style.overflow = 'visible';
+  wrapper.style.opacity = '0';
+  wrapper.style.pointerEvents = 'none';
+  wrapper.style.zIndex = '-1';
+  document.body.appendChild(wrapper);
+
+  return wrapper;
+}
+
 export function PaymentDetailsPage() {
   const params = useParams<{ id: string }>();
-  const { data} = useApi<PaymentDetailResponse>(`/api/payments/${params.id}`);
+  const { data } = useApi<PaymentDetailResponse>(`/api/payments/${params.id}`);
 
   const detail = data;
 
-  const guestLabel = useMemo(() => {
-    if (!detail?.guest) return 'Guest';
-    return `${detail.guest.firstName} ${detail.guest.lastName}`.trim();
-  }, [detail?.guest]);
-
   async function emailInvoice() {
     if (!detail) return;
+
+    let wrapper: HTMLElement | null = null;
 
     try {
       const invoiceElement = document.getElementById('invoice-print-area');
@@ -77,15 +115,23 @@ export function PaymentDetailsPage() {
         throw new Error('Invoice layout not found');
       }
 
-      // Generate PDF from the exact visible invoice layout so email attachment matches UI.
+      wrapper = cloneInvoiceForPdf(invoiceElement);
+      const clonedInvoiceElement = wrapper.firstElementChild as HTMLElement;
       const pdf = new jsPDF({ unit: 'pt', format: 'a4' });
-      await (pdf as unknown as HtmlCapablePdf).html(invoiceElement, {
-        margin: [16, 16, 16, 16],
+      await (pdf as unknown as HtmlCapablePdf).html(clonedInvoiceElement, {
+        margin: [24, 24, 24, 24],
         autoPaging: 'text',
+        x: 0,
+        y: 0,
+        width: 547.28,
+        windowWidth: 900,
         html2canvas: {
-          scale: 1,
+          scale: 2,
           useCORS: true,
           backgroundColor: '#ffffff',
+          scrollX: 0,
+          scrollY: 0,
+          logging: false,
         },
       });
 
@@ -101,10 +147,10 @@ export function PaymentDetailsPage() {
     } catch (err) {
       console.error('Send invoice via API failed', err);
       alert('Failed to email invoice');
+    } finally {
+      wrapper?.remove();
     }
   }
-
-  
 
   if (!detail) {
     return <div className="rounded-[24px] border border-border bg-surface p-6 shadow-sm">Payment not found.</div>;
@@ -174,7 +220,7 @@ function InvoiceList({
 
   return (
     <div className="space-y-5">
-      <article id="invoice-print-area" className="rounded-[24px] border border-border bg-surface p-6 md:p-8">
+      <article id="invoice-print-area" className="max-w-[900px] rounded-[24px] border border-border bg-surface p-6 md:p-8">
         <header className="grid gap-6 border-b border-border pb-6 md:grid-cols-2">
           <div>
             <div className="flex items-center gap-3">
@@ -193,15 +239,15 @@ function InvoiceList({
 
           <div className="text-left md:text-right">
             <div className="text-3xl font-semibold text-[var(--color-text-primary)]">INVOICE</div>
-              <div className="mt-3 space-y-1 text-sm text-[var(--color-text-secondary)]">
-                <p>
-                  <span className="text-[var(--color-text-secondary)]">Invoice No:</span> <strong>#{detail.invoiceReference}</strong>
-                </p>
-                <p>
-                  <span className="text-[var(--color-text-secondary)]">Issue Date:</span> <strong>{new Date(detail.generatedAt).toLocaleDateString()}</strong>
-                </p>
+            <div className="mt-3 space-y-1 text-sm text-[var(--color-text-secondary)]">
               <p>
-                  <span className="text-[var(--color-text-secondary)]">Status:</span>{' '}
+                <span className="text-[var(--color-text-secondary)]">Invoice No:</span> <strong>#{detail.invoiceReference}</strong>
+              </p>
+              <p>
+                <span className="text-[var(--color-text-secondary)]">Issue Date:</span> <strong>{new Date(detail.generatedAt).toLocaleDateString()}</strong>
+              </p>
+              <p>
+                <span className="text-[var(--color-text-secondary)]">Status:</span>{' '}
                 <span className="rounded-xl border border-border bg-surface-secondary px-2 py-1 text-xs font-semibold text-[var(--color-text-primary)]">
                   {detail.billingSummary.status.replace('_', ' ')}
                 </span>
@@ -210,27 +256,27 @@ function InvoiceList({
           </div>
         </header>
 
-        <section className="mt-6 border-b border-sand-200 pb-6">
-            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-text-secondary)]">Bill To</div>
-            <h4 className="mt-3 text-2xl font-semibold text-[var(--color-text-primary)]">{guestLabel}</h4>
-            <div className="mt-2 space-y-1 text-sm text-[var(--color-text-secondary)]">
+        <section className="mt-6">
+          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-text-secondary)]">Bill To</div>
+          <h4 className="mt-3 text-2xl font-semibold text-[var(--color-text-primary)]">{guestLabel}</h4>
+          <div className="mt-2 space-y-1 text-sm text-[var(--color-text-secondary)]">
             <p>{detail.guest?.email ?? 'Email not available'}</p>
             <p>{detail.guest?.phone ?? 'Phone not available'}</p>
             <p>Passport: {detail.guest?.passport ?? 'N/A'}</p>
             <p>Nationality: {detail.guest?.nationality ?? 'N/A'}</p>
             <p>Reservation: {detail.reservation?.reservationId ?? 'Walk-in / Guest charge'}</p>
           </div>
-          </section>
+        </section>
 
-        <section className="mt-6 overflow-x-auto">
-          <table className="min-w-full text-left">
+        <section className="mt-6">
+          <table className="w-full table-fixed text-left">
             <thead>
               <tr className="border-b border-border text-xs uppercase tracking-[0.14em] text-[var(--color-text-secondary)]">
-                <th className="pb-3 pr-3">Description</th>
-                <th className="pb-3 pr-3">Date</th>
-                <th className="pb-3 pr-3 text-right">Qty</th>
-                <th className="pb-3 pr-3 text-right">Rate (Rs)</th>
-                <th className="pb-3 text-right">Amount (Rs)</th>
+                <th className="w-[42%] break-words pb-3 pr-3">Description</th>
+                <th className="w-[13%] pb-3 pr-3 text-right">Date</th>
+                <th className="w-[8%] pb-3 pr-3 text-right">Qty</th>
+                <th className="w-[17%] pb-3 pr-3 text-right">Rate (Rs)</th>
+                <th className="w-[20%] pb-3 text-right">Amount (Rs)</th>
               </tr>
             </thead>
             <tbody>
@@ -240,14 +286,14 @@ function InvoiceList({
                 const rate = item.amount;
                 return (
                   <tr key={`${item.label}-${index}`} className="border-b border-border text-sm text-[var(--color-text-primary)]">
-                    <td className="py-4 pr-3">
-                      <div className="font-medium text-[var(--color-text-primary)]">{item.label}</div>
-                      <div className="text-xs text-[var(--color-text-secondary)]">{item.category}</div>
+                    <td className="w-[42%] break-words py-4 pr-3 align-top">
+                      <div className="break-words font-medium text-[var(--color-text-primary)]">{item.label}</div>
+                      <div className="break-words text-xs text-[var(--color-text-secondary)]">{item.category}</div>
                     </td>
-                    <td className="py-4 pr-3">{lineDate}</td>
-                    <td className="py-4 pr-3 text-right">{quantity}</td>
-                    <td className="py-4 pr-3 text-right">{rate.toLocaleString()}</td>
-                    <td className="py-4 text-right font-semibold">{item.amount.toLocaleString()}</td>
+                    <td className="w-[13%] py-4 pr-3 text-right">{lineDate}</td>
+                    <td className="w-[8%] py-4 pr-3 text-right">{quantity}</td>
+                    <td className="w-[17%] py-4 pr-3 text-right">{rate.toLocaleString()}</td>
+                    <td className="w-[20%] py-4 text-right font-semibold">{item.amount.toLocaleString()}</td>
                   </tr>
                 );
               })}
@@ -286,4 +332,3 @@ function InvoiceList({
     </div>
   );
 }
-

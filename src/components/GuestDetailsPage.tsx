@@ -46,7 +46,7 @@ export default function GuestDetailsPage() {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const { data: profile,  mutate } = useApi<GuestProfileData>(
+  const { data: profile, mutate } = useApi<GuestProfileData>(
     `/api/guests/${params.id}/profile`,
   );
 
@@ -64,16 +64,7 @@ export default function GuestDetailsPage() {
     router.push('/guests');
   }
 
-  
-
-  if (!profile) {
-    return (
-      <div className="space-y-6">
-        <BackLink />
-        <div className="card p-8 text-center text-[var(--color-text-secondary)]">Guest not found.</div>
-      </div>
-    );
-  }
+  if (!profile) return null;
 
   const { guest, currentStay, reservations, activityBookings, foodOrders, payments, stats } = profile;
 
@@ -394,4 +385,3 @@ function TabList({
     </div>
   );
 }
-

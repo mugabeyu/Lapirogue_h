@@ -5,6 +5,7 @@ import { SearchIcon } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { StatusBadge } from '@/components/StatusBadge';
 import { LabeledTable } from '@/components/ui/LabeledTable';
+import { GuestTableCell } from '@/components/ui/GuestNameCell';
 import { useApi } from '@/hooks/useApi';
 import { formatTableValue, getTableValue, type TableColumnType } from '@/lib/table';
 
@@ -121,16 +122,20 @@ export default function DataTablePage({
                     const value = getTableValue(row, column.key);
                     return (
                       <td key={column.key} className={`${idx > 0 ? 'border-l border-card-border' : ''} px-6 py-4 text-sm text-[var(--color-text-primary)]`}>
-                        {column.type === 'image' ? (
+                        {column.type === 'guest' ? (
+                          <GuestTableCell
+                            row={row}
+                            value={value}
+                            columnKey={column.key}
+                            columnType={column.type}
+                          />
+                        ) : column.type === 'image' ? (
                           value ? (
-                            <div className="name-with-avatar">
-                              <img
-                                src={String(value)}
-                                alt={column.label}
-                                className="rounded-full border border-card-border object-cover"
-                              />
-                              <span className="font-medium text-[var(--color-text-primary)]">{String(row[column.key] ?? '')}</span>
-                            </div>
+                            <img
+                              src={String(value)}
+                              alt={column.label}
+                              className="h-10 w-10 shrink-0 rounded-full border border-card-border object-cover"
+                            />
                           ) : (
                             <span className="text-[var(--color-text-secondary)]">-</span>
                           )

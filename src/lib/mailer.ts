@@ -1,5 +1,15 @@
 import { resend, FROM_EMAIL } from "./resend";
 
+function escapeHtml(value: string | number | null | undefined) {
+  return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;',
+  }[char] ?? char));
+}
+
 export async function sendGuestPortalInvitationEmail(input: {
   to: string;
   guestName: string;
@@ -112,13 +122,14 @@ export async function sendInvoiceEmail(input: {
   guestName: string;
   invoiceReference: string;
   pdfBase64: string;
+  summaryHtml?: string;
 }) {
   try {
-    const summaryHtml = `
+    const summaryHtml = input.summaryHtml ?? `
       <div style="font-family:Arial,sans-serif;color:#1f2937;line-height:1.6;padding:16px;">
         <h2 style="margin:0 0 10px;color:#0f766e">Your Invoice Is Attached</h2>
-        <p>Hello <strong>${input.guestName}</strong>,</p>
-        <p>Your invoice <strong>#${input.invoiceReference}</strong> is attached as a PDF receipt.</p>
+        <p>Hello <strong>${escapeHtml(input.guestName)}</strong>,</p>
+        <p>Your invoice <strong>#${escapeHtml(input.invoiceReference)}</strong> is attached as a PDF receipt.</p>
         <p>You can download and keep it for your records.</p>
       </div>
     `;

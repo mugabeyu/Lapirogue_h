@@ -9,6 +9,7 @@ import Button from '@/components/ui/Button';
 import { useApi } from '@/hooks/useApi';
 import { AddGuestModal } from '@/components/modals/AddGuestModal';
 import { LabeledTable } from '@/components/ui/LabeledTable';
+import { GuestNameCell } from '@/components/ui/GuestNameCell';
 import { Guest } from '@/types';
 
 function formatDate(value?: string) {
@@ -128,14 +129,11 @@ export default function GuestsPage() {
               {paginatedRows.map((row) => (
                 <tr key={row.id} className="border-b border-border cursor-pointer transition-colors hover:bg-surface-secondary/50" onClick={() => router.push(`/guests/${row.id}`)}>
                   <td className="px-6 py-4 text-sm text-[var(--color-text-primary)]">
-                    <div className="flex items-center gap-3">
-                      {row.imagePath ? (
-                        <img src={row.imagePath} alt={`${row.firstName} ${row.lastName}`} className="rounded-full border border-border object-cover" />
-                      ) : (
-                        <span className="flex items-center justify-center rounded-full border border-border bg-surface-secondary text-xs font-semibold text-[var(--color-text-secondary)]">{(row.firstName?.[0] ?? '') + (row.lastName?.[0] ?? '')}</span>
-                      )}
-                      <span className="font-medium text-[var(--color-text-primary)]">{row.firstName} {row.lastName}</span>
-                    </div>
+                    <GuestNameCell
+                      name={`${row.firstName} ${row.lastName}`.trim()}
+                      imageUrl={row.imagePath}
+                      className="min-w-0"
+                    />
                   </td>
                   <td className="border-l border-border px-6 py-4 text-sm font-medium text-[var(--color-primary)]">{row.guestId}</td>
                   <td className="border-l border-border px-6 py-4 text-sm text-[var(--color-text-primary)]">{row.email ?? '-'}</td>

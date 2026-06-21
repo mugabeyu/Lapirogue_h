@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import useSWR from 'swr';
 import { ArrowDown, ArrowUp, ArrowUpDown, Send, Star } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
+import { GuestNameCell } from '@/components/ui/GuestNameCell';
 
 type SortKey = 'guest' | 'rating' | 'category' | 'comment' | 'date';
 type SortOrder = 'asc' | 'desc';
@@ -11,6 +12,7 @@ type SortOrder = 'asc' | 'desc';
 type FeedbackReview = {
   id: string;
   guest: string;
+  guestImagePath: string | null;
   rating: number;
   category: string;
   comment: string;
@@ -52,7 +54,7 @@ function StarRating({ value }: { value: number }) {
         return (
           <Star
             key={index}
-            className={`h-4 w-4 ${filled ? 'fill-[var(--color-text-primary)] text-[var(--color-text-primary)]' : 'text-[var(--color-border)]'}`}
+            className={`h-4 w-4 ${filled ? 'fill-[var(--color-feedback-star)] text-[var(--color-feedback-star)]' : 'text-[var(--color-border)]'}`}
             strokeWidth={filled ? 0 : 1.5}
           />
         );
@@ -218,7 +220,7 @@ export default function GuestFeedbackPage() {
               <span className="text-[var(--color-text-secondary)]">{row.stars} Star{row.stars === 1 ? '' : 's'}</span>
               <div className="h-3 overflow-hidden rounded-full bg-surface-secondary">
                 <div
-                  className="h-full rounded-full bg-primary transition-all duration-300"
+                  className="h-full rounded-full bg-[var(--color-feedback-star)] transition-all duration-300"
                   style={{ width: `${row.percent}%` }}
                 />
               </div>
@@ -263,7 +265,13 @@ export default function GuestFeedbackPage() {
               {
                 reviews.map((row) => (
                   <tr key={row.id} className="border-b border-border hover:bg-surface-secondary/50">
-                    <td className="px-5 py-4 font-medium text-[var(--color-text-primary)]">{row.guest}</td>
+                    <td className="px-5 py-4 font-medium text-[var(--color-text-primary)]">
+                      <GuestNameCell
+                        name={row.guest}
+                        imageUrl={row.guestImagePath}
+                        size="sm"
+                      />
+                    </td>
                     <td className="border-l border-border px-5 py-4">
                       <StarRating value={row.rating} />
                     </td>

@@ -14,7 +14,7 @@ export default function ReservationsPage() {
       tableCaption="Hotel reservations"
       columns={[
         { key: 'reservationId', label: 'Reservation ID' },
-        { key: 'guest', label: 'Guest name' },
+        { key: 'guest', label: 'Guest name', type: 'guest' },
         { key: 'room', label: 'Room number' },
         { key: 'checkIn', label: 'Check-in date', type: 'date' },
         { key: 'checkOut', label: 'Check-out date', type: 'date' },

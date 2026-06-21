@@ -28,6 +28,7 @@ type GuestRow = {
   id: string;
   first_name?: string | null;
   last_name?: string | null;
+  image_path?: string | null;
 };
 
 function initials(first?: string | null, last?: string | null) {
@@ -97,7 +98,7 @@ async function loadGuestNames(guestIds: string[]): Promise<Map<string, GuestRow>
 
   const { data, error } = await getSupabaseAdmin()
     .from('guests')
-    .select('id, first_name, last_name')
+    .select('id, first_name, last_name, image_path')
     .in('id', guestIds);
 
   if (error?.code === 'PGRST205') return new Map<string, GuestRow>();
@@ -186,13 +187,14 @@ export async function GET(request: NextRequest) {
       carbonOffsetTrend: percentChange(recentCarbon, priorCarbon),
     };
 
-    const guestTotals = new Map<string, { points: number; firstName?: string | null; lastName?: string | null }>();
+    const guestTotals = new Map<string, { points: number; firstName?: string | null; lastName?: string | null; imagePath?: string | null }>();
     for (const row of events) {
       const guest = guestsByName.get(row.guest_id);
       const existing = guestTotals.get(row.guest_id) ?? {
         points: 0,
         firstName: guest?.first_name,
         lastName: guest?.last_name,
+        imagePath: guest?.image_path ?? null,
       };
       existing.points += row.points;
       guestTotals.set(row.guest_id, existing);
@@ -203,6 +205,7 @@ export async function GET(request: NextRequest) {
         guestId,
         name: `${guest.firstName ?? ''} ${guest.lastName ?? ''}`.trim() || 'Guest',
         initials: initials(guest.firstName, guest.lastName),
+        imagePath: guest.imagePath ?? null,
         tier: resolveTier(guest.points, tiers),
         points: guest.points,
       }))

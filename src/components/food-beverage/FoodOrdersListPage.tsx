@@ -5,12 +5,14 @@ import { useEffect, useMemo, useState } from 'react';
 import useSWR from 'swr';
 import { Filter, Plus, Search } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
+import { GuestNameCell } from '@/components/ui/GuestNameCell';
 import { formatMenuPrice } from '@/lib/menu';
 
 type FoodOrder = {
   id: string;
   orderId: string | null;
   guest: string | null;
+  guestImagePath?: string | null;
   room: string | null;
   itemsSummary: string;
   total: number;
@@ -169,8 +171,12 @@ export default function FoodOrdersListPage() {
                   <tr key={order.id} className="border-b border-border hover:bg-surface-secondary/50">
                     <td className="px-5 py-4 font-medium text-[var(--color-text-primary)]">{order.orderId ?? order.id.slice(0, 8)}</td>
                     <td className="border-l border-border px-5 py-4">
-                      <p className="font-medium text-[var(--color-text-primary)]">{order.guest ?? 'Walk-in'}</p>
-                      <p className="text-xs text-[var(--color-text-secondary)]">{order.room ? `Room ${order.room}` : '—'}</p>
+                      <GuestNameCell
+                        name={order.guest ?? 'Walk-in'}
+                        imageUrl={order.guestImagePath ?? null}
+                        size="sm"
+                      />
+                      <p className="mt-1 text-xs text-[var(--color-text-secondary)]">{order.room ? `Room ${order.room}` : '—'}</p>
                     </td>
                     <td className="border-l border-border px-5 py-4 text-[var(--color-text-primary)]">{order.itemsSummary}</td>
                     <td className="border-l border-border px-5 py-4 font-medium text-[var(--color-text-primary)]">{formatMenuPrice(order.total)}</td>

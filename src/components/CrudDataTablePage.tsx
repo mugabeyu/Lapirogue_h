@@ -17,6 +17,7 @@ import { MenuItemModal } from '@/components/modals/MenuItemModal';
 import { PaymentModal } from '@/components/modals/PaymentModal';
 import { StaffModal } from '@/components/modals/StaffModal';
 import { LabeledTable } from '@/components/ui/LabeledTable';
+import { GuestTableCell } from '@/components/ui/GuestNameCell';
 import { formatTableValue, getTableValue, type TableColumnType } from '@/lib/table';
 
 export type CrudColumn = {
@@ -235,21 +236,27 @@ export default function CrudDataTablePage({
                       const value = getTableValue(row, column.key);
                       return (
                         <td key={column.key} className={`${idx > 0 ? 'border-l border-border' : ''} px-6 py-4 text-sm text-[var(--color-text-primary)]`}>
-                          {column.key === 'name' ? (
-                            <div className="flex items-center gap-3">
-                              {(row as Record<string, unknown>).imagePath ? (
-                                <img src={String((row as Record<string, unknown>).imagePath)} alt={String(value)} className="rounded-full border border-border object-cover" />
-                              ) : (
-                                <span className="flex items-center justify-center rounded-full border border-border bg-surface-secondary text-xs font-semibold text-[var(--color-text-secondary)]">{String(value ?? '')[0]}</span>
-                              )}
-                              <span className="font-medium text-[var(--color-text-primary)]">{formatTableValue(value, column.type)}</span>
-                            </div>
+                          {column.type === 'guest' || column.key === 'guest' ? (
+                            <GuestTableCell
+                              row={row}
+                              value={value}
+                              columnKey={column.key}
+                              columnType={column.type}
+                            />
+                          ) : column.key === 'name' ? (
+                            <GuestTableCell
+                              row={row}
+                              value={value}
+                              columnKey={column.key}
+                              columnType={column.type}
+                            />
                           ) : column.type === 'image' ? (
                             value ? (
-                              <div className="name-with-avatar">
-                                <img src={String(value)} alt={String(row[column.key] ?? '')} className="h-10 w-10 rounded-full border border-border object-cover" />
-                                <span className="font-medium text-[var(--color-text-primary)]">{String(row[column.key] ?? '')}</span>
-                              </div>
+                              <img
+                                src={String(value)}
+                                alt={column.label}
+                                className="h-10 w-10 shrink-0 rounded-full border border-border object-cover"
+                              />
                             ) : (
                               <span className="text-[var(--color-text-secondary)]">-</span>
                             )
