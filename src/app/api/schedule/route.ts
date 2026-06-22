@@ -368,9 +368,14 @@ export async function PATCH(request: NextRequest) {
 
     if (action === 'auto-complete') {
       const supabase = getSupabaseAdmin();
-      const { data, error } = await supabase.rpc('auto_complete_schedule_items');
+      const { data, error } = await supabase
+        .from('guest_schedule_items')
+        .update({ status: 'COMPLETED' })
+        .lt('end_at', new Date().toISOString())
+        .eq('status', 'SCHEDULED')
+        .select();
       if (error) throw error;
-      return NextResponse.json({ success: true, data });
+      return NextResponse.json({ success: true, data: data ?? [] });
     }
 
     if (action === 'mark-completed') {
@@ -379,7 +384,12 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ success: false, error: 'itemId required' }, { status: 400 });
       }
       const supabase = getSupabaseAdmin();
-      const { data, error } = await supabase.rpc('mark_schedule_item_completed', { p_item_id: itemId });
+      const { data, error } = await supabase
+        .from('guest_schedule_items')
+        .update({ status: 'COMPLETED' })
+        .eq('id', itemId)
+        .select()
+        .single();
       if (error) throw error;
       return NextResponse.json({ success: true, data });
     }

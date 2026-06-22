@@ -178,7 +178,7 @@ export default function RegisterPage() {
           <h1 className="mb-4 text-2xl font-semibold text-[var(--color-text-primary)]">
             Invalid Invitation
           </h1>
-          <p className="text-red-500 mb-6">
+          <p className="text-[var(--color-text-secondary)] mb-6">
             {loadError || "This invitation link is invalid or has expired."}
           </p>
           {inviteType === "guest" ? (
