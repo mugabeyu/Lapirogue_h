@@ -72,6 +72,23 @@ async function findAuthUserByEmail(supabase: ReturnType<typeof getSupabaseAdmin>
   return (data.users ?? []).find((user) => user.email?.toLowerCase() === email.toLowerCase()) ?? null;
 }
 
+function normalizeStorageUrl(admin: ReturnType<typeof getSupabaseAdmin>, value: string | null | undefined) {
+  if (!value) return null;
+  if (/^https?:\/\//i.test(value)) return value;
+
+  let path = value;
+  const marker = '/storage/v1/object/public/staff-avatars/';
+  const markerIndex = path.indexOf(marker);
+  if (markerIndex !== -1) {
+    path = decodeURIComponent(path.slice(markerIndex + marker.length));
+  }
+  if (path.startsWith('staff-avatars/')) {
+    path = path.replace(/^staff-avatars\//, '');
+  }
+
+  return admin.storage.from('staff-avatars').getPublicUrl(path).data.publicUrl ?? value;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const search = request.nextUrl.searchParams.get('search') ?? '';
@@ -89,20 +106,31 @@ export async function GET(request: NextRequest) {
       .map((member: StaffRow) => member.email)
       .filter((email): email is string => Boolean(email));
 
-    const mainReceptionists = staffEmails.length
-      ? await supabase.from('profiles').select('email, is_main').in('email', staffEmails)
-      : { data: [], error: null };
+    const [mainReceptionists, profiles] = await Promise.all([
+      staffEmails.length
+        ? supabase.from('profiles').select('email, is_main').in('email', staffEmails)
+        : Promise.resolve({ data: [], error: null }),
+      staffEmails.length
+        ? supabase.from('profiles').select('email, avatar_url').in('email', staffEmails)
+        : Promise.resolve({ data: [], error: null }),
+    ]);
 
     if (mainReceptionists.error) throw mainReceptionists.error;
+    if (profiles.error) throw profiles.error;
 
     const mainReceptionistSet = new Set(
       (mainReceptionists.data ?? []).filter((profile) => profile.is_main).map((profile) => String(profile.email ?? '').toLowerCase()),
+    );
+
+    const avatarByEmail = new Map(
+      (profiles.data ?? []).map((p) => [String(p.email ?? '').toLowerCase(), p.avatar_url]),
     );
 
     return NextResponse.json({
       success: true,
       data: (data ?? []).map((member: StaffRow) => {
         const isMain = Boolean(member.email && mainReceptionistSet.has(member.email.toLowerCase()));
+        const avatarUrl = normalizeStorageUrl(supabase, avatarByEmail.get(member.email.toLowerCase()) ?? member.image_path);
         return {
           id: member.id,
           employeeCode: member.employee_code,
@@ -115,7 +143,7 @@ export async function GET(request: NextRequest) {
           role: isMain ? 'MAIN_RECEPTIONIST' : 'RECEPTIONIST',
           roleLabel: formatStaffRoleLabel(isMain),
           isMain,
-          imagePath: member.image_path,
+          imagePath: avatarUrl,
         };
       }),
     });
@@ -337,8 +365,6 @@ export async function PUT(request: NextRequest) {
         email: updateData.email,
         phone: updateData.phone,
         status: updateData.status,
-        blocked_by: updateData.status === 'INACTIVE' ? actorId : null,
-        blocked_at: updateData.status === 'INACTIVE' ? new Date().toISOString() : null,
       })
       .eq('id', id)
       .select('*')

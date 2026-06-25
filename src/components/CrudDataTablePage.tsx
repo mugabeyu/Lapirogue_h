@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Pencil, Plus, SearchIcon, Trash2 } from 'lucide-react';
+import { Lock, Pencil, Plus, SearchIcon, Trash2, Unlock } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { StatusBadge } from '@/components/StatusBadge';
 import Button from '@/components/ui/Button';
@@ -41,6 +41,8 @@ type CrudDataTablePageProps = {
   rowHrefBase?: string;
   disableEdit?: boolean;
   disableDelete?: boolean;
+  blockable?: boolean;
+  onBlockToggle?: (row: Record<string, unknown>) => Promise<void>;
   tableCaption?: string;
   entityName?: string;
   emptyMessage?: string;
@@ -85,6 +87,8 @@ export default function CrudDataTablePage({
   rowHrefBase,
   disableEdit = false,
   disableDelete = false,
+  blockable = false,
+  onBlockToggle,
   tableCaption,
   entityName,
   emptyMessage,
@@ -96,6 +100,8 @@ export default function CrudDataTablePage({
   const [editRow, setEditRow] = useState<Record<string, unknown> | null>(null);
   const [deleteRow, setDeleteRow] = useState<Record<string, unknown> | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [blockRow, setBlockRow] = useState<Record<string, unknown> | null>(null);
+  const [isBlocking, setIsBlocking] = useState(false);
   const router = useRouter();
 
   const url = useMemo(() => {
@@ -142,6 +148,20 @@ export default function CrudDataTablePage({
     toast.success('Record deleted');
     setDeleteRow(null);
     await mutate();
+  }
+
+  async function handleBlockToggle() {
+    if (!blockRow?.id || !onBlockToggle) return;
+    setIsBlocking(true);
+    try {
+      await onBlockToggle(blockRow);
+      setBlockRow(null);
+      await mutate();
+    } catch {
+      toast.error('Unable to update staff status');
+    } finally {
+      setIsBlocking(false);
+    }
   }
 
   const closeModal = () => {
@@ -283,6 +303,27 @@ export default function CrudDataTablePage({
                               <Pencil className="h-4 w-4" />
                             </button>
                           )}
+                            {blockable && (
+                              <button
+                                type="button"
+                                className={`rounded-lg p-2 ${
+                                  String(row.status ?? '') === 'ACTIVE'
+                                    ? 'text-[var(--color-text-secondary)] hover:bg-warning/10 hover:text-[var(--color-warning)]'
+                                    : 'text-[var(--color-text-secondary)] hover:bg-success/10 hover:text-[var(--color-success)]'
+                                }`}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  setBlockRow(row);
+                                }}
+                                aria-label={String(row.status ?? '') === 'ACTIVE' ? `Block ${rowLabel}` : `Unblock ${rowLabel}`}
+                              >
+                                {String(row.status ?? '') === 'ACTIVE' ? (
+                                  <Lock className="h-4 w-4" />
+                                ) : (
+                                  <Unlock className="h-4 w-4" />
+                                )}
+                              </button>
+                            )}
                             {!disableDelete && entityType !== 'payment' && (
                             <button
                               type="button"
@@ -336,6 +377,22 @@ export default function CrudDataTablePage({
           message="Are you sure you want to delete this record? This action cannot be undone."
           confirmLabel="Delete"
           isLoading={isDeleting}
+        />
+      )}
+
+      {blockable && (
+        <ConfirmDialog
+          isOpen={Boolean(blockRow)}
+          onClose={() => setBlockRow(null)}
+          onConfirm={handleBlockToggle}
+          title={String(blockRow?.status ?? '') === 'ACTIVE' ? 'Block Staff' : 'Unblock Staff'}
+          message={
+            String(blockRow?.status ?? '') === 'ACTIVE'
+              ? `Are you sure you want to block ${String(blockRow?.name ?? 'this staff member')}? They will not be able to log in until unblocked.`
+              : `Are you sure you want to unblock ${String(blockRow?.name ?? 'this staff member')}? They will regain access to the system.`
+          }
+          confirmLabel={String(blockRow?.status ?? '') === 'ACTIVE' ? 'Block' : 'Unblock'}
+          isLoading={isBlocking}
         />
       )}
     </div>
