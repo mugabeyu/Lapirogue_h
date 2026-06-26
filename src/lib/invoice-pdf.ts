@@ -22,11 +22,11 @@ export type InvoicePdfInput = {
   payments: Array<{ paymentId: string; amount: number; method: string; status: string }>;
 };
 
-const pageWidth = 595.28;
-const pageHeight = 841.89;
-const margin = 36;
+const pageWidth = 600;
+const pageHeight = 800;
+const margin = 30;
 const contentWidth = pageWidth - margin * 2;
-const tableLineHeight = 11;
+const tableLineHeight = 9;
 
 function currency(value: number) {
   return `Rs ${value.toLocaleString()}`;
@@ -75,7 +75,7 @@ export function buildInvoicePdfBase64(input: InvoicePdfInput) {
     pdf.setFillColor(29, 58, 50);
     pdf.rect(margin, yy - 10, contentWidth, 18, 'F');
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(10.5);
+    pdf.setFontSize(9);
     pdf.setTextColor(255, 255, 255);
     pdf.text(title, margin + 8, yy + 3);
     pdf.setTextColor(31, 41, 55);
@@ -86,7 +86,7 @@ export function buildInvoicePdfBase64(input: InvoicePdfInput) {
     pdf.setFillColor(243, 244, 246);
     pdf.rect(margin, yy - 13, contentWidth, 18, 'F');
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(8);
+    pdf.setFontSize(7);
     pdf.setTextColor(75, 85, 99);
     pdf.text('Description', margin, yy);
     pdf.text('Date', margin + contentWidth * 0.42, yy, { align: 'right' });
@@ -98,20 +98,20 @@ export function buildInvoicePdfBase64(input: InvoicePdfInput) {
 
   // Header in the style of the Payment Details receipt.
   pdf.setFillColor(29, 58, 50);
-  pdf.rect(0, 0, pageWidth, 112, 'F');
+  pdf.rect(0, 0, pageWidth, 110, 'F');
   pdf.setTextColor(255, 255, 255);
   pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(22);
+  pdf.setFontSize(18);
   pdf.text('La Pirogue', margin, 34);
-  pdf.setFontSize(9.5);
+  pdf.setFontSize(8);
   pdf.text('Wolmar, Flic en Flac, Mauritius', margin, 52);
   pdf.text('Tel: +230 403 3900 | info@lapirogue.mu', margin, 68);
   pdf.text('VAT No: 12345678', margin, 84);
 
   pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(20);
+  pdf.setFontSize(16);
   pdf.text('INVOICE', margin + contentWidth, 34, { align: 'right' });
-  pdf.setFontSize(9.5);
+  pdf.setFontSize(8);
   pdf.text(`Invoice No: #${input.invoiceReference}`, margin + contentWidth, 58, { align: 'right' });
   pdf.text(`Issue Date: ${new Date(input.generatedAt).toLocaleDateString()}`, margin + contentWidth, 74, { align: 'right' });
 
@@ -121,7 +121,7 @@ export function buildInvoicePdfBase64(input: InvoicePdfInput) {
   pdf.roundedRect(margin + contentWidth - statusWidth, 86, statusWidth, 18, 4, 4, 'F');
   pdf.setTextColor(31, 41, 55);
   pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(8.5);
+  pdf.setFontSize(7.5);
   pdf.text(status, margin + contentWidth - statusWidth / 2, 98, { align: 'center' });
 
   pdf.setTextColor(31, 41, 55);
@@ -130,28 +130,28 @@ export function buildInvoicePdfBase64(input: InvoicePdfInput) {
 
   // Bill To and invoice metadata.
   pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(14);
+  pdf.setFontSize(11);
   pdf.setTextColor(31, 41, 55);
-  y = write(input.guestName, margin, y, contentWidth * 0.62, 14, 'bold');
+  y = write(input.guestName, margin, y, contentWidth * 0.62, 11, 'bold');
   y += 4;
   pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(9.5);
-  y = write(input.guestEmail, margin, y, contentWidth * 0.62, 9.5);
-  y = write(input.guestPhone, margin, y, contentWidth * 0.62, 9.5);
-  y = write(`Passport: ${text(input.guestPassport)}`, margin, y, contentWidth * 0.62, 9.5);
-  y = write(`Nationality: ${text(input.guestNationality)}`, margin, y, contentWidth * 0.62, 9.5);
-  y = write(`Reservation: ${text(input.reservationLabel, 'Walk-in / Guest charge')}`, margin, y, contentWidth * 0.62, 9.5);
+  pdf.setFontSize(8);
+  y = write(input.guestEmail, margin, y, contentWidth * 0.62, 8);
+  y = write(input.guestPhone, margin, y, contentWidth * 0.62, 8);
+  y = write(`Passport: ${text(input.guestPassport)}`, margin, y, contentWidth * 0.62, 8);
+  y = write(`Nationality: ${text(input.guestNationality)}`, margin, y, contentWidth * 0.62, 8);
+  y = write(`Reservation: ${text(input.reservationLabel, 'Walk-in / Guest charge')}`, margin, y, contentWidth * 0.62, 8);
   y += 8;
 
   const metaRight = margin + contentWidth * 0.66;
   const metaWidth = contentWidth * 0.34;
   y = Math.max(y, 184);
-  y = write('Payment method', metaRight, y, metaWidth, 8.5, 'bold');
-  y = write(input.paymentMethod, metaRight, y, metaWidth, 8.5);
-  y = write('Payment status', metaRight, y, metaWidth, 8.5, 'bold');
-  y = write(input.paymentStatus, metaRight, y, metaWidth, 8.5);
-  y = write('Payment reference', metaRight, y, metaWidth, 8.5, 'bold');
-  y = write(text(input.paymentReference), metaRight, y, metaWidth, 8.5);
+  y = write('Payment method', metaRight, y, metaWidth, 7.5, 'bold');
+  y = write(input.paymentMethod, metaRight, y, metaWidth, 7.5);
+  y = write('Payment status', metaRight, y, metaWidth, 7.5, 'bold');
+  y = write(input.paymentStatus, metaRight, y, metaWidth, 7.5);
+  y = write('Payment reference', metaRight, y, metaWidth, 7.5, 'bold');
+  y = write(text(input.paymentReference), metaRight, y, metaWidth, 7.5);
   y += 8;
 
   // Itemized charges table.
@@ -172,7 +172,7 @@ export function buildInvoicePdfBase64(input: InvoicePdfInput) {
 
   if (input.items.length === 0) {
     addPageIfNeeded(42);
-    y = write('No itemized charges found.', margin, y, contentWidth, 9.5);
+    y = write('No itemized charges found.', margin, y, contentWidth, 8);
     y += 12;
   } else {
     input.items.forEach((item, index) => {
@@ -190,7 +190,7 @@ export function buildInvoicePdfBase64(input: InvoicePdfInput) {
       if (y < 150) drawTableHeader(y);
 
       pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(8.5);
+      pdf.setFontSize(7);
       pdf.setTextColor(31, 41, 55);
       pdf.text(descLines, margin + 3, y);
       pdf.text(dateLines, xDate + dateWidth - 3, y, { align: 'right' });
@@ -210,13 +210,13 @@ export function buildInvoicePdfBase64(input: InvoicePdfInput) {
     y = writeBlockTitle('Payment history snapshot', y);
     input.payments.slice(0, 12).forEach((payment, index) => {
       addPageIfNeeded(42);
-      y = write(`${index + 1}. ${payment.paymentId}`, margin, y, contentWidth * 0.55, 9, 'bold');
-      y = write(`${payment.method} · ${payment.status}`, margin, y, contentWidth * 0.55, 9);
-      y = write(currency(Number(payment.amount)), margin + contentWidth * 0.62, y - tableLineHeight, contentWidth * 0.38, 9, 'bold', 'right');
+      y = write(`${index + 1}. ${payment.paymentId}`, margin, y, contentWidth * 0.55, 7.5, 'bold');
+      y = write(`${payment.method} · ${payment.status}`, margin, y, contentWidth * 0.55, 7.5);
+      y = write(currency(Number(payment.amount)), margin + contentWidth * 0.62, y - tableLineHeight, contentWidth * 0.38, 7.5, 'bold', 'right');
       y += 4;
     });
     if (input.payments.length > 12) {
-      y = write('Additional payment records are available in the guest account.', margin, y, contentWidth, 8.5);
+      y = write('Additional payment records are available in the guest account.', margin, y, contentWidth, 7.5);
       y += 8;
     }
   }
@@ -231,10 +231,10 @@ export function buildInvoicePdfBase64(input: InvoicePdfInput) {
   const rightX = margin + contentWidth - rightWidth;
 
   pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(9);
-  y = write(text(input.paymentNotes, 'Payment is due upon receipt. We accept major cards, bank transfers, and cash.'), margin, y, leftWidth, 9);
-  y = write(`Reference: ${text(input.paymentReference)}`, margin, y, leftWidth, 9);
-  y = write(`Recorded by: ${text(input.paymentNotes, 'Recorded in system')}`, margin, y, leftWidth, 9);
+  pdf.setFontSize(7.5);
+  y = write(text(input.paymentNotes, 'Payment is due upon receipt. We accept major cards, bank transfers, and cash.'), margin, y, leftWidth, 7.5);
+  y = write(`Reference: ${text(input.paymentReference)}`, margin, y, leftWidth, 7.5);
+  y = write(`Recorded by: ${text(input.paymentNotes, 'Recorded in system')}`, margin, y, leftWidth, 7.5);
 
   let totalsY = footerTop;
   const totals: Array<[string, number, boolean?]> = [
@@ -245,22 +245,22 @@ export function buildInvoicePdfBase64(input: InvoicePdfInput) {
 
   totals.forEach(([label, value, bold = false]) => {
     pdf.setFont('helvetica', bold ? 'bold' : 'normal');
-    pdf.setFontSize(bold ? 11 : 9);
+    pdf.setFontSize(bold ? 9 : 7.5);
     pdf.text(label, rightX, totalsY, { align: 'left' });
     pdf.text(currency(value), rightX + rightWidth, totalsY, { align: 'right' });
-    totalsY += bold ? 24 : 18;
+    totalsY += bold ? 22 : 16;
     if (bold) {
       pdf.setDrawColor(229, 231, 235);
-      pdf.line(rightX, totalsY - 8, rightX + rightWidth, totalsY - 8);
+      pdf.line(rightX, totalsY - 6, rightX + rightWidth, totalsY - 6);
     }
   });
   y = Math.max(y, totalsY + 8);
 
-  y += 12;
+  y += 10;
   pdf.setFont('helvetica', 'italic');
-  pdf.setFontSize(10);
+  pdf.setFontSize(8);
   pdf.setTextColor(100, 116, 139);
-  y = write('Thank you for staying with La Pirogue Hotel. We hope to welcome you back soon.', margin, y, contentWidth, 10);
+  y = write('Thank you for staying with La Pirogue Hotel. We hope to welcome you back soon.', margin, y, contentWidth, 8);
 
   const output = pdf.output('arraybuffer');
   return Buffer.from(output).toString('base64');

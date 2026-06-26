@@ -117,14 +117,19 @@ export function PaymentDetailsPage() {
 
       wrapper = cloneInvoiceForPdf(invoiceElement);
       const clonedInvoiceElement = wrapper.firstElementChild as HTMLElement;
+      const contentWidth = parseFloat(clonedInvoiceElement.style.width);
       const pdf = new jsPDF({ unit: 'pt', format: 'a4' });
+      const pdfPageWidth = pdf.internal.pageSize.getWidth();
+      const margin = 24; // 24pt (~0.33in) margins on each side
+      const usablePdfWidth = pdfPageWidth - margin * 2;
+
       await (pdf as unknown as HtmlCapablePdf).html(clonedInvoiceElement, {
-        margin: [24, 24, 24, 24],
+        margin: [margin, margin, margin, margin],
         autoPaging: 'text',
         x: 0,
         y: 0,
-        width: 547.28,
-        windowWidth: 900,
+        width: usablePdfWidth,
+        windowWidth: contentWidth,
         html2canvas: {
           scale: 2,
           useCORS: true,

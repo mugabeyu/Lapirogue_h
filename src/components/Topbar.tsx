@@ -1,6 +1,6 @@
 'use client';
 
-import { BellIcon, MenuIcon, PlusIcon, UserIcon, UsersIcon } from 'lucide-react';
+import { BellIcon, CalendarIcon, MenuIcon, UserIcon, UsersIcon } from 'lucide-react';
 
 import { User } from '@/types';
 import { useSidebar } from '@/contexts/SidebarContext';
@@ -129,11 +129,11 @@ export default function Topbar() {
 
         <nav className="flex items-center gap-3">
           <Link
-            href="/reservations/new"
+            href="/schedule"
             className="inline-flex items-center gap-2 rounded-xl bg-[var(--color-button-primary)] px-4 py-2 text-sm font-medium text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-button-primary-hover)] active:bg-[var(--color-button-primary-active)]"
           >
-            <PlusIcon className="h-4 w-4" />
-            <span className="hidden sm:inline">Add Reservation</span>
+            <CalendarIcon className="h-4 w-4" />
+            <span className="hidden sm:inline">Daily Schedules</span>
           </Link>
           <button
             type="button"
