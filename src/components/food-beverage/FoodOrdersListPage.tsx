@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import useSWR from 'swr';
-import { Filter, Plus, Search } from 'lucide-react';
+import { Plus, Search } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { GuestNameCell } from '@/components/ui/GuestNameCell';
 import { formatMenuPrice } from '@/lib/menu';
@@ -133,11 +133,7 @@ export default function FoodOrdersListPage() {
           <option value="SERVED">Delivered</option>
           <option value="CANCELLED">Cancelled</option>
         </select>
-        <button type="button" className="btn-secondary inline-flex items-center justify-center gap-2 sm:w-auto">
-          <Filter className="h-4 w-4" />
-          Filter Status
-        </button>
-      </div>
+        </div>
 
       <section className="card" aria-labelledby="food-orders-table-heading">
         <div className="px-5 py-4 border-b border-border">
