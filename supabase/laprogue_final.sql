@@ -579,6 +579,27 @@ CREATE INDEX IF NOT EXISTS idx_eco_actions_active ON public.eco_actions(is_activ
 CREATE INDEX IF NOT EXISTS idx_guest_eco_actions_guest_id ON public.guest_eco_actions(guest_id);
 
 -- =============================================
+-- ROLES TABLE (for staff management)
+-- =============================================
+CREATE TABLE IF NOT EXISTS public.roles (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    name text NOT NULL UNIQUE,
+    description text,
+    permissions jsonb DEFAULT '{}'::jsonb,
+    created_at timestamptz DEFAULT now() NOT NULL,
+    updated_at timestamptz DEFAULT now() NOT NULL
+);
+
+-- Seed default roles (run only if table is empty)
+INSERT INTO public.roles (name, description, permissions)
+SELECT 'MAIN_RECEPTIONIST', 'Full administrative access to all hotel management features', '{"manage_staff": true, "manage_rooms": true, "manage_reservations": true, "manage_payments": true, "manage_guests": true, "view_reports": true}'::jsonb
+WHERE NOT EXISTS (SELECT 1 FROM public.roles WHERE name = 'MAIN_RECEPTIONIST');
+
+INSERT INTO public.roles (name, description, permissions)
+SELECT 'RECEPTIONIST', 'Standard receptionist access with limited permissions', '{"manage_reservations": true, "manage_guests": true}'::jsonb
+WHERE NOT EXISTS (SELECT 1 FROM public.roles WHERE name = 'RECEPTIONIST');
+
+-- =============================================
 -- FUNCTIONS & TRIGGERS
 -- =============================================
 CREATE OR REPLACE FUNCTION public.set_updated_at()
@@ -593,7 +614,7 @@ DO $$
 DECLARE t text;
 BEGIN
   FOR t IN SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename IN (
-    'profiles','guests','rooms','reservations','activities','activity_bookings','guest_schedule_items', 'menu_items','food_orders','guest_orders','guest_order_items','payments','payment_extra_items','messages','hotel_service_categories','hotel_services','emergency_contacts','eco_points_tx','eco_actions','guest_eco_actions','site_content_pages','itinerary_events'
+    'profiles','guests','rooms','reservations','activities','activity_bookings','guest_schedule_items', 'menu_items','food_orders','guest_orders','guest_order_items','payments','payment_extra_items','messages','hotel_service_categories','hotel_services','emergency_contacts','eco_points_tx','eco_actions','guest_eco_actions','site_content_pages','itinerary_events','roles'
   ) LOOP
     BEGIN
       EXECUTE format('CREATE TRIGGER trg_%s_updated_at BEFORE UPDATE ON public.%I FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();', t, t);
@@ -635,7 +656,7 @@ DO $$
 DECLARE t text;
 BEGIN
   FOR t IN SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename IN (
-    'profiles','guests','reservations','activities','payments','food_orders','messages','guest_feedback','hotel_services','guest_orders','eco_points_tx','guest_eco_actions'
+    'profiles','guests','reservations','activities','payments','food_orders','messages','guest_feedback','hotel_services','guest_orders','eco_points_tx','guest_eco_actions','roles'
   ) LOOP
     BEGIN
       EXECUTE format('CREATE TRIGGER trg_audit_%s AFTER INSERT OR UPDATE ON public.%I FOR EACH ROW EXECUTE FUNCTION public.log_audit_event();', t, t);
@@ -662,6 +683,7 @@ ALTER TABLE IF EXISTS public.eco_points_tx ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS public.guest_orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS public.eco_actions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS public.guest_eco_actions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.roles ENABLE ROW LEVEL SECURITY;
 
 -- Guest policies
 DO $$ BEGIN
@@ -701,6 +723,13 @@ DO $$ BEGIN
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='eco_points_balance' AND policyname='Guests view own balance') THEN
     CREATE POLICY "Guests view own balance" ON public.eco_points_balance FOR SELECT USING (guest_id IN (SELECT id FROM public.guests WHERE auth_id = auth.uid()));
+  END IF;
+  -- Roles read-only for staff
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='roles' AND policyname='Roles staff read-only') THEN
+    CREATE POLICY "Roles staff read-only" ON public.roles FOR SELECT USING (EXISTS (SELECT 1 FROM public.profiles WHERE auth_id = auth.uid() AND role IN ('MAIN_RECEPTIONIST','RECEPTIONIST')));
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='roles' AND policyname='Roles admin full access') THEN
+    CREATE POLICY "Roles admin full access" ON public.roles FOR ALL USING (EXISTS (SELECT 1 FROM public.profiles WHERE auth_id = auth.uid() AND role = 'MAIN_RECEPTIONIST'));
   END IF;
 END$$;
 

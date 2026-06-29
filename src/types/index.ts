@@ -310,6 +310,15 @@ export interface SustainabilityActivity {
   updatedAt: string;
 }
 
+export interface DbRole {
+  id: string;
+  name: string;
+  description?: string;
+  permissions?: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface EcaTier {
   id: string;
   name: string;

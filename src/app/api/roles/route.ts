@@ -21,8 +21,16 @@ export async function GET() {
 
     if (error) throw error;
     return NextResponse.json({ success: true, data });
-  } catch {
-    return NextResponse.json({ success: false, error: 'Failed to fetch roles' }, { status: 500 });
+  } catch (error) {
+    return NextResponse.json({
+      success: false,
+      error: 'Failed to fetch roles',
+      details: process.env.NODE_ENV === 'production'
+        ? undefined
+        : error instanceof Error
+          ? error.message
+          : String(error),
+    }, { status: 500 });
   }
 }
 
@@ -48,7 +56,15 @@ export async function POST(request: NextRequest) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ success: false, error: 'Validation error', details: error.errors }, { status: 400 });
     }
-    return NextResponse.json({ success: false, error: 'Failed to create role' }, { status: 500 });
+    return NextResponse.json({
+      success: false,
+      error: 'Failed to create role',
+      details: process.env.NODE_ENV === 'production'
+        ? undefined
+        : error instanceof Error
+          ? error.message
+          : String(error),
+    }, { status: 500 });
   }
 }
 
@@ -76,7 +92,15 @@ export async function PUT(request: NextRequest) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ success: false, error: 'Validation error', details: error.errors }, { status: 400 });
     }
-    return NextResponse.json({ success: false, error: 'Failed to update role' }, { status: 500 });
+    return NextResponse.json({
+      success: false,
+      error: 'Failed to update role',
+      details: process.env.NODE_ENV === 'production'
+        ? undefined
+        : error instanceof Error
+          ? error.message
+          : String(error),
+    }, { status: 500 });
   }
 }
 
@@ -90,7 +114,15 @@ export async function DELETE(request: NextRequest) {
     const { error } = await getSupabaseAdmin().from('roles').delete().eq('id', id);
     if (error) throw error;
     return NextResponse.json({ success: true, message: 'Role deleted' });
-  } catch {
-    return NextResponse.json({ success: false, error: 'Failed to delete role' }, { status: 500 });
+  } catch (error) {
+    return NextResponse.json({
+      success: false,
+      error: 'Failed to delete role',
+      details: process.env.NODE_ENV === 'production'
+        ? undefined
+        : error instanceof Error
+          ? error.message
+          : String(error),
+    }, { status: 500 });
   }
 }

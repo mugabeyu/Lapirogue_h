@@ -4,7 +4,7 @@ export default function RolesPage() {
   return (
     <DataTablePage
       title="Access Roles"
-      subtitle="Roles loaded from the database."
+      subtitle="View staff roles."
       endpoint="/api/roles"
       entityName="roles"
       tableCaption="System roles"
