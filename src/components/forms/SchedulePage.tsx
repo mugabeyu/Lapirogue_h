@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { CalendarDays, ChevronLeft, ChevronRight, Download, Plus, Search } from 'lucide-react';
+import { CalendarDays, ChevronLeft, ChevronRight, Plus, Search } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { CreateScheduleItemModal } from '@/components/modals/CreateScheduleItemModal';
 import { GuestNameCell } from '@/components/ui/GuestNameCell';
@@ -187,40 +187,30 @@ export default function SchedulePage() {
         title="Guest Schedules"
         subtitle="Plan and manage daily itineraries"
         action={
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="inline-flex items-center rounded-xl border border-border bg-surface shadow-sm">
-              <button
-                type="button"
-                onClick={() => setWeekStart((current) => shiftWeek(current, -1))}
-                className="rounded-l-xl px-3 py-2 text-[var(--color-text-secondary)] transition-colors hover:bg-surface-secondary"
-                aria-label="Previous week"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setWeekStart(toDateInput(startOfWeek(new Date())))}
-                className="inline-flex items-center gap-2 border-x border-border px-4 py-2 text-sm font-medium text-[var(--color-text-primary)]"
-              >
-                <CalendarDays className="h-4 w-4" />
-                {weekLabel}
-              </button>
-              <button
-                type="button"
-                onClick={() => setWeekStart((current) => shiftWeek(current, 1))}
-                className="rounded-r-xl px-3 py-2 text-[var(--color-text-secondary)] transition-colors hover:bg-surface-secondary"
-                aria-label="Next week"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
+          <div className="inline-flex items-center rounded-xl border border-border bg-surface shadow-sm">
             <button
               type="button"
-              onClick={() => window.print()}
-              className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-4 py-2 text-sm font-medium text-[var(--color-text-primary)] shadow-sm transition-colors hover:bg-surface-secondary"
+              onClick={() => setWeekStart((current) => shiftWeek(current, -1))}
+              className="rounded-l-xl px-3 py-2 text-[var(--color-text-secondary)] transition-colors hover:bg-surface-secondary"
+              aria-label="Previous week"
             >
-              <Download className="h-4 w-4" />
-              Export PDF
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setWeekStart(toDateInput(startOfWeek(new Date())))}
+              className="inline-flex items-center gap-2 border-x border-border px-4 py-2 text-sm font-medium text-[var(--color-text-primary)]"
+            >
+              <CalendarDays className="h-4 w-4" />
+              {weekLabel}
+            </button>
+            <button
+              type="button"
+              onClick={() => setWeekStart((current) => shiftWeek(current, 1))}
+              className="rounded-r-xl px-3 py-2 text-[var(--color-text-secondary)] transition-colors hover:bg-surface-secondary"
+              aria-label="Next week"
+            >
+              <ChevronRight className="h-4 w-4" />
             </button>
           </div>
         }
