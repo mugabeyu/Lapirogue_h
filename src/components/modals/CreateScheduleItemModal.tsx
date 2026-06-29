@@ -151,6 +151,18 @@ export function CreateScheduleItemModal({
       return;
     }
 
+    if (!startTime || !endTime) {
+      toast.error('Select start and end times');
+      return;
+    }
+
+    const startMinutes = Number(startTime.split(':')[0]) * 60 + Number(startTime.split(':')[1]);
+    const endMinutes = Number(endTime.split(':')[0]) * 60 + Number(endTime.split(':')[1]);
+    if (endMinutes <= startMinutes) {
+      toast.error('End time must be after start time');
+      return;
+    }
+
     setIsSaving(true);
 
     const startAt = `${date}T${startTime}:00`;
@@ -296,6 +308,7 @@ export function CreateScheduleItemModal({
               onChange={(event) => setDate(event.target.value)}
               className="input-field w-full"
               required
+              min={new Date().toISOString().slice(0, 10)}
             />
           </label>
           <label className="block space-y-1.5">
@@ -306,6 +319,8 @@ export function CreateScheduleItemModal({
               onChange={(event) => setStartTime(event.target.value)}
               className="input-field w-full"
               required
+              min="07:00"
+              max="21:00"
             />
           </label>
           <label className="block space-y-1.5">
@@ -316,6 +331,8 @@ export function CreateScheduleItemModal({
               onChange={(event) => setEndTime(event.target.value)}
               className="input-field w-full"
               required
+              min="07:00"
+              max="22:00"
             />
           </label>
         </div>

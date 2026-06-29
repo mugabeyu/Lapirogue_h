@@ -2,7 +2,7 @@
 
 import { useSearchParams } from 'next/navigation';
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
-import { CheckCheckIcon, PaperclipIcon, RefreshCwIcon, SearchIcon, SendIcon, XIcon } from 'lucide-react';
+import { PaperclipIcon, SearchIcon, SendIcon, XIcon } from 'lucide-react';
 import { useApi } from '@/hooks/useApi';
 import { PageHeader } from '@/components/PageHeader';
 import { GuestNameCell } from '@/components/ui/GuestNameCell';
@@ -322,12 +322,6 @@ export default function MessagesPage() {
       <PageHeader
         title="Messages"
         subtitle="Real-time admin and guest messaging."
-        action={
-          <button type="button" className="btn-secondary inline-flex items-center gap-2" onClick={() => mutate()}>
-            <RefreshCwIcon className="h-4 w-4" />
-            Refresh
-          </button>
-        }
       />
 
       <div className="grid gap-6 xl:grid-cols-[340px_1fr]">
@@ -454,10 +448,6 @@ export default function MessagesPage() {
                       : 'Choose a guest to continue the conversation.'}
                 </div>
               </div>
-            </div>
-            <div className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface-secondary px-3 py-1 text-xs font-medium text-[var(--color-text-secondary)]">
-              <CheckCheckIcon className="h-4 w-4" />
-              Real time
             </div>
           </div>
 

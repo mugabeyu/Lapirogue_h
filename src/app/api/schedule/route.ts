@@ -226,7 +226,18 @@ export async function GET(request: NextRequest) {
       });
 
       (foodOrdersResult.data ?? []).forEach((order) => {
-        const createdAt = order.created_at ?? requestedWeekStart.toISOString();
+        let createdAt = order.created_at;
+        const parsedAt = createdAt ? new Date(createdAt) : null;
+        const scheduledMatch = typeof order.notes === 'string' ? order.notes.match(/Scheduled for (\d{4}-\d{2}-\d{2}T\d{2}:\d{2})/) : null;
+        if (scheduledMatch) {
+          createdAt = scheduledMatch[1] + ':00';
+        } else if (!createdAt || !parsedAt || Number.isNaN(parsedAt.getTime())) {
+          createdAt = `${requestedWeekStart.toISOString().slice(0, 10)}T09:00:00`;
+        } else {
+          const datePart = createdAt.slice(0, 10);
+          const timePart = createdAt.slice(11, 19);
+          createdAt = `${datePart}T${timePart}`;
+        }
         const endAt = new Date(createdAt);
         endAt.setMinutes(endAt.getMinutes() + 45);
         const items = order.items as { name?: string }[] | null;
@@ -296,7 +307,12 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const payloadItems = scheduledItems.filter((item) => overlapsWeek(item.start_at, item.end_at, requestedWeekStart));
+    const payloadItems = scheduledItems.filter((item) => {
+      if (item.item_type === 'ORDER' && item.source_module === 'food_orders') {
+        return true;
+      }
+      return overlapsWeek(item.start_at, item.end_at, requestedWeekStart);
+    });
 
     return NextResponse.json({
       success: true,
@@ -435,6 +451,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const startTimeMinutes = Number(startAt.slice(11, 13)) * 60 + Number(startAt.slice(14, 16));
+    const endTimeMinutes = Number(endAt.slice(11, 13)) * 60 + Number(endAt.slice(14, 16));
+    if (startTimeMinutes < 7 * 60 || startTimeMinutes > 21 * 60) {
+      return NextResponse.json({ success: false, error: 'Start time must be between 07:00 and 21:00' }, { status: 400 });
+    }
+    if (endTimeMinutes < 7 * 60 || endTimeMinutes > 22 * 60) {
+      return NextResponse.json({ success: false, error: 'End time must be between 07:00 and 22:00' }, { status: 400 });
+    }
+    if (endTimeMinutes <= startTimeMinutes) {
+      return NextResponse.json({ success: false, error: 'End time must be after start time' }, { status: 400 });
+    }
+
     if (itemType === 'ACTIVITY' || itemType === 'BOOKING') {
       const { data: activity, error: activityError } = await supabase
         .from('activities')
@@ -482,7 +510,7 @@ export async function POST(request: NextRequest) {
         .eq('id', sourceId)
         .single();
 
-      if (menuError || !menuItem) {
+if (menuError || !menuItem) {
         return NextResponse.json({ success: false, error: 'Menu item not found' }, { status: 404 });
       }
 
@@ -512,8 +540,9 @@ export async function POST(request: NextRequest) {
           total: price,
           status: 'PENDING',
           notes: notes ?? `Scheduled for ${startAt}`,
+          created_at: startAt,
         })
-        .select('id')
+        .select('id,created_at')
         .single();
 
       if (orderError) throw orderError;

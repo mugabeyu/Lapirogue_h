@@ -111,7 +111,7 @@ export default function FoodOrdersListPage() {
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <div className="relative flex-1">
+        <div className="relative sm:w-80">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-secondary)]" />
           <input
             type="text"
@@ -133,7 +133,7 @@ export default function FoodOrdersListPage() {
           <option value="SERVED">Delivered</option>
           <option value="CANCELLED">Cancelled</option>
         </select>
-        </div>
+      </div>
 
       <section className="card" aria-labelledby="food-orders-table-heading">
         <div className="px-5 py-4 border-b border-border">
