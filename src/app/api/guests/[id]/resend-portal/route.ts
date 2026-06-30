@@ -23,16 +23,12 @@ async function requireMainReceptionist(request: NextRequest) {
   const admin = getSupabaseAdmin();
   const { data: profile, error: profileError } = await admin
     .from('profiles')
-    .select('role,is_main')
+    .select('role')
     .eq('auth_id', user.id)
     .maybeSingle();
 
   if (profileError || !profile) {
     return { ok: false as const, status: 403, error: 'Not authorized' };
-  }
-
-  if (profile.is_main !== true) {
-    return { ok: false as const, status: 403, error: 'Only the main receptionist can send guest room emails' };
   }
 
   return { ok: true as const };

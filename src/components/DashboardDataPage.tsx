@@ -1,12 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { Bed, Calendar, CreditCard } from 'lucide-react';
+import { Bed, Calendar, CreditCard, Shield, Building2, Users, Star } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { StatCard } from '@/components/StatCard';
 import { GuestNameCell } from '@/components/ui/GuestNameCell';
 import useSWR from 'swr';
-import { ApiResponse } from '@/types';
+import { useApi } from '@/hooks/useApi';
+import { ApiResponse, User } from '@/types';
 
 async function dashboardFetcher(url: string) {
   const response = await fetch(url, { credentials: 'include' });
@@ -14,24 +15,7 @@ async function dashboardFetcher(url: string) {
 }
 
 type DashboardData = {
-  stats: {
-    totalRooms: number;
-    occupiedRooms: number;
-    availableRooms: number;
-    occupancyRate: number;
-    totalGuests: number;
-    activeReservations: number;
-    checkinsToday: number;
-    checkoutsToday: number;
-    totalRevenue: number;
-    pendingPayments: number;
-    roomStatusBreakdown: {
-      available: number;
-      occupied: number;
-      cleaning: number;
-      maintenance: number;
-    };
-  };
+  stats: Record<string, number | string>;
   todaysCheckins: Array<{
     id: string;
     check_in?: string | null;
@@ -60,24 +44,55 @@ function formatShortDate(value?: string | null) {
   });
 }
 
-export default function DashboardDataPage() {
+function AdminDashboard() {
   const { data, error, isLoading } = useSWR<ApiResponse<DashboardData>>('/api/dashboard', dashboardFetcher, {
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false,
-    dedupingInterval: 30000,
+    revalidateOnFocus: false, revalidateOnReconnect: false, dedupingInterval: 30000,
   });
-  const stats = data?.data?.stats;
+  const stats = data?.data?.stats as { totalManagers?: number; activeDepartments?: number; todayAuditEvents?: number } | undefined;
+
+  return (
+    <div className="space-y-6">
+      {error && <p className="text-sm text-red-500">Failed to load dashboard</p>}
+      {isLoading && !data && (
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="card p-6 animate-pulse">
+              <div className="h-4 bg-card-border rounded w-20 mb-3" />
+              <div className="h-8 bg-card-border rounded w-16 mb-2" />
+              <div className="h-3 bg-card-border rounded w-24" />
+            </div>
+          ))}
+        </div>
+      )}
+      {stats && (
+        <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <StatCard label="Active Managers" value={String(stats.totalManagers ?? 0)} subtext="Manager accounts" />
+          <StatCard label="Active Departments" value={String(stats.activeDepartments ?? 0)} subtext="Hotel departments" />
+          <StatCard label="Today's Audit Events" value={String(stats.todayAuditEvents ?? 0)} subtext="System activity log" />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ManagerDashboard() {
+  const { data, error, isLoading } = useSWR<ApiResponse<DashboardData>>('/api/dashboard', dashboardFetcher, {
+    revalidateOnFocus: false, revalidateOnReconnect: false, dedupingInterval: 30000,
+  });
+  const stats = data?.data?.stats as {
+    totalRooms?: number; occupiedRooms?: number; availableRooms?: number;
+    occupancyRate?: number; totalGuests?: number; activeReservations?: number;
+    checkinsToday?: number; checkoutsToday?: number;
+    totalRevenue?: number; pendingPayments?: number;
+    activeReceptionists?: number; averageFeedback?: number;
+    roomStatusBreakdown?: { available: number; occupied: number; cleaning: number; maintenance: number };
+  } | undefined;
   const todaysCheckins = data?.data?.todaysCheckins ?? [];
   const todaysCheckouts = data?.data?.todaysCheckouts ?? [];
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <PageHeader title="Dashboard" subtitle="Overview of today's operations" />
-
-      {error && (
-        <p className="text-sm text-red-500">{error}</p>
-      )}
-
+    <div className="space-y-6">
+      {error && <p className="text-sm text-red-500">Failed to load dashboard</p>}
       {isLoading && !data && (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
           {Array.from({ length: 8 }).map((_, i) => (
@@ -89,51 +104,17 @@ export default function DashboardDataPage() {
           ))}
         </div>
       )}
-
       {stats && (
-        <div className="space-y-6">
+        <>
           <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-4">
-            <StatCard
-              label="Total Rooms"
-              value={String(stats.totalRooms)}
-              subtext="All rooms in inventory"
-            />
-            <StatCard
-              label="Occupied"
-              value={`${stats.occupiedRooms}/${stats.totalRooms}`}
-              subtext={`${stats.occupancyRate}% occupancy`}
-              variant="primary"
-            />
-            <StatCard
-              label="Available"
-              value={`${stats.availableRooms}/${stats.totalRooms}`}
-              subtext={`${stats.totalRooms - stats.occupiedRooms} ready`}
-            />
-            <StatCard
-              label="Occupancy Rate"
-              value={`${stats.occupancyRate}%`}
-              subtext={stats.occupancyRate > 70 ? 'High occupancy' : stats.occupancyRate > 40 ? 'Moderate occupancy' : 'Low occupancy'}
-            />
-            <StatCard
-              label="Total Guests"
-              value={String(stats.totalGuests)}
-              subtext="Registered guests"
-            />
-            <StatCard
-              label="Active Reservations"
-              value={String(stats.activeReservations)}
-              subtext="Current stays"
-            />
-            <StatCard
-              label="Check-ins Today"
-              value={String(stats.checkinsToday)}
-              subtext="Expected arrivals"
-            />
-            <StatCard
-              label="Check-outs Today"
-              value={String(stats.checkoutsToday)}
-              subtext="Departures today"
-            />
+            <StatCard label="Active Receptionists" value={String(stats.activeReceptionists ?? 0)} subtext="Front desk staff" />
+            <StatCard label="Total Guests" value={String(stats.totalGuests ?? 0)} subtext="Registered guests" />
+            <StatCard label="Active Reservations" value={String(stats.activeReservations ?? 0)} subtext="Current stays" />
+            <StatCard label="Avg Feedback" value={String(stats.averageFeedback ?? 0)} subtext="Guest satisfaction" />
+            <StatCard label="Occupancy Rate" value={`${stats.occupancyRate ?? 0}%`} subtext={stats.occupancyRate && stats.occupancyRate > 70 ? 'High occupancy' : stats.occupancyRate && stats.occupancyRate > 40 ? 'Moderate' : 'Low'} />
+            <StatCard label="Check-ins Today" value={String(stats.checkinsToday ?? 0)} subtext="Expected arrivals" />
+            <StatCard label="Check-outs Today" value={String(stats.checkoutsToday ?? 0)} subtext="Departures today" />
+            <StatCard label="Occupied Rooms" value={`${stats.occupiedRooms ?? 0}/${stats.totalRooms ?? 0}`} subtext={`${stats.availableRooms ?? 0} available`} />
           </div>
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -146,69 +127,37 @@ export default function DashboardDataPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <div className="text-sm text-[var(--color-text-secondary)] mb-1">Total Revenue</div>
-                    <div className="font-display text-3xl text-[var(--color-success)]">{formatCurrency(stats.totalRevenue)}</div>
+                    <div className="font-display text-3xl text-[var(--color-success)]">{formatCurrency(stats.totalRevenue ?? 0)}</div>
                   </div>
                   <div>
                     <div className="text-sm text-[var(--color-text-secondary)] mb-1">Pending Payments</div>
-                    <div className="font-display text-3xl text-amber-500">{formatCurrency(stats.pendingPayments)}</div>
-                    <div className="text-xs text-[var(--color-text-secondary)] mt-1">payments awaiting processing</div>
+                    <div className="font-display text-3xl text-amber-500">{formatCurrency(stats.pendingPayments ?? 0)}</div>
+                    <div className="text-xs text-[var(--color-text-secondary)] mt-1">awaiting processing</div>
                   </div>
                 </div>
               </div>
 
               <div className="card p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-display text-xl text-[var(--color-text-primary)]">Room Status Breakdown</h3>
+                  <h3 className="font-display text-xl text-[var(--color-text-primary)]">Room Status</h3>
                   <Bed className="h-5 w-5 text-[var(--color-text-secondary)]" />
                 </div>
-                
-                <div className="flex gap-1 h-10 rounded-lg overflow-hidden mb-4">
-                  {stats.roomStatusBreakdown.available > 0 && (
-                    <div
-                      className="bg-[var(--color-success)] transition-all duration-300"
-                      style={{ width: `${(stats.roomStatusBreakdown.available / stats.totalRooms) * 100}%` }}
-                      title={`${stats.roomStatusBreakdown.available} Available`}
-                    />
-                  )}
-                  {stats.roomStatusBreakdown.occupied > 0 && (
-                    <div
-                      className="bg-[var(--color-danger)] transition-all duration-300"
-                      style={{ width: `${(stats.roomStatusBreakdown.occupied / stats.totalRooms) * 100}%` }}
-                      title={`${stats.roomStatusBreakdown.occupied} Occupied`}
-                    />
-                  )}
-                  {stats.roomStatusBreakdown.cleaning > 0 && (
-                    <div
-                      className="bg-amber-500 transition-all duration-300"
-                      style={{ width: `${(stats.roomStatusBreakdown.cleaning / stats.totalRooms) * 100}%` }}
-                      title={`${stats.roomStatusBreakdown.cleaning} Cleaning`}
-                    />
-                  )}
-                  {stats.roomStatusBreakdown.maintenance > 0 && (
-                    <div
-                      className="bg-gray-500 transition-all duration-300"
-                      style={{ width: `${(stats.roomStatusBreakdown.maintenance / stats.totalRooms) * 100}%` }}
-                      title={`${stats.roomStatusBreakdown.maintenance} Maintenance`}
-                    />
-                  )}
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                <div className="grid grid-cols-4 gap-3 text-center">
                   <div>
                     <div className="text-xs text-[var(--color-text-secondary)] uppercase">Available</div>
-                    <div className="font-display text-lg text-[var(--color-success)]">{stats.roomStatusBreakdown.available}</div>
+                    <div className="font-display text-lg text-[var(--color-success)]">{stats.roomStatusBreakdown?.available ?? 0}</div>
                   </div>
                   <div>
                     <div className="text-xs text-[var(--color-text-secondary)] uppercase">Occupied</div>
-                    <div className="font-display text-lg text-[var(--color-danger)]">{stats.roomStatusBreakdown.occupied}</div>
+                    <div className="font-display text-lg text-[var(--color-danger)]">{stats.roomStatusBreakdown?.occupied ?? 0}</div>
                   </div>
                   <div>
                     <div className="text-xs text-[var(--color-text-secondary)] uppercase">Cleaning</div>
-                    <div className="font-display text-lg text-amber-500">{stats.roomStatusBreakdown.cleaning}</div>
+                    <div className="font-display text-lg text-amber-500">{stats.roomStatusBreakdown?.cleaning ?? 0}</div>
                   </div>
                   <div>
                     <div className="text-xs text-[var(--color-text-secondary)] uppercase">Maintenance</div>
-                    <div className="font-display text-lg text-gray-500">{stats.roomStatusBreakdown.maintenance}</div>
+                    <div className="font-display text-lg text-gray-500">{stats.roomStatusBreakdown?.maintenance ?? 0}</div>
                   </div>
                 </div>
               </div>
@@ -217,118 +166,169 @@ export default function DashboardDataPage() {
             <div className="lg:col-span-1 space-y-6">
               <section className="card overflow-hidden">
                 <div className="px-5 py-4 border-b border-card-border">
-                  <div className="flex items-center justify-between gap-4">
-                    <h3 className="font-display text-xl text-[var(--color-text-primary)]">Today's Check-ins</h3>
-                    <div className="rounded-xl border border-card-border bg-surface-secondary px-3 py-1 text-xs font-medium text-[var(--color-text-primary)]">
-                      {stats.checkinsToday} expected
-                    </div>
-                  </div>
+                  <h3 className="font-display text-lg text-[var(--color-text-primary)]">Today's Check-ins</h3>
                 </div>
-
                 <div className="divide-y divide-card-border max-h-80 overflow-y-auto">
                   {todaysCheckins.length === 0 ? (
-                    <div className="p-8 text-center">
-                      <div className="flex items-center justify-center mb-4">
-                        <Calendar className="h-8 w-8 text-[var(--color-text-secondary)]" />
+                    <div className="p-8 text-center text-[var(--color-text-secondary)]">
+                      <Calendar className="h-8 w-8 mx-auto mb-3" />
+                      No check-ins today
+                    </div>
+                  ) : todaysCheckins.map((checkin) => (
+                    <div key={checkin.id} className="flex items-center justify-between gap-4 p-4 hover:bg-surface-secondary">
+                      <div>
+                        <GuestNameCell
+                          name={[checkin.guests?.first_name, checkin.guests?.last_name].filter(Boolean).join(' ') || 'Guest'}
+                          imageUrl={checkin.guests?.image_path ?? null}
+                          size="sm"
+                        />
+                        <div className="mt-1 text-xs text-[var(--color-text-secondary)]">
+                          {checkin.rooms?.room_number} &middot; {checkin.rooms?.type}
+                        </div>
                       </div>
-                      <div className="text-[var(--color-text-secondary)] mb-3">No check-ins scheduled today</div>
-                      <Link href="/reservations/new" className="btn-primary inline-flex px-6 py-2">
-                        New Reservation
-                      </Link>
+                      <span className="rounded-xl border px-3 py-1 text-xs font-medium text-[var(--color-success)]">Arrival</span>
                     </div>
-                  ) : (
-                    todaysCheckins.map((checkin) => {
-                      const guestName = [checkin.guests?.first_name, checkin.guests?.last_name]
-                        .filter(Boolean).join(' ') || 'Guest';
-                      const roomLabel = checkin.rooms?.room_number || 'Room pending';
-                      const roomType = checkin.rooms?.type || 'Standard';
-
-                      return (
-                        <div
-                          key={checkin.id}
-                          className="flex items-center justify-between gap-4 p-4 transition-colors hover:bg-surface-secondary"
-                        >
-                        <div>
-                          <GuestNameCell
-                            name={guestName}
-                            imageUrl={checkin.guests?.image_path ?? null}
-                            size="sm"
-                          />
-                          <div className="mt-1 text-sm text-[var(--color-text-secondary)]">
-                            {roomLabel} &middot; {roomType}
-                          </div>
-                          <div className="mt-2 flex items-center gap-3 text-xs text-[var(--color-text-secondary)]">
-                            <span>Check-in {formatShortDate(checkin.check_in)}</span>
-                            <span>Check-out {formatShortDate(checkin.check_out)}</span>
-                          </div>
-                        </div>
-                          <div className="rounded-xl border border-card-border bg-surface-secondary px-3 py-1 text-xs font-medium text-[var(--color-success)]">
-                            Arrival
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              </section>
-
-              <section className="card overflow-hidden">
-                <div className="px-5 py-4 border-b border-card-border">
-                  <div className="flex items-center justify-between gap-4">
-                    <h3 className="font-display text-xl text-[var(--color-text-primary)]">Today's Check-outs</h3>
-                    <div className="rounded-xl border border-card-border bg-surface-secondary px-3 py-1 text-xs font-medium text-[var(--color-text-primary)]">
-                      {stats.checkoutsToday} departures
-                    </div>
-                  </div>
-                </div>
-
-                <div className="divide-y divide-card-border max-h-80 overflow-y-auto">
-                  {todaysCheckouts.length === 0 ? (
-                    <div className="p-8 text-center">
-                      <div className="flex items-center justify-center mb-4">
-                        <Calendar className="h-8 w-8 text-[var(--color-text-secondary)]" />
-                      </div>
-                      <div className="text-[var(--color-text-secondary)]">No check-outs scheduled today</div>
-                    </div>
-                  ) : (
-                    todaysCheckouts.map((checkout) => {
-                      const guestName = [checkout.guests?.first_name, checkout.guests?.last_name]
-                        .filter(Boolean).join(' ') || 'Guest';
-                      const roomLabel = checkout.rooms?.room_number || 'Room pending';
-                      const roomType = checkout.rooms?.type || 'Standard';
-
-                      return (
-                        <div
-                          key={checkout.id}
-                          className="flex items-center justify-between gap-4 p-4 transition-colors hover:bg-surface-secondary"
-                        >
-                        <div>
-                          <GuestNameCell
-                            name={guestName}
-                            imageUrl={checkout.guests?.image_path ?? null}
-                            size="sm"
-                          />
-                          <div className="mt-1 text-sm text-[var(--color-text-secondary)]">
-                            {roomLabel} &middot; {roomType}
-                          </div>
-                          <div className="mt-2 flex items-center gap-3 text-xs text-[var(--color-text-secondary)]">
-                            <span>Check-in {formatShortDate(checkout.check_in)}</span>
-                            <span>Check-out {formatShortDate(checkout.check_out)}</span>
-                          </div>
-                        </div>
-                          <div className="rounded-xl border border-card-border bg-surface-secondary px-3 py-1 text-xs font-medium text-amber-500">
-                            Departure
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
+                  ))}
                 </div>
               </section>
             </div>
           </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function ReceptionistDashboard() {
+  const { data, error, isLoading } = useSWR<ApiResponse<DashboardData>>('/api/dashboard', dashboardFetcher, {
+    revalidateOnFocus: false, revalidateOnReconnect: false, dedupingInterval: 30000,
+  });
+  const stats = data?.data?.stats as {
+    totalRooms?: number; availableRooms?: number; occupiedRooms?: number;
+    cleaningRooms?: number; maintenanceRooms?: number;
+    checkinsToday?: number; checkoutsToday?: number;
+    roomStatusBreakdown?: { available: number; occupied: number; cleaning: number; maintenance: number };
+  } | undefined;
+  const todaysCheckins = data?.data?.todaysCheckins ?? [];
+  const todaysCheckouts = data?.data?.todaysCheckouts ?? [];
+
+  return (
+    <div className="space-y-6">
+      {error && <p className="text-sm text-red-500">Failed to load dashboard</p>}
+      {isLoading && !data && (
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="card p-6 animate-pulse">
+              <div className="h-4 bg-card-border rounded w-20 mb-3" />
+              <div className="h-8 bg-card-border rounded w-16 mb-2" />
+              <div className="h-3 bg-card-border rounded w-24" />
+            </div>
+          ))}
         </div>
       )}
+      {stats && (
+        <>
+          <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-4">
+            <StatCard label="Check-ins Today" value={String(stats.checkinsToday ?? 0)} subtext="Arrivals" variant="primary" />
+            <StatCard label="Check-outs Today" value={String(stats.checkoutsToday ?? 0)} subtext="Departures" />
+            <StatCard label="Available Rooms" value={String(stats.availableRooms ?? 0)} subtext={`${stats.totalRooms ?? 0} total rooms`} />
+            <StatCard label="Cleaning" value={String(stats.cleaningRooms ?? 0)} subtext="Rooms being prepared" />
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <div className="card p-6">
+              <h3 className="font-display text-lg text-[var(--color-text-primary)] mb-4">Room Status Breakdown</h3>
+              <div className="flex gap-1 h-10 rounded-lg overflow-hidden mb-4">
+                {stats.roomStatusBreakdown && (
+                  <>
+                    {stats.roomStatusBreakdown.available > 0 && (
+                      <div className="bg-[var(--color-success)] transition-all" style={{ width: `${(stats.roomStatusBreakdown.available / (stats.totalRooms ?? 1)) * 100}%` }} title={`${stats.roomStatusBreakdown.available} Available`} />
+                    )}
+                    {stats.roomStatusBreakdown.occupied > 0 && (
+                      <div className="bg-[var(--color-danger)] transition-all" style={{ width: `${(stats.roomStatusBreakdown.occupied / (stats.totalRooms ?? 1)) * 100}%` }} title={`${stats.roomStatusBreakdown.occupied} Occupied`} />
+                    )}
+                    {stats.roomStatusBreakdown.cleaning > 0 && (
+                      <div className="bg-amber-500 transition-all" style={{ width: `${(stats.roomStatusBreakdown.cleaning / (stats.totalRooms ?? 1)) * 100}%` }} title={`${stats.roomStatusBreakdown.cleaning} Cleaning`} />
+                    )}
+                    {stats.roomStatusBreakdown.maintenance > 0 && (
+                      <div className="bg-gray-500 transition-all" style={{ width: `${(stats.roomStatusBreakdown.maintenance / (stats.totalRooms ?? 1)) * 100}%` }} title={`${stats.roomStatusBreakdown.maintenance} Maintenance`} />
+                    )}
+                  </>
+                )}
+              </div>
+              <div className="grid grid-cols-4 gap-3 text-center text-sm">
+                <div><span className="text-[var(--color-success)] font-bold">{stats.roomStatusBreakdown?.available ?? 0}</span> Available</div>
+                <div><span className="text-[var(--color-danger)] font-bold">{stats.roomStatusBreakdown?.occupied ?? 0}</span> Occupied</div>
+                <div><span className="text-amber-500 font-bold">{stats.roomStatusBreakdown?.cleaning ?? 0}</span> Cleaning</div>
+                <div><span className="text-gray-500 font-bold">{stats.roomStatusBreakdown?.maintenance ?? 0}</span> Maintenance</div>
+              </div>
+            </div>
+
+            <section className="card overflow-hidden">
+              <div className="px-5 py-4 border-b border-card-border">
+                <h3 className="font-display text-lg text-[var(--color-text-primary)]">Today's Check-ins</h3>
+              </div>
+              <div className="divide-y divide-card-border max-h-80 overflow-y-auto">
+                {todaysCheckins.length === 0 ? (
+                  <div className="p-8 text-center">
+                    <Calendar className="h-8 w-8 mx-auto mb-3 text-[var(--color-text-secondary)]" />
+                    <p className="text-[var(--color-text-secondary)]">No check-ins today</p>
+                    <Link href="/reservations/new" className="btn-primary inline-flex px-6 py-2 mt-3">New Reservation</Link>
+                  </div>
+                ) : todaysCheckins.map((checkin) => (
+                  <div key={checkin.id} className="flex items-center justify-between gap-4 p-4 hover:bg-surface-secondary">
+                    <div>
+                      <GuestNameCell
+                        name={[checkin.guests?.first_name, checkin.guests?.last_name].filter(Boolean).join(' ') || 'Guest'}
+                        imageUrl={checkin.guests?.image_path ?? null}
+                        size="sm"
+                      />
+                      <div className="mt-1 text-xs text-[var(--color-text-secondary)]">
+                        {checkin.rooms?.room_number} &middot; {checkin.rooms?.type}
+                      </div>
+                    </div>
+                    <span className="rounded-xl border px-3 py-1 text-xs font-medium text-[var(--color-success)]">Arrival</span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+export default function DashboardDataPage() {
+  const { data: currentUser } = useApi<User>('/api/auth/me');
+  const role = currentUser?.role;
+
+  return (
+    <div className="space-y-6 animate-in fade-in duration-500">
+      <PageHeader
+        title="Dashboard"
+        subtitle={
+          role === 'ADMIN' ? 'System health and user management overview' :
+          role === 'MANAGER' ? 'Revenue, staff metrics, and performance analytics' :
+          'Arrivals, departures, and room cleanliness status'
+        }
+      />
+
+      {!role && (
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="card p-6 animate-pulse">
+              <div className="h-4 bg-card-border rounded w-20 mb-3" />
+              <div className="h-8 bg-card-border rounded w-16 mb-2" />
+              <div className="h-3 bg-card-border rounded w-24" />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {role === 'ADMIN' && <AdminDashboard />}
+      {role === 'MANAGER' && <ManagerDashboard />}
+      {role === 'RECEPTIONIST' && <ReceptionistDashboard />}
     </div>
   );
 }

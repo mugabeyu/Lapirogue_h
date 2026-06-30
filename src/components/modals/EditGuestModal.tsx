@@ -83,18 +83,15 @@ export function EditGuestModal({ isOpen, onClose, guest, currentStay, onSaved }:
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Edit Profile" size="lg">
-<form key={guest.id} onSubmit={handleSubmit} className="space-y-4">
-          <div className="rounded-xl border border-border bg-surface-secondary/30 px-4 py-3 text-sm text-[var(--color-text-secondary)]">
-            Guest profile photo uploads are disabled for admin users.
-          </div>
+      <form key={guest.id} onSubmit={handleSubmit} className="space-y-4">
           <FormField label="First Name" name="firstName" defaultValue={guest.firstName} required>
             <input name="firstName" required className="input-field w-full" defaultValue={guest.firstName} />
           </FormField>
           <FormField label="Last Name" name="lastName" defaultValue={guest.lastName} required>
             <input name="lastName" required className="input-field w-full" defaultValue={guest.lastName} />
           </FormField>
-          <FormField label="Email" type="email" name="email" defaultValue={guest.email ?? ''} required>
-            <input name="email" type="email" required className="input-field w-full" defaultValue={guest.email ?? ''} />
+          <FormField label="Email" type="email" name="email" defaultValue={guest.email ?? ''}>
+            <input name="email" type="email" className="input-field w-full" defaultValue={guest.email ?? ''} readOnly tabIndex={-1} />
           </FormField>
           <FormField label="Phone" name="phone">
             <PhoneField name="phone" defaultValue={guest.phone ?? ''} />

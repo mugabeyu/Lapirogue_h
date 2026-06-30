@@ -67,14 +67,24 @@ export function AddReservationModal({ isOpen, onClose, onSaved, editRow }: AddRe
       <form key={String(editRow?.id ?? 'new')} onSubmit={handleSubmit} className="space-y-5">
         <div>
           <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Guest</label>
-          <select name="guestId" required className="input-field w-full" defaultValue={String(editRow?.guestId ?? '')}>
-            <option value="">Select guest</option>
-            {(guests ?? []).map((guest) => (
-              <option key={guest.id} value={guest.id}>
-                {guest.firstName} {guest.lastName}
-              </option>
-            ))}
-          </select>
+          {isEdit ? (
+            <div className="input-field w-full flex items-center gap-2 text-[var(--color-text-primary)]">
+              {editRow?.guestImagePath ? (
+                <img src={String(editRow.guestImagePath)} alt="" className="h-6 w-6 rounded-full object-cover" />
+              ) : null}
+              <span>{String(editRow?.guest ?? '')}</span>
+              <input type="hidden" name="guestId" value={String(editRow?.guestId ?? '')} />
+            </div>
+          ) : (
+            <select name="guestId" required className="input-field w-full" defaultValue={String(editRow?.guestId ?? '')}>
+              <option value="">Select guest</option>
+              {(guests ?? []).map((guest) => (
+                <option key={guest.id} value={guest.id}>
+                  {guest.firstName} {guest.lastName}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
 
         <div>

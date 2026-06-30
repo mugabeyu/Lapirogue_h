@@ -6,7 +6,7 @@ export type AuditActor = {
   id: string;
   email: string | null;
   name: string | null;
-  role: 'MAIN_RECEPTIONIST' | 'RECEPTIONIST' | null;
+  role: 'ADMIN' | 'MANAGER' | 'RECEPTIONIST' | null;
 };
 
 export async function getAuditActor(request: NextRequest): Promise<AuditActor | null> {
@@ -19,7 +19,7 @@ export async function getAuditActor(request: NextRequest): Promise<AuditActor | 
 
   const { data: profile } = await getSupabaseAdmin()
     .from('profiles')
-    .select('full_name, is_main')
+    .select('full_name, role')
     .eq('auth_id', user.id)
     .maybeSingle();
 
@@ -27,7 +27,7 @@ export async function getAuditActor(request: NextRequest): Promise<AuditActor | 
     id: user.id,
     email: user.email ?? null,
     name: profile?.full_name ?? (user.user_metadata?.full_name as string | undefined) ?? null,
-    role: profile?.is_main ? 'MAIN_RECEPTIONIST' : 'RECEPTIONIST',
+    role: (profile?.role as AuditActor['role']) ?? null,
   };
 }
 

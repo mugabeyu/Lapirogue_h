@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const today = toDateKey(new Date());
-    const cacheKey = `dashboard-${today}`;
+    const cacheKey = `dashboard-${today}-${user.role}`;
     const cached = getCachedResponse<{
       stats: unknown;
       todaysCheckins: unknown[];
@@ -45,6 +45,74 @@ export async function GET(request: NextRequest) {
     const supabase = getSupabaseAdmin();
     const tomorrow = toDateKey(addDays(new Date(), 1));
 
+    // ── Admin Dashboard: System Health & Audits ──────────────
+    if (user.role === 'ADMIN') {
+      const [managerCount, departmentCount, auditCount] = await Promise.all([
+        supabase.from('managers').select('id', { count: 'exact', head: true }).eq('is_active', true),
+        supabase.from('departments').select('id', { count: 'exact', head: true }).eq('is_active', true),
+        supabase.from('audit_logs').select('id', { count: 'exact', head: true }).gte('created_at', today),
+      ]);
+
+      const stats = {
+        totalManagers: managerCount.count ?? 0,
+        activeDepartments: departmentCount.count ?? 0,
+        todayAuditEvents: auditCount.count ?? 0,
+      };
+
+      setCachedResponse(cacheKey, { stats, todaysCheckins: [], todaysCheckouts: [] });
+      response.headers.set('Cache-Control', 'private, max-age=30');
+      return attachSupabaseCookies(NextResponse.json({ success: true, data: { stats, todaysCheckins: [], todaysCheckouts: [] } }), response);
+    }
+
+    // ── Receptionist Dashboard: Arrivals, Departures, Cleanliness ──
+    if (user.role === 'RECEPTIONIST') {
+      const [roomsResult, todayReservationsResult] = await Promise.all([
+        supabase.from('rooms').select('status'),
+        supabase
+          .from('reservations')
+          .select('id, check_in, check_out, guests(first_name, last_name, image_path), rooms(room_number, type)')
+          .in('status', ['CONFIRMED', 'CHECKED_IN'])
+          .or(`check_in.gte.${today},check_in.lt.${tomorrow},check_out.gte.${today},check_out.lt.${tomorrow}`)
+          .order('check_in', { ascending: true })
+          .limit(20),
+      ]);
+
+      const roomStatusBreakdown = {
+        available: 0, occupied: 0, cleaning: 0, maintenance: 0,
+      };
+      for (const room of (roomsResult.data ?? []) as { status: string }[]) {
+        const key = room.status.toLowerCase() as keyof typeof roomStatusBreakdown;
+        if (key in roomStatusBreakdown) roomStatusBreakdown[key]++;
+      }
+
+      const todaysCheckins: unknown[] = [];
+      const todaysCheckouts: unknown[] = [];
+      for (const row of (todayReservationsResult.data ?? []) as Array<{
+        id: string; check_in: string; check_out: string;
+        guests?: { first_name?: string | null; last_name?: string | null; image_path?: string | null } | null;
+        rooms?: { room_number?: string | null; type?: string | null } | null;
+      }>) {
+        if (row.check_in >= today && row.check_in < tomorrow) todaysCheckins.push(row);
+        if (row.check_out >= today && row.check_out < tomorrow) todaysCheckouts.push(row);
+      }
+
+      const stats = {
+        totalRooms: roomStatusBreakdown.available + roomStatusBreakdown.occupied + roomStatusBreakdown.cleaning + roomStatusBreakdown.maintenance,
+        availableRooms: roomStatusBreakdown.available,
+        occupiedRooms: roomStatusBreakdown.occupied,
+        cleaningRooms: roomStatusBreakdown.cleaning,
+        maintenanceRooms: roomStatusBreakdown.maintenance,
+        checkinsToday: todaysCheckins.length,
+        checkoutsToday: todaysCheckouts.length,
+        roomStatusBreakdown,
+      };
+
+      setCachedResponse(cacheKey, { stats, todaysCheckins, todaysCheckouts });
+      response.headers.set('Cache-Control', 'private, max-age=30');
+      return attachSupabaseCookies(NextResponse.json({ success: true, data: { stats, todaysCheckins, todaysCheckouts } }), response);
+    }
+
+    // ── Manager Dashboard: Revenue, Staff Metrics, Performance ──
     const [
       roomsResult,
       totalGuestsResult,
@@ -53,6 +121,8 @@ export async function GET(request: NextRequest) {
       paymentsResult,
       activityBookingsResult,
       foodOrdersResult,
+      receptionistCount,
+      feedbackResult,
     ] = await Promise.all([
       supabase.from('rooms').select('status'),
       supabase.from('guests').select('id', { count: 'exact', head: true }),
@@ -76,6 +146,8 @@ export async function GET(request: NextRequest) {
         .from('food_orders')
         .select('guest_id,total')
         .in('status', ['PENDING', 'PREPARING', 'SERVED']),
+      supabase.from('receptionists').select('id', { count: 'exact', head: true }).eq('is_active', true),
+      supabase.from('guest_feedback').select('rating'),
     ]);
 
     if (roomsResult.error) {
@@ -172,11 +244,20 @@ export async function GET(request: NextRequest) {
 
     const occupancyRate = totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0;
 
+    // Manager-specific metrics
+    const activeReceptionists = receptionistCount.count ?? 0;
+    const feedbackRatings = (feedbackResult.data ?? []) as { rating: number }[];
+    const avgFeedback = feedbackRatings.length > 0
+      ? Math.round((feedbackRatings.reduce((s, f) => s + f.rating, 0) / feedbackRatings.length) * 10) / 10
+      : 0;
+
     const responseData = {
       stats: {
         totalRooms,
         occupiedRooms,
         availableRooms,
+        cleaningRooms,
+        maintenanceRooms,
         occupancyRate,
         totalGuests: totalGuestsResult.count ?? 0,
         activeReservations: reservationsData.length,
@@ -184,6 +265,8 @@ export async function GET(request: NextRequest) {
         checkoutsToday: checkoutsToday.length,
         totalRevenue,
         pendingPayments,
+        activeReceptionists,
+        averageFeedback: avgFeedback,
         roomStatusBreakdown: {
           available: availableRooms,
           occupied: occupiedRooms,

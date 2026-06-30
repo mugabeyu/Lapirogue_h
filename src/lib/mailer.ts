@@ -204,8 +204,104 @@ export async function sendInvoiceEmail(input: {
   }
 }
 
+export async function sendOtpEmail(to: string, otp: string, name: string) {
+  try {
+    const response = await resend.emails.send({
+      from: FROM_EMAIL,
+      to,
+      subject: 'Your La Pirogue verification code',
+      html: `
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr><td align="center" style="padding:40px 20px;background:#f9fafb;">
+            <div style="max-width:480px;background:#ffffff;border-radius:16px;padding:40px;text-align:center;">
+              ${logoImgTag()}
+
+              <h2 style="margin:20px 0 8px;color:#0f766e;font-size:24px;">Verify your email</h2>
+
+              <p style="font-size:16px;color:#374151;">Hi ${escapeHtml(name)},</p>
+
+              <p style="font-size:16px;color:#374151;">Use the code below to complete your registration:</p>
+
+              <div style="margin:24px 0;padding:16px;background:#f3f4f6;border-radius:12px;font-size:36px;font-weight:bold;letter-spacing:8px;color:#0f766e;font-family:monospace;">
+                ${otp}
+              </div>
+
+              <p style="font-size:14px;color:#6b7280;">This code expires in 10 minutes.</p>
+
+              <p style="font-size:14px;color:#6b7280;margin-top:20px;">If you did not request this, please ignore this email.</p>
+            </div>
+          </td></tr>
+        </table>
+      `,
+    });
+
+    return { success: true, data: response };
+  } catch (error) {
+    console.error('OTP EMAIL ERROR:', error);
+    throw error;
+  }
+}
+
+export async function sendReservationConfirmationEmail(input: {
+  to: string;
+  guestName: string;
+  roomNumber: string;
+  checkIn: string;
+  checkOut: string;
+  totalAmount: number;
+  status: string;
+  reservationId: string;
+}) {
+  try {
+    const response = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: input.to,
+      subject: `Reservation ${input.status === 'RESERVED' ? 'Request' : 'Confirmed'} - La Pirogue Hotel`,
+      html: `
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr><td align="center" style="padding:40px 20px;background:#f9fafb;">
+            <div style="max-width:480px;background:#ffffff;border-radius:16px;padding:40px;">
+              ${logoImgTag()}
+
+              <h2 style="margin:20px 0 8px;color:#0f766e;font-size:24px;">
+                ${input.status === 'RESERVED' ? 'Reservation Request Received' : 'Reservation Confirmed'}
+              </h2>
+
+              <p style="font-size:16px;color:#374151;">Dear ${escapeHtml(input.guestName)},</p>
+
+              <p style="font-size:16px;color:#374151;">
+                ${input.status === 'RESERVED' ? 'Your reservation request has been received and will be confirmed at check-in.' : 'Your reservation has been confirmed.'}
+              </p>
+
+              <div style="margin:20px 0;padding:16px;background:#f3f4f6;border-radius:12px;">
+                <p style="margin:4px 0;"><strong>Room:</strong> ${escapeHtml(input.roomNumber)}</p>
+                <p style="margin:4px 0;"><strong>Check-in:</strong> ${input.checkIn}</p>
+                <p style="margin:4px 0;"><strong>Check-out:</strong> ${input.checkOut}</p>
+                <p style="margin:4px 0;"><strong>Total:</strong> Rs ${input.totalAmount.toLocaleString()}</p>
+                <p style="margin:4px 0;"><strong>Reference:</strong> ${escapeHtml(input.reservationId)}</p>
+              </div>
+
+              ${input.status === 'RESERVED' ? `
+              <p style="font-size:14px;color:#6b7280;">Please proceed to the front desk at check-in to complete your reservation. Your room service and activity booking features will unlock upon check-in.</p>
+              ` : ''}
+
+              <p style="font-size:14px;color:#6b7280;margin-top:20px;">Thank you for choosing La Pirogue Hotel.</p>
+            </div>
+          </td></tr>
+        </table>
+      `,
+    });
+
+    return { success: true, data: response };
+  } catch (error) {
+    console.error('RESERVATION CONFIRMATION EMAIL ERROR:', error);
+    throw error;
+  }
+}
+
 export async function sendPasswordResetEmail(input: {
   to: string;
+  name: string;
   resetUrl: string;
 }) {
   try {

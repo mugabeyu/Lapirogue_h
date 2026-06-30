@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from 'react';
 import useSWR from 'swr';
+import { useApi } from '@/hooks/useApi';
+import { User } from '@/types';
 import { Clock, Pencil, Plus, Search } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { MenuItemModal } from '@/components/modals/MenuItemModal';
@@ -28,10 +30,12 @@ function MenuItemCard({
   item,
   onEdit,
   onToggleAvailability,
+  isManager,
 }: {
   item: MenuItemRecord;
   onEdit: () => void;
   onToggleAvailability: () => void;
+  isManager: boolean;
 }) {
   const prepLabel = formatPrepTime(item.preparationMinutes);
 
@@ -73,34 +77,42 @@ function MenuItemCard({
         )}
 
         <div className="mt-auto flex items-center justify-between border-t border-card-border pt-3">
-          <label className="flex cursor-pointer items-center gap-2 text-sm text-[var(--color-text-primary)]">
+          {isManager ? (
+            <>
+              <label className="flex cursor-pointer items-center gap-2 text-sm text-[var(--color-text-primary)]">
                 <span
-                className={`relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors ${
-                item.isAvailable ? 'bg-[var(--color-button-primary)]' : 'bg-surface-secondary'
-              }`}
-            >
-              <input
-                type="checkbox"
-                className="peer sr-only"
-                checked={item.isAvailable}
-                onChange={onToggleAvailability}
-              />
-              <span
-                className={`absolute top-0.5 h-5 w-5 rounded-full bg-surface transition-transform ${
-                  item.isAvailable ? 'left-[22px]' : 'left-0.5'
-                }`}
-              />
+                  className={`relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors ${
+                    item.isAvailable ? 'bg-[var(--color-button-primary)]' : 'bg-surface-secondary'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    className="peer sr-only"
+                    checked={item.isAvailable}
+                    onChange={onToggleAvailability}
+                  />
+                  <span
+                    className={`absolute top-0.5 h-5 w-5 rounded-full bg-surface transition-transform ${
+                      item.isAvailable ? 'left-[22px]' : 'left-0.5'
+                    }`}
+                  />
+                </span>
+                {item.isAvailable ? 'Available' : 'Unavailable'}
+              </label>
+              <button
+                type="button"
+                onClick={onEdit}
+                className="rounded-xl p-2 text-[var(--color-text-secondary)] transition-colors hover:bg-surface-secondary hover:text-[var(--color-nav-active)]"
+                aria-label={`Edit ${item.name}`}
+              >
+                <Pencil className="h-4 w-4" />
+              </button>
+            </>
+          ) : (
+            <span className="text-sm text-[var(--color-text-secondary)]">
+              {item.isAvailable ? 'Available' : 'Out of Stock'}
             </span>
-            {item.isAvailable ? 'Available' : 'Unavailable'}
-          </label>
-          <button
-            type="button"
-            onClick={onEdit}
-            className="rounded-xl p-2 text-[var(--color-text-secondary)] transition-colors hover:bg-surface-secondary hover:text-[var(--color-nav-active)]"
-            aria-label={`Edit ${item.name}`}
-          >
-            <Pencil className="h-4 w-4" />
-          </button>
+          )}
         </div>
       </div>
     </article>
@@ -112,6 +124,10 @@ export default function FoodBeverageMenuPage() {
   const [category, setCategory] = useState('All');
   const [modalOpen, setModalOpen] = useState(false);
   const [editItem, setEditItem] = useState<MenuItemRecord | null>(null);
+
+  const { data: userData } = useApi<User>('/api/auth/me');
+  const userRole = userData?.role ?? '';
+  const isManager = userRole === 'MANAGER';
 
   const url = useMemo(() => {
     const params = new URLSearchParams();
@@ -161,12 +177,12 @@ export default function FoodBeverageMenuPage() {
       <PageHeader
         title="Food & Beverage Menu"
         subtitle="Manage restaurant and room service offerings"
-        action={
+        action={isManager ? (
           <button type="button" onClick={openCreate} className="btn-primary inline-flex items-center gap-2">
             <Plus className="h-4 w-4" />
             Add Item
           </button>
-        }
+        ) : undefined}
       />
 
       <div className="relative max-w-xl">
@@ -205,9 +221,11 @@ export default function FoodBeverageMenuPage() {
       { items.length === 0 && (
         <div className="card rounded-xl border-dashed border-card-border px-6 py-16 text-center">
           <p className="text-[var(--color-text-secondary)]">No menu items found.</p>
-          <button type="button" onClick={openCreate} className="mt-4 text-sm font-semibold text-[var(--color-button-primary)]">
-            Add your first item →
-          </button>
+          {isManager && (
+            <button type="button" onClick={openCreate} className="mt-4 text-sm font-semibold text-[var(--color-button-primary)]">
+              Add your first item →
+            </button>
+          )}
         </div>
       )}
 
@@ -216,6 +234,7 @@ export default function FoodBeverageMenuPage() {
           <MenuItemCard
             key={item.id}
             item={item}
+            isManager={isManager}
             onEdit={() => openEdit(item)}
             onToggleAvailability={() => handleToggleAvailability(item)}
           />

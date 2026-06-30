@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { getRouteHandlerSupabaseClient } from '@/lib/supabase-server';
 import { getAuditActor, recordAuditLog } from '@/lib/audit';
 import { z } from 'zod';
 import { validationErrorResponse } from '@/lib/api-response';
@@ -19,6 +20,7 @@ const guestUpdateSchema = z.object({
   dateOfBirth: z.string().optional(),
   vip: z.boolean().optional(),
   status: z.enum(['RESERVED', 'CHECKED_IN', 'CHECKED_OUT', 'CANCELLED']).optional(),
+  accountStatus: z.enum(['PENDING', 'ACTIVE', 'FROZEN', 'BANNED']).optional(),
   notes: z.string().optional(),
   imagePath: z.string().optional().nullable(),
 });
@@ -66,6 +68,18 @@ export async function PATCH(request: NextRequest, context: { params: Promise<unk
     await getAuditActor(request);
     const supabase = getSupabaseAdmin();
 
+    const authClient = getRouteHandlerSupabaseClient(request);
+    const { data: { user } } = await authClient.auth.getUser();
+    let userRole: string | null = null;
+    if (user) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('auth_id', user.id)
+        .maybeSingle();
+      userRole = profile?.role ?? null;
+    }
+
     if (validatedData.status === 'CHECKED_IN') {
       const today = toDateKey();
       const { data: activeStay, error: activeStayError } = await supabase
@@ -96,15 +110,19 @@ export async function PATCH(request: NextRequest, context: { params: Promise<unk
     const updatePayload: Record<string, unknown> = {};
     if (validatedData.firstName !== undefined) updatePayload.first_name = validatedData.firstName;
     if (validatedData.lastName !== undefined) updatePayload.last_name = validatedData.lastName;
-    if (validatedData.email !== undefined) updatePayload.email = validatedData.email;
     if (validatedData.phone !== undefined) updatePayload.phone = validatedData.phone;
     if (validatedData.nationality !== undefined) updatePayload.nationality = validatedData.nationality;
     if (validatedData.passport !== undefined) updatePayload.passport = validatedData.passport;
     if (validatedData.dateOfBirth !== undefined) updatePayload.date_of_birth = validatedData.dateOfBirth;
-    if (validatedData.vip !== undefined) updatePayload.vip = validatedData.vip;
-    if (validatedData.status !== undefined) updatePayload.status = validatedData.status;
     if (validatedData.notes !== undefined) updatePayload.notes = validatedData.notes;
     if (validatedData.imagePath !== undefined) updatePayload.image_path = validatedData.imagePath;
+
+    const isManager = userRole === 'MANAGER';
+    if (isManager) {
+      if (validatedData.vip !== undefined) updatePayload.vip = validatedData.vip;
+      if (validatedData.status !== undefined) updatePayload.status = validatedData.status;
+      if (validatedData.accountStatus !== undefined) updatePayload.account_status = validatedData.accountStatus;
+    }
 
     const { data: guest, error } = await supabase
       .from('guests')

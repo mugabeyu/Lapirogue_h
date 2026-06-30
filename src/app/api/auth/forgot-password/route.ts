@@ -50,8 +50,17 @@ export async function POST(request: NextRequest) {
     }
 
     const resetUrl = (data as { properties: { action_link: string } }).properties.action_link;
+
+    const { data: profileRow } = await supabase
+      .from('profiles')
+      .select('name')
+      .eq('email', validatedData.email)
+      .maybeSingle();
+    const userName = profileRow?.name ?? validatedData.email.split('@')[0];
+
     await sendPasswordResetEmail({
       to: validatedData.email,
+      name: userName,
       resetUrl,
     });
 

@@ -15,8 +15,9 @@ const reservationSchema = z.object({
   children: z.number().int().min(0),
   totalAmount: z.number().min(0),
   status: z
-    .enum(["CONFIRMED", "CHECKED_IN", "CHECKED_OUT", "CANCELLED", "NO_SHOW"])
+    .enum(["RESERVED", "CONFIRMED", "CHECKED_IN", "CHECKED_OUT", "CANCELLED", "NO_SHOW"])
     .optional(),
+  origin: z.enum(["MOBILE_APP", "RECEPTION_DESK", "MANAGER_PORTAL"]).optional(),
 });
 
 type ReservationRow = {
@@ -100,6 +101,41 @@ export async function POST(request: NextRequest) {
     const supabase = getSupabaseAdmin();
     await getAuditActor(request);
 
+    // Gate: guest account_status must be ACTIVE to make reservations
+    const { data: guestCheck } = await supabase
+      .from("guests")
+      .select("account_status, auth_id")
+      .eq("id", body.guestId)
+      .maybeSingle();
+
+    if (!guestCheck) {
+      return createApiResponse(false, "Guest not found", { status: 404 });
+    }
+
+    if (guestCheck.account_status === 'FROZEN') {
+      return createApiResponse(
+        false,
+        "Account is frozen. Contact the hotel to resume bookings.",
+        { status: 403 },
+      );
+    }
+
+    if (guestCheck.account_status === 'BANNED') {
+      return createApiResponse(
+        false,
+        "Account is banned. Cannot make reservations.",
+        { status: 403 },
+      );
+    }
+
+    if (guestCheck.account_status === 'PENDING') {
+      return createApiResponse(
+        false,
+        "Account is pending activation. Please verify your email first.",
+        { status: 403 },
+      );
+    }
+
     const { data: conflicting, error: conflictError } = await supabase
       .from("reservations")
       .select("id")
@@ -116,6 +152,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Determine initial status based on origin
+    let initialStatus = body.status || "CONFIRMED";
+    const origin = body.origin || "RECEPTION_DESK";
+
+    // Mobile app reservations start as RESERVED (not yet checked in)
+    if (origin === "MOBILE_APP" && !body.status) {
+      initialStatus = "RESERVED";
+    }
+
     const { data, error } = await supabase
       .from("reservations")
       .insert({
@@ -126,7 +171,7 @@ export async function POST(request: NextRequest) {
         adults: body.adults,
         children: body.children,
         total_amount: body.totalAmount,
-        status: body.status || "CONFIRMED",
+        status: initialStatus,
       })
       .select("*")
       .single();
@@ -136,7 +181,7 @@ export async function POST(request: NextRequest) {
     const [{ data: guestRow }, { data: roomRow }] = await Promise.all([
       supabase
         .from("guests")
-        .select("first_name,last_name,email,auth_id,guest_id")
+        .select("first_name,last_name,email,auth_id,guest_id,account_status")
         .eq("id", body.guestId)
         .maybeSingle(),
       supabase
@@ -146,26 +191,23 @@ export async function POST(request: NextRequest) {
         .maybeSingle(),
     ]);
 
+    // Send confirmation email (no longer sends portal invite link - mobile app uses OTP)
     if (guestRow?.email && roomRow?.room_number) {
-      const registerUrl = new URL("/register", request.url);
-      registerUrl.searchParams.set("guestId", body.guestId);
-
-      await sendGuestPortalInvitationEmail({
-        to: guestRow.email,
-        guestName:
-          `${guestRow.first_name || ""} ${guestRow.last_name || ""}`.trim(),
-        guestId: guestRow.guest_id || body.guestId,
-        guestEmail: guestRow.email,
-        roomNumber: roomRow.room_number,
-        checkIn: body.checkIn,
-        checkOut: body.checkOut,
-        registerUrl: registerUrl.toString(),
-      }).catch((emailError) => {
-        console.warn(
-          "Guest portal invitation email could not be sent on POST:",
-          emailError,
-        );
-      });
+      try {
+        const { sendReservationConfirmationEmail } = await import('@/lib/mailer');
+        await sendReservationConfirmationEmail({
+          to: guestRow.email,
+          guestName: `${guestRow.first_name || ""} ${guestRow.last_name || ""}`.trim(),
+          roomNumber: roomRow.room_number,
+          checkIn: body.checkIn,
+          checkOut: body.checkOut,
+          totalAmount: body.totalAmount,
+          status: initialStatus,
+          reservationId: data.reservation_id,
+        });
+      } catch (emailError) {
+        console.warn("Confirmation email could not be sent:", emailError);
+      }
     }
 
     return createApiResponse(true, data, { status: 201 });

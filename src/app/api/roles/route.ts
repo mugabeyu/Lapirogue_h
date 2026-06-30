@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { z } from 'zod';
 
-const allowedRoleNames = ['MAIN_RECEPTIONIST', 'RECEPTIONIST'] as const;
+const allowedRoleNames = ['ADMIN', 'MANAGER', 'RECEPTIONIST'] as const;
 
 const roleSchema = z.object({
   id: z.string().uuid().optional(),

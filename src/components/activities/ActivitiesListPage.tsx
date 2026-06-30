@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import useSWR from 'swr';
+import { useApi } from '@/hooks/useApi';
 import {
   Clock,
   Grid3X3,
@@ -122,6 +123,7 @@ function ActivityGridCard({
 }
 
 export default function ActivitiesListPage() {
+  const { data: currentUser } = useApi<{ role: string }>('/api/auth/me');
   const [category, setCategory] = useState('All');
   const [view, setView] = useState<ViewMode>('list');
   const [bookingActivity, setBookingActivity] = useState<ActivityListItem | null>(null);
@@ -134,6 +136,7 @@ export default function ActivitiesListPage() {
 
   const { data, mutate } = useSWR(url, fetchActivities);
   const activities = data?.data ?? [];
+  const isManager = currentUser?.role === 'MANAGER';
   const categories = useMemo(() => {
     const fromApi = data?.categories ?? [];
     const merged = new Set<string>(['All', ...ACTIVITY_CATEGORIES, ...fromApi]);
@@ -145,14 +148,14 @@ export default function ActivitiesListPage() {
       <PageHeader
         title="Activities & Tours"
         subtitle="Manage hotel experiences and excursions"
-        action={
+        action={isManager ? (
           <Link href="/activities/new" className="inline-flex">
             <Button variant="primary">
               <Plus className="h-4 w-4" />
               Add Activity
             </Button>
           </Link>
-        }
+        ) : undefined}
       />
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -200,9 +203,11 @@ className={`rounded-xl px-4 py-2 text-sm font-medium transition-colors ${
       { activities.length === 0 && (
         <div className="card rounded-xl border-dashed border-card-border px-6 py-16 text-center">
           <p className="text-[var(--color-text-secondary)]">No activities in this category yet.</p>
-          <Link href="/activities/new" className="mt-4 inline-block">
-            <Button variant="secondary">Add your first activity →</Button>
-          </Link>
+          {isManager && (
+            <Link href="/activities/new" className="mt-4 inline-block">
+              <Button variant="secondary">Add your first activity →</Button>
+            </Link>
+          )}
         </div>
       )}
 

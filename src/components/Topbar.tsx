@@ -13,7 +13,8 @@ import Link from 'next/link';
 
 function formatRole(role?: string) {
   if (!role) return '';
-  if (role === 'MAIN_RECEPTIONIST') return 'Main Receptionist';
+  if (role === 'ADMIN') return 'Administrator';
+  if (role === 'MANAGER') return 'Manager';
   if (role === 'RECEPTIONIST') return 'Receptionist';
   return role
     .toLowerCase()
@@ -88,6 +89,7 @@ export default function Topbar() {
   const [isGuestModalOpen, setIsGuestModalOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
 
+  const isAdmin = user?.role === 'ADMIN';
   const displayName = user?.name?.trim() || '';
   const displayRole = formatRole(user?.role);
   const todayLabel = formatTodayLabel(new Date());
@@ -127,88 +129,92 @@ export default function Topbar() {
           </div>
         </div>
 
-        <nav className="flex items-center gap-3">
-          <Link
-            href="/schedule"
-            className="inline-flex items-center gap-2 rounded-xl bg-[var(--color-button-primary)] px-4 py-2 text-sm font-medium text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-button-primary-hover)] active:bg-[var(--color-button-primary-active)]"
-          >
-            <CalendarIcon className="h-4 w-4" />
-            <span className="hidden sm:inline">Daily Schedules</span>
-          </Link>
-          <button
-            type="button"
-            onClick={() => setIsGuestModalOpen(true)}
-            className="inline-flex items-center gap-2 rounded-xl border border-[var(--color-button-primary)] bg-transparent px-4 py-2 text-sm font-medium text-[var(--color-button-primary)] transition-colors hover:bg-[var(--color-button-primary)]/10 active:bg-[var(--color-button-primary)]/20"
-          >
-            <UsersIcon className="h-4 w-4" />
-            <span className="hidden sm:inline">Register Guest</span>
-          </button>
-        </nav>
-
-        <div className="flex items-center gap-4">
-          <div className="relative">
+        {!isAdmin && (
+          <nav className="flex items-center gap-3">
+            <Link
+              href="/schedule"
+              className="inline-flex items-center gap-2 rounded-xl bg-[var(--color-button-primary)] px-4 py-2 text-sm font-medium text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-button-primary-hover)] active:bg-[var(--color-button-primary-active)]"
+            >
+              <CalendarIcon className="h-4 w-4" />
+              <span className="hidden sm:inline">Daily Schedules</span>
+            </Link>
             <button
               type="button"
-              onClick={() => setIsNotificationsOpen((current) => !current)}
-              className="relative rounded-xl p-2 text-[var(--color-text-secondary)] transition-colors hover:bg-surface-secondary hover:text-[var(--color-nav-active)]"
-              aria-haspopup="menu"
-              aria-expanded={isNotificationsOpen}
+              onClick={() => setIsGuestModalOpen(true)}
+              className="inline-flex items-center gap-2 rounded-xl border border-[var(--color-button-primary)] bg-transparent px-4 py-2 text-sm font-medium text-[var(--color-button-primary)] transition-colors hover:bg-[var(--color-button-primary)]/10 active:bg-[var(--color-button-primary)]/20"
             >
-              <BellIcon className="h-5 w-5 text-icon-body" />
-              {incomingMessages.length > 0 && (
-                <span className="absolute -right-0.5 -top-0.5 flex min-h-5 min-w-5 items-center justify-center rounded-full bg-[var(--color-button-primary)] px-1 text-[10px] font-semibold text-[var(--color-text-primary)]">
-                  {incomingMessages.length > 99 ? '99+' : incomingMessages.length}
-                </span>
-              )}
+              <UsersIcon className="h-4 w-4" />
+              <span className="hidden sm:inline">Register Guest</span>
             </button>
+          </nav>
+        )}
 
-            {isNotificationsOpen && (
-              <div className="absolute right-0 z-50 mt-3 w-[min(92vw,420px)] rounded-2xl border border-card-border bg-surface shadow-xl">
-                <div className="flex items-center justify-between border-b border-card-border px-4 py-3">
-                  <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">Incoming messages</h2>
-                  <span className="rounded-full bg-[var(--color-button-primary)]/10 px-2 py-1 text-xs font-semibold text-[var(--color-button-primary)]">
-                    {incomingMessages.length}
+        <div className="flex items-center gap-4">
+          {!isAdmin && (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setIsNotificationsOpen((current) => !current)}
+                className="relative rounded-xl p-2 text-[var(--color-text-secondary)] transition-colors hover:bg-surface-secondary hover:text-[var(--color-nav-active)]"
+                aria-haspopup="menu"
+                aria-expanded={isNotificationsOpen}
+              >
+                <BellIcon className="h-5 w-5 text-icon-body" />
+                {incomingMessages.length > 0 && (
+                  <span className="absolute -right-0.5 -top-0.5 flex min-h-5 min-w-5 items-center justify-center rounded-full bg-[var(--color-button-primary)] px-1 text-[10px] font-semibold text-[var(--color-text-primary)]">
+                    {incomingMessages.length > 99 ? '99+' : incomingMessages.length}
                   </span>
-                </div>
+                )}
+              </button>
 
-                <div className="max-h-[min(70vh,560px)] overflow-y-auto p-2">
-                  {incomingMessages.length === 0 ? (
-                    <div className="px-4 py-6 text-center text-sm text-[var(--color-text-secondary)]">No new messages</div>
-                  ) : (
-                    incomingMessages.map((message) => (
-                      <Link
-                        key={message.id}
-                        href={`/messages?guestId=${message.guestId}`}
-                        onClick={() => setIsNotificationsOpen(false)}
-                        className="group flex gap-3 rounded-xl p-3 transition-colors hover:bg-surface-secondary"
-                      >
-                        <GuestNameCell name={message.guestName ?? message.guestId} imageUrl={message.guestImagePath} />
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-start justify-between gap-3">
-                            <p className="truncate text-sm font-medium text-[var(--color-text-primary)]">
-                              {message.guestName ?? message.guestId}
-                            </p>
-                            <time className="shrink-0 text-xs text-[var(--color-text-secondary)]">
-                              {formatNotificationTime(message.createdAt)}
-                            </time>
+              {isNotificationsOpen && (
+                <div className="absolute right-0 z-50 mt-3 w-[min(92vw,420px)] rounded-2xl border border-card-border bg-surface shadow-xl">
+                  <div className="flex items-center justify-between border-b border-card-border px-4 py-3">
+                    <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">Incoming messages</h2>
+                    <span className="rounded-full bg-[var(--color-button-primary)]/10 px-2 py-1 text-xs font-semibold text-[var(--color-button-primary)]">
+                      {incomingMessages.length}
+                    </span>
+                  </div>
+
+                  <div className="max-h-[min(70vh,560px)] overflow-y-auto p-2">
+                    {incomingMessages.length === 0 ? (
+                      <div className="px-4 py-6 text-center text-sm text-[var(--color-text-secondary)]">No new messages</div>
+                    ) : (
+                      incomingMessages.map((message) => (
+                        <Link
+                          key={message.id}
+                          href={`/messages?guestId=${message.guestId}`}
+                          onClick={() => setIsNotificationsOpen(false)}
+                          className="group flex gap-3 rounded-xl p-3 transition-colors hover:bg-surface-secondary"
+                        >
+                          <GuestNameCell name={message.guestName ?? message.guestId} imageUrl={message.guestImagePath} />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-start justify-between gap-3">
+                              <p className="truncate text-sm font-medium text-[var(--color-text-primary)]">
+                                {message.guestName ?? message.guestId}
+                              </p>
+                              <time className="shrink-0 text-xs text-[var(--color-text-secondary)]">
+                                {formatNotificationTime(message.createdAt)}
+                              </time>
+                            </div>
+                            <p className="mt-1 line-clamp-2 text-sm text-[var(--color-text-secondary)]">{message.content}</p>
                           </div>
-                          <p className="mt-1 line-clamp-2 text-sm text-[var(--color-text-secondary)]">{message.content}</p>
-                        </div>
-                      </Link>
-                    ))
-                  )}
-                </div>
+                        </Link>
+                      ))
+                    )}
+                  </div>
 
-                <Link
-                  href="/messages?tab=unread"
-                  onClick={() => setIsNotificationsOpen(false)}
-                  className="block border-t border-card-border px-4 py-3 text-center text-sm font-medium text-[var(--color-button-primary)] transition-colors hover:bg-surface-secondary"
-                >
-                  View all unread
-                </Link>
-              </div>
-            )}
-          </div>
+                  <Link
+                    href="/messages?tab=unread"
+                    onClick={() => setIsNotificationsOpen(false)}
+                    className="block border-t border-card-border px-4 py-3 text-center text-sm font-medium text-[var(--color-button-primary)] transition-colors hover:bg-surface-secondary"
+                  >
+                    View all unread
+                  </Link>
+                </div>
+              )}
+            </div>
+          )}
           <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border border-card-border bg-surface-secondary text-base font-semibold text-[var(--color-text-primary)]">
             {avatarUrl ? (
               <img src={avatarUrl} alt={displayName || ''} className="h-full w-full object-cover" />

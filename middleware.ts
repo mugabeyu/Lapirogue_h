@@ -10,7 +10,9 @@ const PUBLIC_API_PREFIXES = [
   '/api/auth/verify',
   '/api/auth/password-sync',
   '/api/auth/me',
-  '/api/staff/onboarding',
+  '/api/auth/register-guest',
+  '/api/auth/verify-otp',
+  '/api/staff/register',
 ];
 
 function isAuthRoute(pathname: string) {
@@ -139,7 +141,7 @@ export const config = {
   matcher: [
     '/',
     '/(login|forgot-password|reset-password|register)(/.*)?',
-    '/((?!api/auth/(?:login|forgot-password|verify|password-sync|me)|staff/onboarding|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!api/auth/(?:login|forgot-password|verify|password-sync|me|register-guest|verify-otp)|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };
 

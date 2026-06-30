@@ -15,7 +15,7 @@ import { RoomModal } from '@/components/modals/RoomModal';
 import { AddActivityModal } from '@/components/modals/AddActivityModal';
 import { MenuItemModal } from '@/components/modals/MenuItemModal';
 import { PaymentModal } from '@/components/modals/PaymentModal';
-import { StaffModal } from '@/components/modals/StaffModal';
+
 import { LabeledTable } from '@/components/ui/LabeledTable';
 import { GuestTableCell } from '@/components/ui/GuestNameCell';
 import { formatTableValue, getTableValue, type TableColumnType } from '@/lib/table';
@@ -26,7 +26,7 @@ export type CrudColumn = {
   type?: TableColumnType;
 };
 
-export type CrudEntityType = 'reservation' | 'room' | 'activity' | 'menu-item' | 'payment' | 'staff';
+export type CrudEntityType = 'reservation' | 'room' | 'activity' | 'menu-item' | 'payment';
 
 type CrudDataTablePageProps = {
   title: string;
@@ -67,8 +67,6 @@ function EntityModal({ entityType, ...props }: EntityModalProps & { entityType: 
       return <MenuItemModal {...props} />;
     case 'payment':
       return <PaymentModal {...props} />;
-    case 'staff':
-      return <StaffModal {...props} />;
     default:
       return null;
   }

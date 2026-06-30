@@ -1,3 +1,5 @@
+import type { GuestAccountStatus } from '@/types';
+
 export type GuestRow = {
   id: string;
   guest_id: string;
@@ -10,6 +12,8 @@ export type GuestRow = {
   date_of_birth: string | null;
   vip: boolean;
   status: string;
+  account_status: string;
+  home_address: string | null;
   notes: string | null;
   image_path: string | null;
   fcm_token: string | null;
@@ -24,6 +28,7 @@ export function toGuest(row: GuestRow) {
   return {
     id: row.id,
     guestId: row.guest_id,
+    authId: row.auth_id ?? undefined,
     firstName: row.first_name,
     lastName: row.last_name,
     email: row.email ?? undefined,
@@ -33,6 +38,8 @@ export function toGuest(row: GuestRow) {
     dateOfBirth: row.date_of_birth ?? undefined,
     vip: row.vip,
     status: row.status,
+    accountStatus: (row.account_status || 'ACTIVE') as GuestAccountStatus,
+    homeAddress: row.home_address ?? undefined,
     notes: row.notes ?? undefined,
     imagePath: row.image_path ?? undefined,
     createdAt: row.created_at,

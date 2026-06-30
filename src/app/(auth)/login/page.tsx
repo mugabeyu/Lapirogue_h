@@ -106,6 +106,7 @@ export default function LoginPage() {
 
         <section className="flex w-full items-center justify-center px-6 py-8 sm:px-10 lg:w-1/2 lg:px-14 xl:px-16">
           <div className="w-full max-w-[420px]">
+            <p className="mb-1 text-center text-base font-medium text-[var(--color-text-secondary)]">Welcome</p>
             <h1 className="mb-5 text-center font-display text-3xl font-semibold leading-tight tracking-tight text-[var(--color-text-primary)] sm:text-[32px]">
               Sign in to your account
             </h1>

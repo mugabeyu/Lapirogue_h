@@ -8,55 +8,55 @@
 :root {
   /* Color tokens - New Color Scheme */
   /* Button colors */
-  --color-button-primary: #A1C181;
-  --color-button-primary-hover: #8AA070;
-  --color-button-primary-active: #8AA070;
-  
+  --color-button-primary: #a1c181;
+  --color-button-primary-hover: #8aa070;
+  --color-button-primary-active: #8aa070;
+
   /* Primary for other uses */
-  --color-primary: #A1C181;
-  --color-accent: #FE7F2D;
-  
+  --color-primary: #a1c181;
+  --color-accent: #fe7f2d;
+
   /* Sidebar background */
-  --color-sidebar-bg: #619B8A;
-  --color-sidebar-border: #619B8A;
-  --color-sidebar-hover: #FE7F2D;
-  
+  --color-sidebar-bg: #619b8a;
+  --color-sidebar-border: #619b8a;
+  --color-sidebar-hover: #fe7f2d;
+
   /* Icon colors */
   --color-icon-body: #374151;
-  
+
   /* Date/Status colors */
-  --color-checkout-date: #FCCA46;
-  
+  --color-checkout-date: #fcca46;
+
   /* Card/Table border */
-  --color-card-border: #E5E7EB;
-  --color-border: #E5E7EB;
-  
+  --color-card-border: #e5e7eb;
+  --color-border: #e5e7eb;
+
   /* Search bar border */
-  --color-search-border: #D1D5DB;
-  
+  --color-search-border: #d1d5db;
+
   /* Sidebar nav active/hover */
-  --color-nav-active: #A1C181;
-  
+  --color-nav-active: #a1c181;
+
   /* Keep danger red for delete/logout buttons */
   --color-danger: #c8321c;
-  --color-success: #10B981;
-  --color-warning: #F59E0B;
-  --color-feedback-star: #FCCA46;
-  --color-eco-points: #FE7F2D;
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-feedback-star: #fcca46;
+  --color-eco-points: #fe7f2d;
 
   /* Keep date */
   --color-black: #000000;
-  
+
   /* Text colors */
-  --color-text-primary: #1F2937;
-  --color-text-secondary: #4A4A4A;
-  --color-text-tertiary: #6B7280;
-  --color-link: #2563EB;
+  --color-text-primary: #1f2937;
+  --color-text-secondary: #4a4a4a;
+  --color-text-tertiary: #6b7280;
+  --color-link: #2563eb;
   /* Background colors */
-  --color-background: #FAFAFA;
-  --color-surface: #FFFFFF;
-  --color-surface-secondary: #F3F4F6;
-  
+  --color-background: #fafafa;
+  --color-surface: #ffffff;
+  --color-surface-secondary: #f3f4f6;
+
   /* Spacing */
   --space-1: 4px;
   --space-2: 8px;
@@ -66,7 +66,7 @@
   --space-8: 32px;
   --space-12: 56px;
   --space-16: 80px;
-  
+
   /* Radius - Single value everywhere */
   --radius-sm: 8px;
   --radius-md: 12px;
@@ -75,19 +75,36 @@
 }
 
 @layer base {
-   body {
-     background-color: var(--color-background);
-     color: var(--color-black);
-     font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-     -webkit-font-smoothing: antialiased;
-     -moz-osx-font-smoothing: grayscale;
-   }
-   h1, h2, h3, h4, h5, h6 {
-     font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-     font-weight: 600 !important;
-     font-size: 1.05em;
-     line-height: 1.2;
-   }
+  body {
+    background-color: var(--color-background);
+    color: var(--color-black);
+    font-family:
+      "Inter",
+      system-ui,
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family:
+      "Inter",
+      system-ui,
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      sans-serif;
+    font-weight: 600 !important;
+    font-size: 1.05em;
+    line-height: 1.2;
+  }
 }
 
 @layer components {
@@ -99,41 +116,47 @@
     border-radius: var(--radius-md) !important;
     box-shadow: none !important;
   }
-  
+
   .btn-primary {
     background-color: var(--color-button-primary);
-    color: #1F2937;
+    color: #1f2937;
     border: 1px solid var(--color-card-border);
     padding: 8px 16px;
-    transition: background-color .15s ease-in-out;
+    transition:
+      background-color 0.15s ease-in-out,
+      color 0.15s ease-in-out;
   }
   .btn-primary:hover {
-    background-color: var(--color-button-primary-hover);
+    background-color: var(--color-sidebar-hover);
+    color: #ffffff;
   }
   .btn-primary:active {
-    background-color: var(--color-button-primary-active);
+    background-color: var(--color-sidebar-hover);
+    color: #ffffff;
   }
-  
+
   .btn-secondary {
     background-color: var(--color-surface);
     color: var(--color-text-primary);
     border: 1px solid var(--color-card-border);
     padding: 8px 16px;
     font-weight: 600 !important;
-    transition: background-color .15s, color .15s;
+    transition:
+      background-color 0.15s,
+      color 0.15s;
     box-shadow: none;
   }
   .btn-secondary:hover {
-    background-color: #F3F4F6;
+    background-color: #f3f4f6;
   }
-  
+
   .btn-danger {
     background-color: var(--color-danger);
-    color: #FFFFFF;
+    color: #ffffff;
     border: 1px solid var(--color-danger);
     padding: 8px 16px;
     font-weight: 600 !important;
-    transition: opacity .15s;
+    transition: opacity 0.15s;
     box-shadow: none;
   }
   .btn-danger:hover {
@@ -142,31 +165,27 @@
 
   .btn {
     background-color: var(--color-button-primary);
-    color: #1F2937;
+    color: #1f2937;
     border: 1px solid var(--color-card-border);
     padding: 8px 16px;
     font-weight: 600 !important;
-    transition: background-color .15s;
     box-shadow: none;
   }
-  .btn:hover {
-    background-color: var(--color-button-primary-hover);
-  }
-  
+
   /* Card styles - no shadows, with visible border */
   .card {
     background-color: var(--color-surface);
     border: 1px solid var(--color-card-border);
     border-radius: var(--radius-md);
   }
-  
+
   /* Table wrapper */
   .table-wrap {
     overflow-x: auto;
     border-radius: var(--radius-md);
     border: 1px solid var(--color-card-border);
   }
-  
+
   /* Input fields - search bar border */
   .input-field {
     width: 100%;
@@ -174,14 +193,14 @@
     background-color: var(--color-surface);
     border: 1px solid var(--color-search-border);
     border-radius: var(--radius-md);
-    transition: border-color .12s;
+    transition: border-color 0.12s;
     box-shadow: none;
   }
   .input-field:focus {
     outline: none;
     border-color: var(--color-search-border);
   }
-  
+
   /* Badge styles */
   .badge {
     display: inline-flex;
@@ -192,15 +211,15 @@
     font-weight: 500;
     box-shadow: none;
   }
-  
+
   .badge-default {
     background-color: var(--color-surface-secondary);
     color: var(--color-text-secondary);
   }
-  
+
   .badge-danger {
-    background-color: #FEE2E2;
-    color: #DC2626;
+    background-color: #fee2e2;
+    color: #dc2626;
   }
 
   .eco-points-value {
@@ -228,14 +247,14 @@
 
 /* Auth page background styles */
 .auth-page-bg {
-  background-image: url('/images/forgotpasswordimage.jpg');
+  background-image: url("/images/forgotpasswordimage.jpg");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
 }
 
 .auth-login-bg {
-  background-image: url('/images/homeimage.jpeg');
+  background-image: url("/images/homeimage.jpeg");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -249,4 +268,11 @@ svg.lucide {
   stroke-width: 2;
   color: var(--color-icon-body) !important;
   stroke: currentColor !important;
+}
+
+input[readonly],
+textarea[readonly] {
+  background-color: var(--color-surface-secondary);
+  color: var(--color-text-secondary);
+  cursor: default;
 }

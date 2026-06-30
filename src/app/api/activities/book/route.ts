@@ -24,6 +24,7 @@ const bookingSchema = z.object({
   pickupPoint: z.string().optional(),
   status: z.enum(['CONFIRMED', 'COMPLETED', 'CANCELLED']).optional(),
   notes: z.string().optional(),
+  origin: z.enum(['MOBILE_APP', 'RECEPTION_DESK', 'MANAGER_PORTAL']).optional(),
 });
 
 function parseTimeSlot(value?: string) {
@@ -92,6 +93,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const { data: checkedInReservation } = await admin
+      .from('reservations')
+      .select('id')
+      .eq('guest_id', body.guestId)
+      .eq('status', 'CHECKED_IN')
+      .limit(1)
+      .maybeSingle();
+
+    if (!checkedInReservation) {
+      return NextResponse.json({
+        success: false,
+        error: 'Guest must be CHECKED_IN before booking activities.'
+      }, { status: 403 });
+    }
+
     const { data, error } = await admin
       .from('activity_bookings')
       .insert({
@@ -103,6 +119,7 @@ export async function POST(request: NextRequest) {
         pickup_point: body.pickupPoint,
         status: body.status ?? 'CONFIRMED',
         notes: body.notes,
+        origin: body.origin ?? 'RECEPTION_DESK',
       })
       .select('*')
       .single();

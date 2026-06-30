@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { attachSupabaseCookies, getRouteHandlerSupabaseSession } from '@/lib/supabase-server';
-import { INTERNATIONAL_PHONE_DISPLAY_PATTERN } from '@/lib/phone';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -17,34 +16,61 @@ type ProfileRow = {
   phone: string | null;
   avatar_url: string | null;
   role: string | null;
-  is_main: boolean | null;
   is_active: boolean | null;
+  home_address: string | null;
   created_at: string | null;
   updated_at: string | null;
 };
 
-type StaffRow = {
-  auth_user_id: string;
+type ManagerRow = {
   email: string | null;
-  full_name: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  phone: string | null;
   image_path: string | null;
-  status: string | null;
+  home_address: string | null;
+  department_id: string | null;
+  is_active: boolean | null;
+  created_at: string | null;
+  updated_at: string | null;
+  departments?: { name: string | null } | null;
+};
+
+type ReceptionistRow = {
+  email: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  phone: string | null;
+  image_path: string | null;
+  home_address: string | null;
+  department_id: string | null;
+  manager_id: string | null;
+  is_active: boolean | null;
+  created_at: string | null;
+  updated_at: string | null;
+  departments?: { name: string | null } | null;
 };
 
 type SessionData = {
   id: string;
   email: string;
   name: string;
-  role: 'MAIN_RECEPTIONIST' | 'RECEPTIONIST';
+  role: 'ADMIN' | 'MANAGER' | 'RECEPTIONIST';
   phone: string | null;
   avatarUrl: string | null;
+  homeAddress: string | null;
+  departmentId: string | null;
+  departmentName: string | null;
+  managerId: string | null;
+  managerName: string | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
 };
 
 function normalizeRole(role?: string | null): SessionData['role'] {
-  if (role === 'MAIN_RECEPTIONIST') return 'MAIN_RECEPTIONIST';
+  if (role === 'ADMIN') return 'ADMIN';
+  if (role === 'MANAGER') return 'MANAGER';
   return 'RECEPTIONIST';
 }
 
@@ -83,33 +109,99 @@ function deriveNameFromEmail(email: string) {
   );
 }
 
-function buildSessionData(params: {
+async function buildSessionData(params: {
   userId: string;
   userCreatedAt?: string;
   userUpdatedAt?: string;
   userMetadata?: Record<string, unknown>;
   profile: ProfileRow | null;
-  staff: StaffRow | null;
   admin: ReturnType<typeof getSupabaseAdmin>;
-}): SessionData {
-  const { userId, userCreatedAt, userUpdatedAt, userMetadata, profile, staff, admin } = params;
-  const email = profile?.email || staff?.email || '';
-  const name =
-    profile?.full_name ||
-    staff?.full_name ||
-    (typeof userMetadata?.full_name === 'string' ? userMetadata.full_name : null) ||
-    (email ? deriveNameFromEmail(email) : '');
+}): Promise<SessionData> {
+  const { userId, userCreatedAt, userUpdatedAt, userMetadata, profile, admin } = params;
+
+  if (!profile?.role) {
+    return {
+      id: userId,
+      email: profile?.email || '',
+      name: profile?.full_name || deriveNameFromEmail(profile?.email || ''),
+      role: 'RECEPTIONIST',
+      phone: null,
+      avatarUrl: null,
+      homeAddress: null,
+      departmentId: null,
+      departmentName: null,
+      managerId: null,
+      managerName: null,
+      isActive: profile?.is_active !== false,
+      createdAt: profile?.created_at || userCreatedAt || '',
+      updatedAt: profile?.updated_at || userUpdatedAt || '',
+    };
+  }
+
+  const role = normalizeRole(profile.role);
+  const email = profile.email || '';
+  const name = profile.full_name || deriveNameFromEmail(email);
+  const avatarUrl = normalizeStorageUrl(admin, profile.avatar_url);
+
+  let departmentName: string | null = null;
+  let managerName: string | null = null;
+  let managerId: string | null = null;
+  let detailPhone: string | null = null;
+  let detailHomeAddress = profile.home_address;
+
+  if (role === 'MANAGER') {
+    const { data } = await admin
+      .from('managers')
+      .select('phone, home_address, department_id, departments(name)')
+      .eq('auth_id', userId)
+      .maybeSingle();
+    const mgr = data as { phone?: string | null; home_address?: string | null; department_id?: string | null; departments?: { name?: string | null } | null } | null;
+    if (mgr) {
+      detailPhone = normalizeVal(mgr.phone);
+      detailHomeAddress = detailHomeAddress || normalizeVal(mgr.home_address);
+      departmentName = mgr.departments?.name ?? null;
+    }
+  } else if (role === 'RECEPTIONIST') {
+    const { data } = await admin
+      .from('receptionists')
+      .select('phone, home_address, department_id, manager_id, departments(name)')
+      .eq('auth_id', userId)
+      .maybeSingle();
+    const rec = data as { phone?: string | null; home_address?: string | null; department_id?: string | null; manager_id?: string | null; departments?: { name?: string | null } | null } | null;
+    if (rec) {
+      detailPhone = normalizeVal(rec.phone);
+      detailHomeAddress = detailHomeAddress || normalizeVal(rec.home_address);
+      departmentName = rec.departments?.name ?? null;
+      managerId = rec.manager_id ?? null;
+
+      if (managerId) {
+        const { data: mgrData } = await admin
+          .from('managers')
+          .select('first_name, last_name')
+          .eq('id', managerId)
+          .maybeSingle();
+        if (mgrData) {
+          managerName = `${(mgrData as { first_name?: string }).first_name ?? ''} ${(mgrData as { last_name?: string }).last_name ?? ''}`.trim();
+        }
+      }
+    }
+  }
 
   return {
-    id: profile?.auth_id || staff?.auth_user_id || userId,
+    id: profile.auth_id || userId,
     email,
     name,
-    role: profile?.is_main ? 'MAIN_RECEPTIONIST' : normalizeRole(profile?.role ?? (userMetadata?.role as string | undefined)),
-    phone: profile?.phone ?? null,
-    avatarUrl: normalizeStorageUrl(admin, profile?.avatar_url) || normalizeStorageUrl(admin, staff?.image_path),
-    isActive: profile?.is_active !== false,
-    createdAt: profile?.created_at || userCreatedAt || '',
-    updatedAt: profile?.updated_at || userUpdatedAt || '',
+    role,
+    phone: normalizeVal(profile.phone) || detailPhone,
+    avatarUrl,
+    homeAddress: detailHomeAddress,
+    departmentId: null,
+    departmentName,
+    managerId,
+    managerName,
+    isActive: profile.is_active !== false,
+    createdAt: profile.created_at || userCreatedAt || '',
+    updatedAt: profile.updated_at || userUpdatedAt || '',
   };
 }
 
@@ -117,7 +209,8 @@ const profileSchema = z.object({
   fullName: z.string().min(1).optional().nullable(),
   email: z.string().email(),
   avatarUrl: z.string().url().optional().nullable(),
-  phone: z.string().regex(INTERNATIONAL_PHONE_DISPLAY_PATTERN, 'Use Mauritian format like (+230) 1234 5678').optional().nullable(),
+  phone: z.string().optional().nullable(),
+  homeAddress: z.string().optional().nullable(),
 });
 
 export async function GET(request: NextRequest) {
@@ -136,16 +229,11 @@ export async function GET(request: NextRequest) {
 
   const admin = getSupabaseAdmin();
 
-  const [profileResult, staffResult, guestResult] = await Promise.all([
+  const [profileResult, guestResult] = await Promise.all([
     admin
       .from('profiles')
-      .select('auth_id, email, full_name, phone, avatar_url, role, is_main, is_active, created_at, updated_at')
+      .select('auth_id, email, full_name, phone, avatar_url, role, is_active, home_address, created_at, updated_at')
       .eq('auth_id', user.id)
-      .maybeSingle(),
-    admin
-      .from('staff')
-      .select('auth_user_id, email, full_name, image_path, status')
-      .eq('auth_user_id', user.id)
       .maybeSingle(),
     admin
       .from('guests')
@@ -155,7 +243,6 @@ export async function GET(request: NextRequest) {
   ]);
 
   if (profileResult.error) throw profileResult.error;
-  if (staffResult.error) throw staffResult.error;
   if (guestResult.error) throw guestResult.error;
 
   if (guestResult.data) {
@@ -166,11 +253,10 @@ export async function GET(request: NextRequest) {
   }
 
   const profileRow = profileResult.data as ProfileRow | null;
-  const staffRow = staffResult.data as StaffRow | null;
 
-  if (profileRow?.is_active === false || (staffRow?.status && staffRow.status.toUpperCase() !== 'ACTIVE')) {
+  if (profileRow?.is_active === false) {
     return attachSupabaseCookies(
-      NextResponse.json({ success: false, error: 'This staff account is blocked' }, { status: 403 }),
+      NextResponse.json({ success: false, error: 'This account is blocked' }, { status: 403 }),
       response,
     );
   }
@@ -183,20 +269,19 @@ export async function GET(request: NextRequest) {
         phone: normalizeVal(profileRow.phone),
         avatar_url: normalizeVal(profileRow.avatar_url),
         role: normalizeVal(profileRow.role),
-        is_main: profileRow.is_main,
         is_active: profileRow.is_active,
+        home_address: normalizeVal(profileRow.home_address),
         created_at: profileRow.created_at,
         updated_at: profileRow.updated_at,
       }
     : null;
 
-  let responseData = buildSessionData({
+  let responseData = await buildSessionData({
     userId: user.id,
     userCreatedAt: user.created_at,
     userUpdatedAt: user.updated_at,
     userMetadata: user.user_metadata ?? {},
     profile: normalizedProfileRow,
-    staff: staffRow,
     admin,
   });
 
@@ -230,7 +315,7 @@ export async function PUT(request: NextRequest) {
 
     const { data: existingProfile } = await admin
       .from('profiles')
-      .select('email, full_name, phone, avatar_url, role, is_main, is_active, created_at, updated_at')
+      .select('email, full_name, phone, avatar_url, role, is_active, home_address, created_at, updated_at')
       .eq('auth_id', user.id)
       .maybeSingle();
 
@@ -239,6 +324,7 @@ export async function PUT(request: NextRequest) {
       validatedData.fullName ?? existingProfile?.full_name ?? (user.user_metadata?.full_name as string | null) ?? null;
     const resolvedPhone = validatedData.phone ?? existingProfile?.phone ?? null;
     const resolvedAvatarUrl = validatedData.avatarUrl !== undefined ? validatedData.avatarUrl : existingProfile?.avatar_url ?? null;
+    const resolvedHomeAddress = validatedData.homeAddress !== undefined ? validatedData.homeAddress : existingProfile?.home_address ?? null;
 
     const { data, error } = await admin
       .from('profiles')
@@ -249,11 +335,12 @@ export async function PUT(request: NextRequest) {
           full_name: resolvedFullName,
           phone: resolvedPhone,
           avatar_url: resolvedAvatarUrl,
+          home_address: resolvedHomeAddress,
           is_active: existingProfile?.is_active ?? true,
         },
         { onConflict: 'auth_id' },
       )
-      .select('auth_id, email, full_name, phone, avatar_url, role, is_main, is_active, created_at, updated_at')
+      .select('auth_id, email, full_name, phone, avatar_url, role, is_active, home_address, created_at, updated_at')
       .single();
 
     if (error) throw error;
@@ -267,13 +354,12 @@ export async function PUT(request: NextRequest) {
       await supabase.auth.updateUser({ data: metadata });
     }
 
-    const responseData = buildSessionData({
+    const responseData = await buildSessionData({
       userId: user.id,
       userCreatedAt: user.created_at,
       userUpdatedAt: user.updated_at,
       userMetadata: { ...(user.user_metadata ?? {}), ...metadata },
       profile: data as ProfileRow,
-      staff: null,
       admin,
     });
 

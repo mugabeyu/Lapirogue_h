@@ -1,3 +1,27 @@
+export type Role = 'ADMIN' | 'MANAGER' | 'RECEPTIONIST';
+
+export type GuestAccountStatus = 'PENDING' | 'ACTIVE' | 'FROZEN' | 'BANNED';
+
+export type GuestStatus = 'RESERVED' | 'CHECKED_IN' | 'CHECKED_OUT' | 'CANCELLED';
+
+export type ReservationStatus = 'RESERVED' | 'CONFIRMED' | 'CHECKED_IN' | 'CHECKED_OUT' | 'CANCELLED' | 'NO_SHOW';
+
+export type RoomType = 'STANDARD' | 'DELUXE' | 'SUITE' | 'VILLA';
+
+export type RoomStatus = 'AVAILABLE' | 'OCCUPIED' | 'CLEANING' | 'MAINTENANCE';
+
+export type PaymentMethod = 'CASH' | 'CARD' | 'BANK_TRANSFER' | 'ONLINE';
+
+export type PaymentStatus = 'PENDING' | 'COMPLETED' | 'FAILED' | 'REFUNDED' | 'PAID' | 'PARTIALLY_PAID';
+
+export type ActivityStatus = 'ACTIVE' | 'INACTIVE' | 'FULL';
+
+export type OrderStatus = 'PENDING' | 'PREPARING' | 'SERVED' | 'CANCELLED';
+
+export type OrderOrigin = 'MOBILE_APP' | 'RECEPTION_DESK' | 'MANAGER_PORTAL';
+
+export type ScheduleItemType = 'RESERVATION' | 'ACTIVITY' | 'BOOKING' | 'ORDER' | 'SERVICE' | 'CUSTOM';
+
 export interface User {
   id: string;
   email: string;
@@ -6,14 +30,67 @@ export interface User {
   phone?: string | null;
   avatarUrl?: string | null;
   isActive: boolean;
+  homeAddress?: string | null;
+  departmentId?: string | null;
+  departmentName?: string | null;
+  managerId?: string | null;
+  managerName?: string | null;
   createdAt: string;
   updatedAt: string;
   lastLogin?: string;
 }
 
+export interface Department {
+  id: string;
+  name: string;
+  description?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Manager {
+  id: string;
+  managerId: string;
+  authId?: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  homeAddress?: string;
+  departmentId?: string;
+  departmentName?: string;
+  dateOfJoining: string;
+  isActive: boolean;
+  imagePath?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Receptionist {
+  id: string;
+  employeeCode: string;
+  authId?: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  homeAddress?: string;
+  departmentId?: string;
+  departmentName?: string;
+  managerId?: string;
+  managerName?: string;
+  dateOfJoining: string;
+  isActive: boolean;
+  imagePath?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Guest {
   id: string;
   guestId: string;
+  authId?: string;
   firstName: string;
   lastName: string;
   email?: string;
@@ -23,6 +100,8 @@ export interface Guest {
   dateOfBirth?: string;
   vip: boolean;
   status: GuestStatus;
+  accountStatus: GuestAccountStatus;
+  homeAddress?: string;
   notes?: string;
   imagePath?: string;
   createdAt: string;
@@ -134,23 +213,6 @@ export interface MenuItem {
   updatedAt: string;
 }
 
-export interface Staff {
-  id: string;
-  employeeCode: string;
-  name: string;
-  department: string;
-  position: string;
-  email?: string;
-  phone?: string;
-  status: string;
-  role?: Role;
-  roleLabel?: string;
-  isMain?: boolean;
-  imagePath?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
 export interface Reservation {
   id: string;
   reservationId: string;
@@ -167,12 +229,14 @@ export interface Reservation {
   updatedAt: string;
   guest?: Guest;
   room?: Room;
+  origin?: OrderOrigin;
 }
 
 export interface Payment {
   id: string;
   paymentId: string;
-  reservationId: string;
+  reservationId?: string;
+  guestId: string;
   amount: number;
   method: PaymentMethod;
   status: PaymentStatus;
@@ -192,6 +256,7 @@ export interface Activity {
   capacity: number;
   status: ActivityStatus;
   imagePath?: string;
+  meeting_point?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -199,8 +264,8 @@ export interface Activity {
 export interface FoodOrder {
   id: string;
   orderId: string;
-  roomId?: string;
   guestId?: string;
+  roomId?: string;
   guestImagePath?: string | null;
   items: OrderItem[];
   subtotal?: number;
@@ -208,12 +273,11 @@ export interface FoodOrder {
   taxAmount?: number;
   total: number;
   status: OrderStatus;
+  origin: OrderOrigin;
   notes?: string;
   createdAt: string;
   updatedAt: string;
 }
-
-export type ScheduleItemType = 'RESERVATION' | 'ACTIVITY' | 'BOOKING' | 'ORDER' | 'SERVICE' | 'CUSTOM';
 
 export interface GuestScheduleItem {
   id: string;
@@ -279,24 +343,6 @@ export interface AuthContext {
   user: User;
   token: string;
 }
-
-export type Role = 'MAIN_RECEPTIONIST' | 'RECEPTIONIST';
-
-export type GuestStatus = 'RESERVED' | 'CHECKED_IN' | 'CHECKED_OUT' | 'CANCELLED';
-
-export type RoomType = 'STANDARD' | 'DELUXE' | 'SUITE' | 'VILLA';
-
-export type RoomStatus = 'AVAILABLE' | 'OCCUPIED' | 'CLEANING' | 'MAINTENANCE';
-
-export type ReservationStatus = 'CONFIRMED' | 'CHECKED_IN' | 'CHECKED_OUT' | 'CANCELLED' | 'NO_SHOW';
-
-export type PaymentMethod = 'CASH' | 'CARD' | 'BANK_TRANSFER' | 'ONLINE';
-
-export type PaymentStatus = 'PENDING' | 'PARTIALLY_PAID' | 'PAID' | 'REFUNDED';
-
-export type ActivityStatus = 'ACTIVE' | 'INACTIVE' | 'FULL';
-
-export type OrderStatus = 'PENDING' | 'PREPARING' | 'SERVED' | 'CANCELLED';
 
 export interface SustainabilityActivity {
   id: string;

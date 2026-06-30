@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Grid3X3, LayoutList, Plus, SearchIcon, BedDouble, Users, Pen, Trash2 } from 'lucide-react';
+import { Grid3X3, LayoutList, Plus, SearchIcon, BedDouble, Users, Pen, Trash2, ArrowRight } from 'lucide-react';
 import { useApi } from '@/hooks/useApi';
 import { PageHeader } from '@/components/PageHeader';
 import { StatusBadge } from '@/components/StatusBadge';
@@ -39,6 +39,10 @@ export default function RoomsPage() {
   const url = useMemo(() => '/api/rooms?limit=200', []);
   const { data, mutate } = useApi<Room[]>(url);
   const rows = data ?? [];
+
+  const { data: currentUser } = useApi<{ role: string } | null>('/api/auth/me');
+  const isManager = currentUser?.role === 'MANAGER';
+  const isReceptionist = currentUser?.role === 'RECEPTIONIST';
 
   const filteredRows = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -83,11 +87,16 @@ export default function RoomsPage() {
     <div className="space-y-6 animate-in fade-in duration-500">
       <PageHeader
         title="Rooms"
-        subtitle="Manage room inventory, status, and pricing."
-        action={(
+        subtitle={isManager ? "Manage room inventory, status, and pricing." : "View room availability and status."}
+        action={isManager ? (
           <Button variant="primary" onClick={() => { setEditRow(null); setIsModalOpen(true); }}>
             <Plus className="h-4 w-4" />
             Add Room
+          </Button>
+        ) : (
+          <Button variant="primary" onClick={() => window.location.href = '/rooms/assign'}>
+            <ArrowRight className="h-4 w-4" />
+            Assign Room
           </Button>
         )}
       />
@@ -157,10 +166,10 @@ export default function RoomsPage() {
                     key={room.id}
                     className="group overflow-hidden rounded-xl border border-card-border bg-surface transition-colors"
                   >
-                  <button type="button" className="block w-full text-left" onClick={() => {
+                  <button type="button" className="block w-full text-left" onClick={isManager ? () => {
                     setEditRow(room as unknown as Record<string, unknown>);
                     setIsModalOpen(true);
-                  }}>
+                  } : undefined}>
                     <div className="relative aspect-[4/3] overflow-hidden bg-surface-secondary">
                       {image ? (
                         <img src={image} alt={`Room ${room.roomNumber}`} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
@@ -197,27 +206,29 @@ export default function RoomsPage() {
 
                   <div className="flex items-center justify-between gap-4 border-t border-card-border px-4 py-3">
                     <StatusBadge status={room.status} />
-                    <div className="inline-flex gap-1">
-                      <button
-                        type="button"
-                        className="rounded-xl p-2 text-[var(--color-text-secondary)] hover:bg-surface-secondary hover:text-[var(--color-nav-active)]"
-                        onClick={() => {
-                          setEditRow(room as unknown as Record<string, unknown>);
-                          setIsModalOpen(true);
-                        }}
-                        aria-label={`Edit room ${room.roomNumber}`}
-                      >
-                        <Pen className="h-4 w-4" />
-                      </button>
-                      <button
-                        type="button"
-                        className="rounded-xl p-2 text-[var(--color-text-secondary)] hover:bg-danger/10 hover:text-[var(--color-danger)]"
-                        onClick={() => setDeleteRow(room as unknown as Record<string, unknown>)}
-                        aria-label={`Delete room ${room.roomNumber}`}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
+                    {isManager && (
+                      <div className="inline-flex gap-1">
+                        <button
+                          type="button"
+                          className="rounded-xl p-2 text-[var(--color-text-secondary)] hover:bg-surface-secondary hover:text-[var(--color-nav-active)]"
+                          onClick={() => {
+                            setEditRow(room as unknown as Record<string, unknown>);
+                            setIsModalOpen(true);
+                          }}
+                          aria-label={`Edit room ${room.roomNumber}`}
+                        >
+                          <Pen className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          className="rounded-xl p-2 text-[var(--color-text-secondary)] hover:bg-danger/10 hover:text-[var(--color-danger)]"
+                          onClick={() => setDeleteRow(room as unknown as Record<string, unknown>)}
+                          aria-label={`Delete room ${room.roomNumber}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </article>
               );
@@ -267,27 +278,29 @@ export default function RoomsPage() {
                       <td className="border-l border-card-border px-6 py-4 text-[var(--color-text-secondary)]">Rs {Number(room.price).toLocaleString()}</td>
                       <td className="border-l border-card-border px-6 py-4"><StatusBadge status={room.status} /></td>
                       <td className="border-l border-card-border px-6 py-4 text-right">
-<div className="inline-flex gap-1">
-                           <button
-                             type="button"
-                             className="rounded-xl p-2 text-[var(--color-text-secondary)] hover:bg-surface-secondary hover:text-[var(--color-nav-active)]"
-                             onClick={() => {
-                               setEditRow(room as unknown as Record<string, unknown>);
-                               setIsModalOpen(true);
-                             }}
-                             aria-label={`Edit room ${room.roomNumber}`}
-                           >
-                             <Pen className="h-4 w-4" />
-                           </button>
-                           <button
-                             type="button"
-                             className="rounded-xl p-2 text-[var(--color-text-secondary)] hover:bg-danger/10 hover:text-[var(--color-danger)]"
-                             onClick={() => setDeleteRow(room as unknown as Record<string, unknown>)}
-                             aria-label={`Delete room ${room.roomNumber}`}
-                           >
-                             <Trash2 className="h-4 w-4" />
-                           </button>
-                         </div>
+                        {isManager && (
+                          <div className="inline-flex gap-1">
+                            <button
+                              type="button"
+                              className="rounded-xl p-2 text-[var(--color-text-secondary)] hover:bg-surface-secondary hover:text-[var(--color-nav-active)]"
+                              onClick={() => {
+                                setEditRow(room as unknown as Record<string, unknown>);
+                                setIsModalOpen(true);
+                              }}
+                              aria-label={`Edit room ${room.roomNumber}`}
+                            >
+                              <Pen className="h-4 w-4" />
+                            </button>
+                            <button
+                              type="button"
+                              className="rounded-xl p-2 text-[var(--color-text-secondary)] hover:bg-danger/10 hover:text-[var(--color-danger)]"
+                              onClick={() => setDeleteRow(room as unknown as Record<string, unknown>)}
+                              aria-label={`Delete room ${room.roomNumber}`}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   );

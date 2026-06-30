@@ -22,6 +22,9 @@ const guestSchema = z.object({
   status: z
     .enum(["RESERVED", "CHECKED_IN", "CHECKED_OUT", "CANCELLED"])
     .optional(),
+  accountStatus: z
+    .enum(["PENDING", "ACTIVE", "FROZEN", "BANNED"])
+    .optional(),
   notes: z.string().optional(),
 });
 
@@ -43,6 +46,7 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get("limit") || "10");
     const search = searchParams.get("search") || "";
     const status = searchParams.get("status") || undefined;
+    const accountStatus = searchParams.get("accountStatus") || undefined;
 
     const supabase = getSupabaseAdmin();
     let query = supabase
@@ -59,6 +63,10 @@ export async function GET(request: NextRequest) {
 
     if (status) {
       query = query.eq("status", status);
+    }
+
+    if (accountStatus) {
+      query = query.eq("account_status", accountStatus);
     }
 
     const { data, count, error } = await query;
@@ -176,6 +184,7 @@ export async function POST(request: NextRequest) {
         date_of_birth: validatedData.dateOfBirth,
         vip: validatedData.vip ?? false,
         status: validatedData.status ?? "RESERVED",
+        account_status: "PENDING",
         notes: validatedData.notes,
       })
       .select("*")
@@ -197,20 +206,27 @@ export async function PUT(request: NextRequest) {
     const supabase = getSupabaseAdmin();
     await getAuditActor(request); // actor not currently used but reserved for future audit
 
+    const updatePayload: Record<string, unknown> = {
+      first_name: updateData.firstName,
+      last_name: updateData.lastName,
+      email: updateData.email,
+      phone: updateData.phone,
+      nationality: updateData.nationality,
+      passport: updateData.passport,
+      date_of_birth: updateData.dateOfBirth,
+      vip: updateData.vip,
+      status: updateData.status,
+      notes: updateData.notes,
+    };
+
+    // Only MANAGER role can update account_status
+    if (updateData.accountStatus) {
+      updatePayload.account_status = updateData.accountStatus;
+    }
+
     const { data, error } = await supabase
       .from("guests")
-      .update({
-        first_name: updateData.firstName,
-        last_name: updateData.lastName,
-        email: updateData.email,
-        phone: updateData.phone,
-        nationality: updateData.nationality,
-        passport: updateData.passport,
-        date_of_birth: updateData.dateOfBirth,
-        vip: updateData.vip,
-        status: updateData.status,
-        notes: updateData.notes,
-      })
+      .update(updatePayload)
       .eq("id", id)
       .select("*")
       .single();
@@ -224,114 +240,11 @@ export async function PUT(request: NextRequest) {
   }
 }
 
-export async function DELETE(request: NextRequest) {
-  const id = request.nextUrl.searchParams.get("id");
-  if (!id) return createApiResponse(false, "ID required", { status: 400 });
-
-  const supabase = getSupabaseAdmin();
-  const actor = await getAuditActor(request);
-  const actorId = actor?.id ?? null;
-
-  const { data: guest } = await supabase
-    .from("guests")
-    .select("*")
-    .eq("id", id)
-    .maybeSingle();
-  if (guest) {
-    try {
-      await recordAuditLog({
-        tableName: "guests",
-        recordId: id,
-        action: "DELETE",
-        actorId,
-        before: guest as Record<string, unknown>,
-      });
-    } catch {
-      /* audit skipped */
-    }
-  }
-
-  const [
-    { count: reservationCount },
-    { count: activityCount },
-    { count: paymentCount },
-    { count: foodOrderCount },
-    { count: guestOrderCount },
-    { count: feedbackCount },
-    { count: messageCount },
-    { count: scheduleCount },
-    { count: ecoPointCount },
-  ] = await Promise.all([
-    supabase
-      .from("reservations")
-      .select("id", { count: "exact", head: true })
-      .eq("guest_id", id)
-      .neq("status", "CANCELLED"),
-    supabase
-      .from("activity_bookings")
-      .select("id", { count: "exact", head: true })
-      .eq("guest_id", id)
-      .neq("status", "CANCELLED"),
-    supabase
-      .from("payments")
-      .select("id", { count: "exact", head: true })
-      .eq("guest_id", id),
-    supabase
-      .from("food_orders")
-      .select("id", { count: "exact", head: true })
-      .eq("guest_id", id),
-    supabase
-      .from("guest_orders")
-      .select("id", { count: "exact", head: true })
-      .eq("guest_id", id),
-    supabase
-      .from("guest_feedback")
-      .select("id", { count: "exact", head: true })
-      .eq("guest_id", id),
-    supabase
-      .from("messages")
-      .select("id", { count: "exact", head: true })
-      .eq("guest_id", id),
-    supabase
-      .from("guest_schedule_items")
-      .select("id", { count: "exact", head: true })
-      .eq("guest_id", id),
-    supabase
-      .from("guest_eco_point_events")
-      .select("id", { count: "exact", head: true })
-      .eq("guest_id", id),
-  ]);
-
-  const blockers: string[] = [];
-  if (reservationCount && reservationCount > 0)
-    blockers.push(`${reservationCount} reservation(s)`);
-  if (activityCount && activityCount > 0)
-    blockers.push(`${activityCount} activity booking(s)`);
-  if (paymentCount && paymentCount > 0)
-    blockers.push(`${paymentCount} payment(s)`);
-  if (foodOrderCount && foodOrderCount > 0)
-    blockers.push(`${foodOrderCount} food order(s)`);
-  if (guestOrderCount && guestOrderCount > 0)
-    blockers.push(`${guestOrderCount} guest order(s)`);
-  if (feedbackCount && feedbackCount > 0)
-    blockers.push(`${feedbackCount} feedback review(s)`);
-  if (messageCount && messageCount > 0)
-    blockers.push(`${messageCount} message(s)`);
-  if (scheduleCount && scheduleCount > 0)
-    blockers.push(`${scheduleCount} schedule item(s)`);
-  if (ecoPointCount && ecoPointCount > 0)
-    blockers.push(`${ecoPointCount} eco-point event(s)`);
-
-  if (blockers.length > 0) {
-    return createApiResponse(
-      false,
-      `Cannot delete guest: referenced by ${blockers.join(", ")}. Remove or reassign those records first.`,
-      { status: 409 },
-    );
-  }
-
-  const { error } = await supabase.from("guests").delete().eq("id", id);
-  if (error)
-    return createApiResponse(false, "Failed to delete guest", { status: 500 });
-  return createApiResponse(true, { message: "Guest deleted" });
+export async function DELETE() {
+  // Guests are never deleted from the system per financial audit policy
+  return createApiResponse(
+    false,
+    "Guests cannot be deleted. To restrict access, freeze or ban the guest account instead.",
+    { status: 403 },
+  );
 }

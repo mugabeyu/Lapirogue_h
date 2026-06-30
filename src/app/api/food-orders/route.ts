@@ -18,6 +18,7 @@ const foodOrderSchema = z.object({
   subtotal: z.number().min(0).optional(),
   serviceCharge: z.number().min(0).optional(),
   taxAmount: z.number().min(0).optional(),
+  origin: z.enum(['MOBILE_APP', 'RECEPTION_DESK', 'MANAGER_PORTAL']).optional(),
 });
 
 type FoodOrderRow = {
@@ -33,6 +34,7 @@ type FoodOrderRow = {
   status?: string | null;
   notes?: string | null;
   created_at?: string | null;
+  origin?: string | null;
 };
 
 function itemsSummary(items: FoodOrderRow['items']) {
@@ -56,7 +58,7 @@ export async function GET(request: NextRequest) {
     const supabase = getSupabaseAdmin();
     let query = supabase
       .from('food_orders')
-      .select('id,order_id,guest_id,room_id,items,subtotal,service_charge,tax_amount,total,status,notes,created_at')
+      .select('id,order_id,guest_id,room_id,items,subtotal,service_charge,tax_amount,total,status,notes,created_at,origin')
       .order('created_at', { ascending: false });
 
     if (statusFilter) {
@@ -107,6 +109,7 @@ export async function GET(request: NextRequest) {
       status: order.status ?? null,
       time: formatOrderTime(order.created_at),
       createdAt: order.created_at ?? null,
+      origin: order.origin ?? null,
     }));
 
     const stats = {
@@ -150,13 +153,20 @@ export async function POST(request: NextRequest) {
     if (body.guestId && !roomId) {
       const { data: reservation } = await supabase
         .from('reservations')
-        .select('room_id')
+        .select('room_id, status')
         .eq('guest_id', body.guestId)
         .neq('status', 'CANCELLED')
         .order('check_in', { ascending: false })
         .limit(1)
         .maybeSingle();
       roomId = reservation?.room_id ?? null;
+
+      if (!reservation || reservation.status !== 'CHECKED_IN') {
+        return NextResponse.json({
+          success: false,
+          error: 'Guest must be CHECKED_IN before placing food orders.'
+        }, { status: 403 });
+      }
     }
 
     const { data, error } = await supabase
@@ -171,6 +181,7 @@ export async function POST(request: NextRequest) {
         total: body.total,
         status: body.status ?? 'PENDING',
         notes: body.notes,
+        origin: body.origin ?? 'RECEPTION_DESK',
       })
       .select('*')
       .single();

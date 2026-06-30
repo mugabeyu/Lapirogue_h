@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { useState } from 'react';
 import {
   ArrowLeft,
@@ -11,16 +11,15 @@ import {
   Mail,
   Pencil,
   Phone,
+  Shield,
   Sparkles,
-  Trash2,
   UtensilsCrossed,
   User,
 } from 'lucide-react';
 import { StatusBadge } from '@/components/StatusBadge';
-import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { EditGuestModal } from '@/components/modals/EditGuestModal';
 import { useApi } from '@/hooks/useApi';
-import { Guest, GuestProfileData, GuestStay } from '@/types';
+import type { Guest, GuestAccountStatus, GuestProfileData, GuestStay } from '@/types';
 import { toast } from 'sonner';
 
 type TabId = 'overview' | 'bookings' | 'activities' | 'food' | 'payments';
@@ -40,33 +39,38 @@ function formatCurrency(value: number) {
 
 export default function GuestDetailsPage() {
   const params = useParams<{ id: string }>();
-  const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabId>('overview');
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [isStatusChanging, setIsStatusChanging] = useState(false);
 
   const { data: profile, mutate } = useApi<GuestProfileData>(
     `/api/guests/${params.id}/profile`,
   );
+  const { data: currentUser } = useApi<{ role: string }>('/api/auth/me');
 
-  async function handleDelete() {
-    setIsDeleting(true);
-    const response = await fetch(`/api/guests/${params.id}`, { method: 'DELETE' });
-    setIsDeleting(false);
+  async function handleStatusChange(newStatus: GuestAccountStatus) {
+    setIsStatusChanging(true);
+    const response = await fetch(`/api/guests/${params.id}/status`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accountStatus: newStatus }),
+    });
+    setIsStatusChanging(false);
 
     if (!response.ok) {
-      toast.error('Unable to delete guest');
+      const err = await response.json().catch(() => ({}));
+      toast.error(err.error || 'Unable to update account status');
       return;
     }
 
-    toast.success('Guest deleted');
-    router.push('/guests');
+    toast.success('Account status updated');
+    await mutate();
   }
 
   if (!profile) return null;
 
   const { guest, currentStay, reservations, activityBookings, foodOrders, payments, stats } = profile;
+  const isManager = currentUser?.role === 'MANAGER';
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -75,13 +79,19 @@ export default function GuestDetailsPage() {
       <ProfileHeaderCard
         guest={guest}
         onEdit={() => setIsEditOpen(true)}
-        onDelete={() => setIsDeleteOpen(true)}
       />
 
       <TabBar activeTab={activeTab} onChange={setActiveTab} />
 
       {activeTab === 'overview' && (
-        <OverviewTab guest={guest} currentStay={currentStay} stats={stats} />
+        <OverviewTab
+          guest={guest}
+          currentStay={currentStay}
+          stats={stats}
+          isManager={isManager}
+          onStatusChange={handleStatusChange}
+          isStatusChanging={isStatusChanging}
+        />
       )}
       {activeTab === 'bookings' && (
         <TabList
@@ -141,16 +151,6 @@ export default function GuestDetailsPage() {
           await mutate();
         }}
       />
-
-      <ConfirmDialog
-        isOpen={isDeleteOpen}
-        onClose={() => setIsDeleteOpen(false)}
-        onConfirm={handleDelete}
-        title="Delete Guest"
-        message={`Are you sure you want to permanently delete ${guest.firstName} ${guest.lastName}? This action cannot be undone.`}
-        confirmLabel="Delete Guest"
-        isLoading={isDeleting}
-      />
     </div>
   );
 }
@@ -164,14 +164,26 @@ function BackLink() {
   );
 }
 
+function accountStatusBadgeClass(status: GuestAccountStatus): string {
+  switch (status) {
+    case 'ACTIVE':
+      return 'bg-[var(--color-success)]/10 text-[var(--color-success)]';
+    case 'FROZEN':
+      return 'bg-blue-500/10 text-blue-500';
+    case 'BANNED':
+      return 'bg-[var(--color-danger)]/10 text-[var(--color-danger)]';
+    case 'PENDING':
+    default:
+      return 'bg-amber-500/10 text-amber-500';
+  }
+}
+
 function ProfileHeaderCard({
   guest,
   onEdit,
-  onDelete,
 }: {
   guest: Guest;
   onEdit: () => void;
-  onDelete: () => void;
 }) {
   return (
     <div className="card p-6 md:p-8">
@@ -190,6 +202,10 @@ function ProfileHeaderCard({
                 {guest.firstName} {guest.lastName}
               </h1>
               <StatusBadge status={guest.status} />
+              <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${accountStatusBadgeClass(guest.accountStatus)}`}>
+                <Shield className="h-3 w-3" />
+                {guest.accountStatus}
+              </span>
               {guest.vip && (
                 <span className="rounded-full bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning">VIP</span>
               )}
@@ -224,14 +240,6 @@ function ProfileHeaderCard({
           <button type="button" className="btn-secondary inline-flex items-center gap-2" onClick={onEdit}>
             <Pencil className="h-4 w-4" />
             Edit Profile
-          </button>
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-4 py-2 font-medium text-[var(--color-text-primary)] transition-colors hover:bg-surface-secondary"
-            onClick={onDelete}
-          >
-            <Trash2 className="h-4 w-4" />
-            Delete
           </button>
         </div>
       </div>
@@ -270,15 +278,29 @@ function TabBar({ activeTab, onChange }: { activeTab: TabId; onChange: (tab: Tab
   );
 }
 
+const ACCOUNT_STATUS_OPTIONS: { value: GuestAccountStatus; label: string }[] = [
+  { value: 'ACTIVE', label: 'Active' },
+  { value: 'FROZEN', label: 'Frozen' },
+  { value: 'BANNED', label: 'Banned' },
+];
+
 function OverviewTab({
   guest,
   currentStay,
   stats,
+  isManager,
+  onStatusChange,
+  isStatusChanging,
 }: {
   guest: Guest;
   currentStay: GuestStay | null;
   stats: GuestProfileData['stats'];
+  isManager: boolean;
+  onStatusChange: (status: GuestAccountStatus) => Promise<void>;
+  isStatusChanging: boolean;
 }) {
+  const [selectedStatus, setSelectedStatus] = useState<GuestAccountStatus>(guest.accountStatus);
+
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       <ProfileCard title="Current Stay" icon={<BedDouble className="h-5 w-5 text-primary" />}>
@@ -309,6 +331,39 @@ function OverviewTab({
           <StatRow icon={<CircleDollarSign className="h-4 w-4" />} label="Total Spent" value={formatCurrency(stats.totalSpent)} />
         </ul>
       </ProfileCard>
+
+      {isManager && (
+        <ProfileCard title="Account Status" icon={<Shield className="h-5 w-5 text-primary" />}>
+          <p className="text-sm text-[var(--color-text-secondary)] mb-3">
+            Change the guest&apos;s account access level.
+          </p>
+          <div className="flex items-center gap-3">
+            <select
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value as GuestAccountStatus)}
+              className="rounded-xl border border-border bg-surface px-3 py-2 text-sm text-[var(--color-text-primary)]"
+              disabled={isStatusChanging}
+            >
+              {ACCOUNT_STATUS_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className="btn-primary inline-flex items-center gap-2 px-4 py-2 text-sm"
+              onClick={() => onStatusChange(selectedStatus)}
+              disabled={selectedStatus === guest.accountStatus || isStatusChanging}
+            >
+              {isStatusChanging ? 'Updating...' : 'Apply'}
+            </button>
+          </div>
+          <p className="text-xs text-[var(--color-text-secondary)] mt-2">
+            {selectedStatus === 'FROZEN' && 'Guest cannot make new reservations but existing stays continue.'}
+            {selectedStatus === 'BANNED' && 'All reservations will be cancelled. Guest cannot re-register.'}
+            {selectedStatus === 'ACTIVE' && 'Full access restored.'}
+          </p>
+        </ProfileCard>
+      )}
 
       <ProfileCard title="Guest Notes & Preferences" className="lg:col-span-2">
         <p className="whitespace-pre-wrap text-sm text-[var(--color-text-primary)]">

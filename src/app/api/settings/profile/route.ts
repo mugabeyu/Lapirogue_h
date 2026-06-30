@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { attachSupabaseCookies, getRouteHandlerSupabaseSession } from '@/lib/supabase-server';
-import { INTERNATIONAL_PHONE_DISPLAY_PATTERN } from '@/lib/phone';
 
 function emptyToUndefined(value: unknown) {
   if (typeof value !== 'string') return value;
@@ -15,9 +14,10 @@ const profileSchema = z.object({
   email: z.preprocess(emptyToUndefined, z.string().email().optional().nullable()),
   phone: z.preprocess(
     emptyToUndefined,
-    z.string().regex(INTERNATIONAL_PHONE_DISPLAY_PATTERN, 'Use Mauritian format like (+230) 1234 5678').optional().nullable(),
+    z.string().optional().nullable(),
   ),
   avatarUrl: z.preprocess(emptyToUndefined, z.string().url().optional().nullable()),
+  homeAddress: z.preprocess(emptyToUndefined, z.string().optional().nullable()),
 });
 
 type ProfileRow = {
@@ -26,15 +26,16 @@ type ProfileRow = {
   full_name: string | null;
   phone: string | null;
   avatar_url: string | null;
+  home_address: string | null;
   role: string | null;
-  is_main: boolean | null;
   is_active: boolean | null;
   created_at: string | null;
   updated_at: string | null;
 };
 
 function normalizeRole(role?: string | null) {
-  if (role === 'MAIN_RECEPTIONIST') return 'MAIN_RECEPTIONIST' as const;
+  if (role === 'ADMIN') return 'ADMIN' as const;
+  if (role === 'MANAGER') return 'MANAGER' as const;
   return 'RECEPTIONIST' as const;
 }
 
@@ -69,7 +70,7 @@ export async function PUT(request: NextRequest) {
 
     const { data: existingProfile } = await admin
       .from('profiles')
-      .select('email, full_name, phone, avatar_url, role, is_main, is_active, created_at, updated_at')
+      .select('email, full_name, phone, avatar_url, role, is_active, home_address, created_at, updated_at')
       .eq('auth_id', user.id)
       .maybeSingle();
 
@@ -79,6 +80,8 @@ export async function PUT(request: NextRequest) {
     const resolvedPhone = validatedData.phone ?? existingProfile?.phone ?? null;
     const resolvedAvatarUrl =
       validatedData.avatarUrl !== undefined ? validatedData.avatarUrl : existingProfile?.avatar_url ?? null;
+    const resolvedHomeAddress =
+      validatedData.homeAddress !== undefined ? validatedData.homeAddress : existingProfile?.home_address ?? null;
 
     const { data, error } = await admin
       .from('profiles')
@@ -89,11 +92,12 @@ export async function PUT(request: NextRequest) {
           email: resolvedEmail,
           phone: resolvedPhone,
           avatar_url: resolvedAvatarUrl,
+          home_address: resolvedHomeAddress,
           is_active: existingProfile?.is_active ?? true,
         },
         { onConflict: 'auth_id' },
       )
-      .select('auth_id, email, full_name, phone, avatar_url, role, is_main, is_active, created_at, updated_at')
+      .select('auth_id, email, full_name, phone, avatar_url, role, is_active, home_address, created_at, updated_at')
       .single();
 
     if (error) throw error;
@@ -112,9 +116,10 @@ export async function PUT(request: NextRequest) {
       id: profile.auth_id,
       email: profile.email,
       name: profile.full_name,
-      role: profile.is_main ? 'MAIN_RECEPTIONIST' : normalizeRole(profile.role),
+      role: normalizeRole(profile.role),
       phone: profile.phone,
       avatarUrl: normalizeStorageUrl(admin, profile.avatar_url),
+      homeAddress: profile.home_address ?? null,
       isActive: profile.is_active !== false,
       createdAt: profile.created_at ?? '',
       updatedAt: profile.updated_at ?? '',

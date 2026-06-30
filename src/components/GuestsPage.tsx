@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
-import { SearchIcon } from 'lucide-react';
+import { SearchIcon, ShieldAlert, ShieldBan, Snowflake } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { StatusBadge } from '@/components/StatusBadge';
 import Button from '@/components/ui/Button';
@@ -10,7 +10,7 @@ import { useApi } from '@/hooks/useApi';
 import { AddGuestModal } from '@/components/modals/AddGuestModal';
 import { LabeledTable } from '@/components/ui/LabeledTable';
 import { GuestNameCell } from '@/components/ui/GuestNameCell';
-import { Guest } from '@/types';
+import { Guest, User } from '@/types';
 
 function formatDate(value?: string) {
   if (!value) return '-';
@@ -21,6 +21,21 @@ function formatDate(value?: string) {
   });
 }
 
+function AccountStatusBadge({ status }: { status: string }) {
+  const styles: Record<string, { label: string; className: string; icon?: React.ReactNode }> = {
+    ACTIVE: { label: 'Active', className: 'bg-emerald-100 text-emerald-800' },
+    PENDING: { label: 'Pending', className: 'bg-amber-100 text-amber-800' },
+    FROZEN: { label: 'Frozen', className: 'bg-blue-100 text-blue-800', icon: <Snowflake className="h-3 w-3" /> },
+    BANNED: { label: 'Banned', className: 'bg-red-100 text-red-800', icon: <ShieldBan className="h-3 w-3" /> },
+  };
+  const s = styles[status] || { label: status, className: 'bg-gray-100 text-gray-800' };
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${s.className}`}>
+      {s.icon}{s.label}
+    </span>
+  );
+}
+
 export default function GuestsPage() {
   const PAGE_SIZE = 15;
   const router = useRouter();
@@ -28,13 +43,13 @@ export default function GuestsPage() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
 
-  // Sync search state with URL query on mount
   useEffect(() => {
     const urlSearch = searchParams.get('search') || '';
     if (urlSearch) setSearch(urlSearch);
   }, [searchParams]);
 
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
+  const { data: currentUser } = useApi<User>('/api/auth/me');
 
   const url = useMemo(() => {
     const params = new URLSearchParams();
@@ -72,15 +87,20 @@ export default function GuestsPage() {
     }
   }, [page, totalPages]);
 
+  const isManager = currentUser?.role === 'MANAGER';
+  const canRegister = currentUser?.role === 'RECEPTIONIST' || currentUser?.role === 'MANAGER';
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <PageHeader
         title="Guests"
-        subtitle="Manage current, upcoming, and past guests."
+        subtitle={isManager ? 'Manage guest accounts and account statuses.' : 'Manage current, upcoming, and past guests.'}
         action={
-          <Button variant="primary" onClick={() => setIsRegisterOpen(true)}>
-            Register Guest
-          </Button>
+          canRegister ? (
+            <Button variant="primary" onClick={() => setIsRegisterOpen(true)}>
+              Register Guest
+            </Button>
+          ) : undefined
         }
       />
 
@@ -116,13 +136,16 @@ export default function GuestsPage() {
                 <th scope="col" className="border-l border-border px-6 py-4 font-medium">Check-in</th>
                 <th scope="col" className="border-l border-border px-6 py-4 font-medium">Check-out</th>
                 <th scope="col" className="border-l border-border px-6 py-4 font-medium">Stay status</th>
+                {isManager && (
+                  <th scope="col" className="border-l border-border px-6 py-4 font-medium">Account</th>
+                )}
               </tr>
             </thead>
 
             <tbody>
               { filteredRows.length === 0 && (
                 <tr className="border-b border-border">
-                  <td colSpan={6} className="px-6 py-12 text-center text-sm text-[var(--color-text-secondary)]">No guests found. Register a guest to get started.</td>
+                  <td colSpan={isManager ? 7 : 6} className="px-6 py-12 text-center text-sm text-[var(--color-text-secondary)]">No guests found. Register a guest to get started.</td>
                 </tr>
               )}
 
@@ -140,6 +163,11 @@ export default function GuestsPage() {
                   <td className="border-l border-border px-6 py-4 text-sm text-[var(--color-text-primary)]">{formatDate(row.checkIn)}</td>
                   <td className="border-l border-border px-6 py-4 text-sm text-[var(--color-text-primary)]">{formatDate(row.checkOut)}</td>
                   <td className="border-l border-border px-6 py-4 text-sm text-[var(--color-text-primary)]"><StatusBadge status={row.status} /></td>
+                  {isManager && (
+                    <td className="border-l border-border px-6 py-4 text-sm text-[var(--color-text-primary)]">
+                      <AccountStatusBadge status={row.accountStatus} />
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
