@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
 
     const { data: activeReservation } = await admin
       .from('reservations')
-      .select('id, check_in, check_out')
+      .select('id, check_in, check_out, status')
       .eq('guest_id', body.guestId)
       .in('status', ['RESERVED', 'CHECKED_IN'])
       .limit(1)
