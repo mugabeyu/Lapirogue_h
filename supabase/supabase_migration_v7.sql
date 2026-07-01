@@ -389,5 +389,63 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- =============================================
+-- 10. RPC: create_guest_profile
+--     Called from mobile app after email confirmation
+--     Creates the guest record linked to the authenticated user
+-- =============================================
+CREATE OR REPLACE FUNCTION public.create_guest_profile(
+    p_first_name text,
+    p_last_name text,
+    p_phone text DEFAULT NULL,
+    p_nationality text DEFAULT NULL,
+    p_passport text DEFAULT NULL,
+    p_date_of_birth date DEFAULT NULL,
+    p_gender text DEFAULT NULL
+) RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_auth_id uuid;
+    v_guest_id text;
+    v_email text;
+BEGIN
+    v_auth_id := auth.uid();
+    IF v_auth_id IS NULL THEN
+        RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+    END IF;
+
+    SELECT email INTO v_email FROM auth.users WHERE id = v_auth_id;
+
+    INSERT INTO public.guests (
+        auth_id, first_name, last_name, email, phone,
+        nationality, passport, date_of_birth, gender,
+        account_status, status, created_by_name
+    ) VALUES (
+        v_auth_id, p_first_name, p_last_name, v_email,
+        p_phone, p_nationality, p_passport, p_date_of_birth, p_gender,
+        'ACTIVE', 'RESERVED', 'self'
+    )
+    ON CONFLICT (auth_id) DO NOTHING
+    RETURNING guest_id INTO v_guest_id;
+
+    IF v_guest_id IS NULL THEN
+        RETURN jsonb_build_object('success', false, 'error', 'Guest profile already exists');
+    END IF;
+
+    -- Also create profile entry for consistency
+    INSERT INTO public.profiles (auth_id, email, full_name, role, is_active)
+    VALUES (v_auth_id, v_email, p_first_name || ' ' || p_last_name, 'GUEST', true)
+    ON CONFLICT (auth_id) DO NOTHING;
+
+    RETURN jsonb_build_object('success', true, 'guest_id', v_guest_id);
+END;
+$$;
+
+-- Grant access to authenticated users
+REVOKE ALL ON FUNCTION public.create_guest_profile(text, text, text, text, text, date, text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.create_guest_profile(text, text, text, text, text, date, text) TO authenticated;
+
+-- =============================================
 -- END OF V7 MIGRATION
 -- =============================================
