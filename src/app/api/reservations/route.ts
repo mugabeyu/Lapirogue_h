@@ -191,19 +191,25 @@ export async function POST(request: NextRequest) {
         .maybeSingle(),
     ]);
 
-    // Send confirmation email (no longer sends portal invite link - mobile app uses OTP)
+    // Send confirmation email with full details
     if (guestRow?.email && roomRow?.room_number) {
       try {
         const { sendReservationConfirmationEmail } = await import('@/lib/mailer');
+        const taxAmount = Math.round(body.totalAmount * 0.15);
         await sendReservationConfirmationEmail({
           to: guestRow.email,
           guestName: `${guestRow.first_name || ""} ${guestRow.last_name || ""}`.trim(),
           roomNumber: roomRow.room_number,
+          roomType: roomRow.type,
           checkIn: body.checkIn,
           checkOut: body.checkOut,
           totalAmount: body.totalAmount,
           status: initialStatus,
           reservationId: data.reservation_id,
+          adults: body.adults,
+          children: body.children,
+          taxAmount: taxAmount,
+          paymentStatus: guestRow.account_status === 'ACTIVE' ? 'PENDING' : 'UNPAID',
         });
       } catch (emailError) {
         console.warn("Confirmation email could not be sent:", emailError);
@@ -303,6 +309,43 @@ export async function PUT(request: NextRequest) {
 
     if (status === "CHECKED_IN" || status === "CHECKED_OUT") {
       await supabase.from("guests").update({ status }).eq("id", guestId);
+    }
+
+    // Send cancellation email if status changed to CANCELLED
+    if (status === "CANCELLED" && previousReservation?.status !== "CANCELLED") {
+      const { data: cancelGuest } = await supabase
+        .from("guests")
+        .select("first_name,last_name,email")
+        .eq("id", guestId)
+        .maybeSingle();
+
+      const { data: cancelRoom } = await supabase
+        .from("rooms")
+        .select("room_number,type")
+        .eq("id", roomId)
+        .maybeSingle();
+
+      if (cancelGuest?.email && cancelRoom?.room_number) {
+        try {
+          const { sendReservationConfirmationEmail } = await import('@/lib/mailer');
+          await sendReservationConfirmationEmail({
+            to: cancelGuest.email,
+            guestName: `${cancelGuest.first_name || ""} ${cancelGuest.last_name || ""}`.trim(),
+            roomNumber: cancelRoom.room_number,
+            roomType: cancelRoom.type,
+            checkIn: checkIn,
+            checkOut: checkOut,
+            totalAmount: totalAmount,
+            status: 'CANCELLED',
+            reservationId: data.reservation_id || id,
+            adults: adults,
+            children: children,
+            paymentStatus: 'CANCELLED',
+          });
+        } catch (emailError) {
+          console.warn("Cancellation email could not be sent:", emailError);
+        }
+      }
     }
 
     const [{ data: guestRow }, { data: roomRow }] = await Promise.all([

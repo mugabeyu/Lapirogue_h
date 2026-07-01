@@ -246,46 +246,78 @@ export async function sendReservationConfirmationEmail(input: {
   to: string;
   guestName: string;
   roomNumber: string;
+  roomType?: string;
   checkIn: string;
   checkOut: string;
   totalAmount: number;
   status: string;
   reservationId: string;
+  adults?: number;
+  children?: number;
+  hotelName?: string;
+  hotelAddress?: string;
+  cancellationPolicy?: string;
+  paymentStatus?: string;
+  taxAmount?: number;
 }) {
+  const hotelName = input.hotelName || 'La Pirogue Hotel Mauritius';
+  const hotelAddress = input.hotelAddress || 'La Pirogue, Belle Mare, Mauritius';
+  const cancelPolicy = input.cancellationPolicy || 'Free cancellation up to 48 hours before check-in. Cancellations within 48 hours may incur a one-night charge.';
+  const paymentStatus = input.paymentStatus || 'UNPAID';
+  const guests = `${input.adults || 1} Adult(s)` + (input.children ? `, ${input.children} Child(ren)` : '');
+  const taxAmount = input.taxAmount || Math.round(input.totalAmount * 0.15);
+
   try {
     const response = await resend.emails.send({
       from: FROM_EMAIL,
       to: input.to,
-      subject: `Reservation ${input.status === 'RESERVED' ? 'Request' : 'Confirmed'} - La Pirogue Hotel`,
+      subject: `Reservation ${input.status === 'RESERVED' ? 'Request Received' : input.status === 'CANCELLED' ? 'Cancelled' : 'Confirmed'} - ${hotelName}`,
       html: `
         <table width="100%" cellpadding="0" cellspacing="0">
           <tr><td align="center" style="padding:40px 20px;background:#f9fafb;">
-            <div style="max-width:480px;background:#ffffff;border-radius:16px;padding:40px;">
+            <div style="max-width:560px;background:#ffffff;border-radius:16px;padding:40px;">
               ${logoImgTag()}
 
-              <h2 style="margin:20px 0 8px;color:#0f766e;font-size:24px;">
-                ${input.status === 'RESERVED' ? 'Reservation Request Received' : 'Reservation Confirmed'}
+              <h2 style="margin:20px 0 8px;${input.status === 'CANCELLED' ? 'color:#dc2626;' : 'color:#0f766e;'}font-size:24px;">
+                ${input.status === 'RESERVED' ? 'Reservation Request Received' : input.status === 'CANCELLED' ? 'Reservation Cancelled' : 'Reservation Confirmed'}
               </h2>
 
               <p style="font-size:16px;color:#374151;">Dear ${escapeHtml(input.guestName)},</p>
 
               <p style="font-size:16px;color:#374151;">
-                ${input.status === 'RESERVED' ? 'Your reservation request has been received and will be confirmed at check-in.' : 'Your reservation has been confirmed.'}
+                ${input.status === 'CANCELLED' ? 'Your reservation has been cancelled as requested. Details of the cancelled reservation are below.' : 'Thank you for choosing ${escapeHtml(hotelName)}. Your reservation details are below.'}
               </p>
 
-              <div style="margin:20px 0;padding:16px;background:#f3f4f6;border-radius:12px;">
-                <p style="margin:4px 0;"><strong>Room:</strong> ${escapeHtml(input.roomNumber)}</p>
-                <p style="margin:4px 0;"><strong>Check-in:</strong> ${input.checkIn}</p>
-                <p style="margin:4px 0;"><strong>Check-out:</strong> ${input.checkOut}</p>
-                <p style="margin:4px 0;"><strong>Total:</strong> Rs ${input.totalAmount.toLocaleString()}</p>
-                <p style="margin:4px 0;"><strong>Reference:</strong> ${escapeHtml(input.reservationId)}</p>
+              <div style="margin:24px 0;padding:24px;background:#f3f4f6;border-radius:12px;">
+                <h3 style="margin:0 0 16px;${input.status === 'CANCELLED' ? 'color:#dc2626;' : 'color:#0f766e;'}font-size:18px;">${input.status === 'CANCELLED' ? 'Cancelled Reservation Details' : 'Reservation Details'}</h3>
+                <table style="width:100%;border-collapse:collapse;font-size:14px;">
+                  <tr><td style="padding:6px 0;color:#6b7280;width:140px;">Reservation #</td><td style="padding:6px 0;font-weight:600;">${escapeHtml(input.reservationId)}</td></tr>
+                  <tr><td style="padding:6px 0;color:#6b7280;">Guest Name</td><td style="padding:6px 0;font-weight:600;">${escapeHtml(input.guestName)}</td></tr>
+                  <tr><td style="padding:6px 0;color:#6b7280;">Hotel</td><td style="padding:6px 0;font-weight:600;">${escapeHtml(hotelName)}</td></tr>
+                  <tr><td style="padding:6px 0;color:#6b7280;">Address</td><td style="padding:6px 0;font-weight:600;">${escapeHtml(hotelAddress)}</td></tr>
+                  <tr><td style="padding:6px 0;color:#6b7280;">Room</td><td style="padding:6px 0;font-weight:600;">${escapeHtml(input.roomNumber)}${input.roomType ? ' (${escapeHtml(input.roomType)})' : ''}</td></tr>
+                  <tr><td style="padding:6px 0;color:#6b7280;">Check-in</td><td style="padding:6px 0;font-weight:600;">${input.checkIn}</td></tr>
+                  <tr><td style="padding:6px 0;color:#6b7280;">Check-out</td><td style="padding:6px 0;font-weight:600;">${input.checkOut}</td></tr>
+                  <tr><td style="padding:6px 0;color:#6b7280;">Guests</td><td style="padding:6px 0;font-weight:600;">${escapeHtml(guests)}</td></tr>
+                  <tr><td style="padding:6px 0;color:#6b7280;">Subtotal</td><td style="padding:6px 0;font-weight:600;">Rs ${input.totalAmount.toLocaleString()}</td></tr>
+                  <tr><td style="padding:6px 0;color:#6b7280;">Tax (15%)</td><td style="padding:6px 0;font-weight:600;">Rs ${taxAmount.toLocaleString()}</td></tr>
+                  <tr><td style="padding:6px 0;color:#6b7280;border-top:1px solid #d1d5db;">Total</td><td style="padding:6px 0;font-weight:700;font-size:16px;border-top:1px solid #d1d5db;color:#0f766e;">Rs ${(input.totalAmount + taxAmount).toLocaleString()}</td></tr>
+                  <tr><td style="padding:6px 0;color:#6b7280;">Payment Status</td><td style="padding:6px 0;font-weight:600;color:${paymentStatus === 'PAID' ? '#059669' : paymentStatus === 'CANCELLED' ? '#dc2626' : '#d97706'};">${escapeHtml(paymentStatus)}</td></tr>
+                </table>
+              </div>
+
+              <div style="margin:20px 0;padding:16px;background:#fef3c7;border-radius:12px;border:1px solid #f59e0b;">
+                <p style="margin:0;font-size:13px;color:#92400e;"><strong>Cancellation Policy:</strong><br>${escapeHtml(cancelPolicy)}</p>
               </div>
 
               ${input.status === 'RESERVED' ? `
-              <p style="font-size:14px;color:#6b7280;">Please proceed to the front desk at check-in to complete your reservation. Your room service and activity booking features will unlock upon check-in.</p>
+              <p style="font-size:14px;color:#6b7280;">You can pre-book activities, spa sessions, and restaurant reservations through the La Pirogue mobile app. Room service will be available after check-in.</p>
+              ` : input.status === 'CANCELLED' ? `
+              <p style="font-size:14px;color:#6b7280;">If you have any questions regarding your cancellation, please contact our front desk.</p>
               ` : ''}
 
-              <p style="font-size:14px;color:#6b7280;margin-top:20px;">Thank you for choosing La Pirogue Hotel.</p>
+              <p style="font-size:14px;color:#6b7280;margin-top:24px;">${input.status === 'CANCELLED' ? 'We hope to welcome you again in the future.' : 'We look forward to welcoming you!'}</p>
+              <p style="font-size:14px;color:#6b7280;">Warm regards,<br>The ${escapeHtml(hotelName)} Team</p>
             </div>
           </td></tr>
         </table>

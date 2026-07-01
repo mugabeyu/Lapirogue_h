@@ -93,19 +93,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { data: checkedInReservation } = await admin
+    const { data: activeReservation } = await admin
       .from('reservations')
-      .select('id')
+      .select('id, check_in, check_out')
       .eq('guest_id', body.guestId)
-      .eq('status', 'CHECKED_IN')
+      .in('status', ['RESERVED', 'CHECKED_IN'])
       .limit(1)
       .maybeSingle();
 
-    if (!checkedInReservation) {
+    if (!activeReservation) {
       return NextResponse.json({
         success: false,
-        error: 'Guest must be CHECKED_IN before booking activities.'
+        error: 'Guest must have an active reservation to book activities.'
       }, { status: 403 });
+    }
+
+    // If guest is RESERVED (not checked in), ensure booking date is within reservation dates
+    if (activeReservation.status === 'RESERVED') {
+      const bookingDate = new Date(body.date);
+      const checkIn = new Date(activeReservation.check_in);
+      const checkOut = new Date(activeReservation.check_out);
+      if (bookingDate < checkIn || bookingDate >= checkOut) {
+        return NextResponse.json({
+          success: false,
+          error: 'Activity booking date must be within your reservation period.'
+        }, { status: 403 });
+      }
     }
 
     const { data, error } = await admin
