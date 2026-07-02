@@ -8,6 +8,9 @@
 --   4. cleanup_expired_pending_reservations() function
 -- =============================================
 
+-- 0. ENABLE pgcrypto EXTENSION (required for gen_random_bytes)
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 -- 1. ENSURE 'RESERVED' EXISTS IN reservation_status ENUM
 DO $$ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'reservation_status') THEN

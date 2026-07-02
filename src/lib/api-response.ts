@@ -18,10 +18,6 @@ export function validationErrorResponse(error: unknown, message = 'Validation er
 
 export function handleError(error: unknown, fallbackMessage: string) {
   console.error(fallbackMessage, error);
-  const message = process.env.NODE_ENV === 'production'
-    ? fallbackMessage
-    : error instanceof Error
-      ? error.message
-      : fallbackMessage;
+  const message = error instanceof Error ? error.message : fallbackMessage;
   return createApiResponse(false, message, { status: 500 });
 }
