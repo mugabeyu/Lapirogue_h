@@ -285,7 +285,7 @@ export async function sendReservationConfirmationEmail(input: {
               <p style="font-size:16px;color:#374151;">Dear ${escapeHtml(input.guestName)},</p>
 
               <p style="font-size:16px;color:#374151;">
-                ${input.status === 'CANCELLED' ? 'Your reservation has been cancelled as requested. Details of the cancelled reservation are below.' : 'Thank you for choosing ${escapeHtml(hotelName)}. Your reservation details are below.'}
+                ${input.status === 'CANCELLED' ? 'Your reservation has been cancelled as requested. Details of the cancelled reservation are below.' : `Thank you for choosing ${escapeHtml(hotelName)}. Your reservation details are below.`}
               </p>
 
               <div style="margin:24px 0;padding:24px;background:#f3f4f6;border-radius:12px;">
@@ -295,7 +295,7 @@ export async function sendReservationConfirmationEmail(input: {
                   <tr><td style="padding:6px 0;color:#6b7280;">Guest Name</td><td style="padding:6px 0;font-weight:600;">${escapeHtml(input.guestName)}</td></tr>
                   <tr><td style="padding:6px 0;color:#6b7280;">Hotel</td><td style="padding:6px 0;font-weight:600;">${escapeHtml(hotelName)}</td></tr>
                   <tr><td style="padding:6px 0;color:#6b7280;">Address</td><td style="padding:6px 0;font-weight:600;">${escapeHtml(hotelAddress)}</td></tr>
-                  <tr><td style="padding:6px 0;color:#6b7280;">Room</td><td style="padding:6px 0;font-weight:600;">${escapeHtml(input.roomNumber)}${input.roomType ? ' (${escapeHtml(input.roomType)})' : ''}</td></tr>
+                  <tr><td style="padding:6px 0;color:#6b7280;">Room</td><td style="padding:6px 0;font-weight:600;">${escapeHtml(input.roomNumber)}${input.roomType ? ` (${escapeHtml(input.roomType)})` : ''}</td></tr>
                   <tr><td style="padding:6px 0;color:#6b7280;">Check-in</td><td style="padding:6px 0;font-weight:600;">${input.checkIn}</td></tr>
                   <tr><td style="padding:6px 0;color:#6b7280;">Check-out</td><td style="padding:6px 0;font-weight:600;">${input.checkOut}</td></tr>
                   <tr><td style="padding:6px 0;color:#6b7280;">Guests</td><td style="padding:6px 0;font-weight:600;">${escapeHtml(guests)}</td></tr>

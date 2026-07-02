@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 const AUTH_ROUTES = ['/login', '/forgot-password', '/reset-password'];
-const PUBLIC_ROUTES = ['/register'];
+const PUBLIC_ROUTES = ['/register', '/dining'];
 
 const PUBLIC_API_PREFIXES = [
   '/api/auth/login',
@@ -16,6 +16,8 @@ const PUBLIC_API_PREFIXES = [
   '/api/activities',
   '/api/dining',
   '/api/spa',
+  '/api/menu-items',
+  '/api/health',
 ];
 
 function isAuthRoute(pathname: string) {
@@ -164,7 +166,7 @@ export const config = {
   matcher: [
     '/',
     '/(login|forgot-password|reset-password|register)(/.*)?',
-    '/((?!api/(?:auth/(?:login|forgot-password|verify|password-sync|me|staff/register)|reservations|rooms|activities|dining|spa)|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!api/(?:auth/(?:login|forgot-password|verify|password-sync|me|staff/register)|reservations|rooms|activities|dining|spa|menu-items|health)|dining|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };
 
