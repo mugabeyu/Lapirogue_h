@@ -99,7 +99,6 @@ export async function POST(request: NextRequest) {
   try {
     const body = reservationSchema.parse(await request.json());
     const supabase = getSupabaseAdmin();
-    await getAuditActor(request);
 
     // Gate: guest account_status must be ACTIVE to make reservations
     const { data: guestCheck } = await supabase

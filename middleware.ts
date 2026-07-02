@@ -10,9 +10,12 @@ const PUBLIC_API_PREFIXES = [
   '/api/auth/verify',
   '/api/auth/password-sync',
   '/api/auth/me',
-  '/api/auth/register-guest',
-  '/api/auth/verify-otp',
   '/api/staff/register',
+  '/api/reservations',
+  '/api/rooms',
+  '/api/activities',
+  '/api/dining',
+  '/api/spa',
 ];
 
 function isAuthRoute(pathname: string) {
@@ -28,11 +31,31 @@ function isPublicRoute(pathname: string) {
 }
 
 function nextResponse(request: NextRequest) {
-  return NextResponse.next({
+  const response = NextResponse.next({
     request: {
       headers: request.headers,
     },
   });
+  if (request.nextUrl.pathname.startsWith('/api/')) {
+    response.headers.set('Access-Control-Allow-Origin', '*');
+    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, apikey');
+  }
+  return response;
+}
+
+export async function OPTIONS(request: NextRequest) {
+  if (request.nextUrl.pathname.startsWith('/api/')) {
+    return new NextResponse(null, {
+      status: 204,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, apikey',
+      },
+    });
+  }
+  return NextResponse.next();
 }
 
 function createSupabase(request: NextRequest, response: NextResponse, supabaseUrl: string, supabaseAnonKey: string) {
@@ -141,7 +164,7 @@ export const config = {
   matcher: [
     '/',
     '/(login|forgot-password|reset-password|register)(/.*)?',
-    '/((?!api/auth/(?:login|forgot-password|verify|password-sync|me|register-guest|verify-otp)|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!api/(?:auth/(?:login|forgot-password|verify|password-sync|me|staff/register)|reservations|rooms|activities|dining|spa)|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };
 

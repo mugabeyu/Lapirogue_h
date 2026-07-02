@@ -117,7 +117,8 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = messageSchema.parse(await request.json());
-    const { data, error } = await getSupabaseAdmin()
+    const supabase = getSupabaseAdmin();
+    const { data, error } = await supabase
       .from('messages')
       .insert({
         guest_id: body.guestId,
@@ -133,6 +134,17 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) throw error;
+
+    if (body.senderType !== 'guest') {
+      await supabase.from('notifications').insert({
+        guest_id: body.guestId,
+        title: 'New Message from Hotel',
+        message: body.content.trim().substring(0, Math.min(body.content.trim().length, 200)),
+        category: 'Message',
+        is_read: false,
+      }).maybeSingle();
+    }
+
     const mapped = await mapMessages((data ? [data] : []) as MessageRow[]);
     return attachSupabaseCookies(NextResponse.json({ success: true, data: mapped[0] ?? null }, { status: 201 }), response);
   } catch (error) {
