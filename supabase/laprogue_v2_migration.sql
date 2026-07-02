@@ -559,7 +559,11 @@ END$$;
 
 -- =============================================
 -- 16. OTP VERIFICATION TABLE FOR GUEST REGISTRATION
+-- ⚠️  SUPERSEDED by 007_supabase_auth_verification.sql (Supabase Auth OTP)
+--    Kept for reference only. The active flow uses pending_reservations table
+--    with Supabase Auth's signInWithOtp/verifyOtp.
 -- =============================================
+-- DROP TABLE IF EXISTS public.registration_otps; -- Uncomment to clean up
 CREATE TABLE IF NOT EXISTS public.registration_otps (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     email text NOT NULL,

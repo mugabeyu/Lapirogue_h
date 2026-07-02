@@ -15,7 +15,14 @@ const reservationSchema = z.object({
   children: z.number().int().min(0),
   totalAmount: z.number().min(0),
   status: z
-    .enum(["RESERVED", "CONFIRMED", "CHECKED_IN", "CHECKED_OUT", "CANCELLED", "NO_SHOW"])
+    .enum([
+      "RESERVED",
+      "CONFIRMED",
+      "CHECKED_IN",
+      "CHECKED_OUT",
+      "CANCELLED",
+      "NO_SHOW",
+    ])
     .optional(),
   origin: z.enum(["MOBILE_APP", "RECEPTION_DESK", "MANAGER_PORTAL"]).optional(),
 });
@@ -44,6 +51,22 @@ function toDateKey(date = new Date()) {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function toGuestReservationStatus(status: string | undefined) {
+  switch (status) {
+    case "CHECKED_IN":
+      return "CHECKED_IN";
+    case "CHECKED_OUT":
+      return "CHECKED_OUT";
+    case "CANCELLED":
+    case "NO_SHOW":
+      return "CANCELLED";
+    case "RESERVED":
+    case "CONFIRMED":
+    default:
+      return "RESERVED";
+  }
 }
 
 export async function GET(request: NextRequest) {
@@ -111,7 +134,7 @@ export async function POST(request: NextRequest) {
       return createApiResponse(false, "Guest not found", { status: 404 });
     }
 
-    if (guestCheck.account_status === 'FROZEN') {
+    if (guestCheck.account_status === "FROZEN") {
       return createApiResponse(
         false,
         "Account is frozen. Contact the hotel to resume bookings.",
@@ -119,7 +142,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (guestCheck.account_status === 'BANNED') {
+    if (guestCheck.account_status === "BANNED") {
       return createApiResponse(
         false,
         "Account is banned. Cannot make reservations.",
@@ -127,7 +150,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (guestCheck.account_status === 'PENDING') {
+    if (guestCheck.account_status === "PENDING") {
       return createApiResponse(
         false,
         "Account is pending activation. Please verify your email first.",
@@ -171,6 +194,7 @@ export async function POST(request: NextRequest) {
         children: body.children,
         total_amount: body.totalAmount,
         status: initialStatus,
+        origin,
       })
       .select("*")
       .single();
@@ -193,11 +217,13 @@ export async function POST(request: NextRequest) {
     // Send confirmation email with full details
     if (guestRow?.email && roomRow?.room_number) {
       try {
-        const { sendReservationConfirmationEmail } = await import('@/lib/mailer');
+        const { sendReservationConfirmationEmail } =
+          await import("@/lib/mailer");
         const taxAmount = Math.round(body.totalAmount * 0.15);
         await sendReservationConfirmationEmail({
           to: guestRow.email,
-          guestName: `${guestRow.first_name || ""} ${guestRow.last_name || ""}`.trim(),
+          guestName:
+            `${guestRow.first_name || ""} ${guestRow.last_name || ""}`.trim(),
           roomNumber: roomRow.room_number,
           roomType: roomRow.type,
           checkIn: body.checkIn,
@@ -208,7 +234,8 @@ export async function POST(request: NextRequest) {
           adults: body.adults,
           children: body.children,
           taxAmount: taxAmount,
-          paymentStatus: guestRow.account_status === 'ACTIVE' ? 'PENDING' : 'UNPAID',
+          paymentStatus:
+            guestRow.account_status === "ACTIVE" ? "PENDING" : "UNPAID",
         });
       } catch (emailError) {
         console.warn("Confirmation email could not be sent:", emailError);
@@ -245,8 +272,6 @@ export async function PUT(request: NextRequest) {
       status,
     } = parsed;
     const supabase = getSupabaseAdmin();
-    const actor = await getAuditActor(request);
-    const actorId = actor?.id;
 
     if (status === "CHECKED_IN") {
       const today = toDateKey();
@@ -263,7 +288,7 @@ export async function PUT(request: NextRequest) {
       await supabase
         .from("reservations")
         .select(
-            "id,reservation_id,guest_id,room_id,check_in,check_out,status,guests(first_name,last_name,email),rooms(room_number,type)",
+          "id,reservation_id,guest_id,room_id,check_in,check_out,status,guests(first_name,last_name,email),rooms(room_number,type)",
         )
         .eq("id", id)
         .maybeSingle();
@@ -306,8 +331,11 @@ export async function PUT(request: NextRequest) {
 
     if (error) throw error;
 
-    if (status === "CHECKED_IN" || status === "CHECKED_OUT") {
-      await supabase.from("guests").update({ status }).eq("id", guestId);
+    if (status) {
+      await supabase
+        .from("guests")
+        .update({ status: toGuestReservationStatus(status) })
+        .eq("id", guestId);
     }
 
     // Send cancellation email if status changed to CANCELLED
@@ -326,20 +354,22 @@ export async function PUT(request: NextRequest) {
 
       if (cancelGuest?.email && cancelRoom?.room_number) {
         try {
-          const { sendReservationConfirmationEmail } = await import('@/lib/mailer');
+          const { sendReservationConfirmationEmail } =
+            await import("@/lib/mailer");
           await sendReservationConfirmationEmail({
             to: cancelGuest.email,
-            guestName: `${cancelGuest.first_name || ""} ${cancelGuest.last_name || ""}`.trim(),
+            guestName:
+              `${cancelGuest.first_name || ""} ${cancelGuest.last_name || ""}`.trim(),
             roomNumber: cancelRoom.room_number,
             roomType: cancelRoom.type,
             checkIn: checkIn,
             checkOut: checkOut,
             totalAmount: totalAmount,
-            status: 'CANCELLED',
+            status: "CANCELLED",
             reservationId: data.reservation_id || id,
             adults: adults,
             children: children,
-            paymentStatus: 'CANCELLED',
+            paymentStatus: "CANCELLED",
           });
         } catch (emailError) {
           console.warn("Cancellation email could not be sent:", emailError);
@@ -407,53 +437,82 @@ export async function DELETE(request: NextRequest) {
     if (!id) return createApiResponse(false, "ID required", { status: 400 });
     const supabase = getSupabaseAdmin();
     const actor = await getAuditActor(request);
-    const actorId = actor?.id;
     const { data: reservation } = await supabase
       .from("reservations")
       .select("*")
       .eq("id", id)
       .maybeSingle();
 
+    if (!reservation) {
+      return createApiResponse(false, "Reservation not found", { status: 404 });
+    }
+
+    if (reservation.status === "CANCELLED") {
+      return createApiResponse(true, {
+        message: "Reservation already cancelled",
+      });
+    }
+
     if (reservation) {
       try {
         await recordAuditLog({
           tableName: "reservations",
           recordId: id,
-          action: "DELETE",
+          action: "UPDATE",
           actorId: actor?.id || "unknown",
           before: reservation as Record<string, unknown>,
+          after: {
+            ...(reservation as Record<string, unknown>),
+            status: "CANCELLED",
+          },
         });
       } catch (auditError) {
         console.warn("Reservation audit log skipped", auditError);
       }
     }
 
-    const [{ count: paymentCount }] = await Promise.all([
-      supabase
-        .from("payments")
-        .select("id", { count: "exact", head: true })
-        .eq("reservation_id", id),
-    ]);
+    const { data: cancelledReservation, error } = await supabase
+      .from("reservations")
+      .update({ status: "CANCELLED" })
+      .eq("id", id)
+      .select("id, guest_id")
+      .single();
 
-    const blockers: string[] = [];
-    if (paymentCount && paymentCount > 0)
-      blockers.push(`${paymentCount} payment/invoice record(s)`);
-
-    if (blockers.length > 0) {
-      return createApiResponse(
-        false,
-        `Cannot delete reservation: referenced by ${blockers.join(", ")}. Settle or cancel those records first.`,
-        { status: 409 },
-      );
-    }
-
-    const { error } = await supabase.from("reservations").delete().eq("id", id);
-    if (error)
-      return createApiResponse(false, "Failed to delete reservation", {
+    if (error) {
+      return createApiResponse(false, "Failed to cancel reservation", {
         status: 500,
       });
-    return createApiResponse(true, { message: "Reservation deleted" });
+    }
+
+    if (cancelledReservation?.guest_id) {
+      const { data: replacementReservation } = await supabase
+        .from("reservations")
+        .select("status")
+        .eq("guest_id", cancelledReservation.guest_id)
+        .neq("id", id)
+        .in("status", [
+          "CHECKED_IN",
+          "RESERVED",
+          "CONFIRMED",
+          "CHECKED_OUT",
+          "NO_SHOW",
+        ])
+        .order("check_in", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      await supabase
+        .from("guests")
+        .update({
+          status: toGuestReservationStatus(
+            replacementReservation?.status ?? "CANCELLED",
+          ),
+        })
+        .eq("id", cancelledReservation.guest_id);
+    }
+
+    return createApiResponse(true, { message: "Reservation cancelled" });
   } catch {
-    return createApiResponse(false, "Failed to delete reservation");
+    return createApiResponse(false, "Failed to cancel reservation");
   }
 }

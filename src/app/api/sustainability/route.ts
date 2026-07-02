@@ -249,12 +249,9 @@ export async function GET(request: NextRequest) {
       points: monthBuckets.get(month.key) ?? 0,
     }));
 
-    const payload = emptySustainabilityPayload();
-
     return attachSupabaseCookies(NextResponse.json({
       success: true,
       data: {
-        ...payload,
         summary,
         leaderboard,
         activityDistribution,

@@ -1,16 +1,20 @@
-import { resend, FROM_EMAIL } from './resend';
+import { resend, FROM_EMAIL } from "./resend";
 
 function escapeHtml(value: string | number | null | undefined) {
-  return String(value ?? '').replace(/[&<>"']/g, (char) => ({
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#039;',
-  }[char] ?? char));
+  return String(value ?? "").replace(
+    /[&<>"']/g,
+    (char) =>
+      ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#039;",
+      })[char] ?? char,
+  );
 }
 
-const LOGO_URL = 'https://lapirogue-hotel.yunusu.me/lapiroguelogo.jpg';
+const LOGO_URL = "https://lapirogue-hotel.yunusu.me/lapiroguelogo.jpg";
 
 function logoImgTag() {
   return `<img src="${LOGO_URL}" alt="La Pirogue Hotel" style="max-width: 200px; height: auto; display: block;" />`;
@@ -30,7 +34,8 @@ export async function sendGuestPortalInvitationEmail(input: {
     const response = await resend.emails.send({
       from: FROM_EMAIL,
       to: input.to,
-      subject: "Welcome to La Pirogue Hotel - Complete Your Guest Portal Registration",
+      subject:
+        "Welcome to La Pirogue Hotel - Complete Your Guest Portal Registration",
       html: `
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;margin:0;font-family:Arial,sans-serif;color:#1f2937;line-height:1.6">
           <tr><td style="padding:16px;">
@@ -169,7 +174,9 @@ export async function sendInvoiceEmail(input: {
       from: FROM_EMAIL,
       to: input.to,
       subject: `Invoice ${input.invoiceReference} - La Pirogue Hotel`,
-      html: input.summaryHtml ?? `
+      html:
+        input.summaryHtml ??
+        `
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;margin:0;font-family:Arial,sans-serif;color:#1f2937;line-height:1.6">
           <tr><td style="padding:16px;">
             <div style="margin-bottom: 20px;">
@@ -204,44 +211,6 @@ export async function sendInvoiceEmail(input: {
   }
 }
 
-export async function sendOtpEmail(to: string, otp: string, name: string) {
-  try {
-    const response = await resend.emails.send({
-      from: FROM_EMAIL,
-      to,
-      subject: 'Your La Pirogue verification code',
-      html: `
-        <table width="100%" cellpadding="0" cellspacing="0">
-          <tr><td align="center" style="padding:40px 20px;background:#f9fafb;">
-            <div style="max-width:480px;background:#ffffff;border-radius:16px;padding:40px;text-align:center;">
-              ${logoImgTag()}
-
-              <h2 style="margin:20px 0 8px;color:#0f766e;font-size:24px;">Verify your email</h2>
-
-              <p style="font-size:16px;color:#374151;">Hi ${escapeHtml(name)},</p>
-
-              <p style="font-size:16px;color:#374151;">Use the code below to complete your registration:</p>
-
-              <div style="margin:24px 0;padding:16px;background:#f3f4f6;border-radius:12px;font-size:36px;font-weight:bold;letter-spacing:8px;color:#0f766e;font-family:monospace;">
-                ${otp}
-              </div>
-
-              <p style="font-size:14px;color:#6b7280;">This code expires in 10 minutes.</p>
-
-              <p style="font-size:14px;color:#6b7280;margin-top:20px;">If you did not request this, please ignore this email.</p>
-            </div>
-          </td></tr>
-        </table>
-      `,
-    });
-
-    return { success: true, data: response };
-  } catch (error) {
-    console.error('OTP EMAIL ERROR:', error);
-    throw error;
-  }
-}
-
 export async function sendReservationConfirmationEmail(input: {
   to: string;
   guestName: string;
@@ -260,49 +229,54 @@ export async function sendReservationConfirmationEmail(input: {
   paymentStatus?: string;
   taxAmount?: number;
 }) {
-  const hotelName = input.hotelName || 'La Pirogue Hotel Mauritius';
-  const hotelAddress = input.hotelAddress || 'La Pirogue, Belle Mare, Mauritius';
-  const cancelPolicy = input.cancellationPolicy || 'Free cancellation up to 48 hours before check-in. Cancellations within 48 hours may incur a one-night charge.';
-  const paymentStatus = input.paymentStatus || 'UNPAID';
-  const guests = `${input.adults || 1} Adult(s)` + (input.children ? `, ${input.children} Child(ren)` : '');
+  const hotelName = input.hotelName || "La Pirogue Hotel Mauritius";
+  const hotelAddress =
+    input.hotelAddress || "La Pirogue, Belle Mare, Mauritius";
+  const cancelPolicy =
+    input.cancellationPolicy ||
+    "Free cancellation up to 48 hours before check-in. Cancellations within 48 hours may incur a one-night charge.";
+  const paymentStatus = input.paymentStatus || "UNPAID";
+  const guests =
+    `${input.adults || 1} Adult(s)` +
+    (input.children ? `, ${input.children} Child(ren)` : "");
   const taxAmount = input.taxAmount || Math.round(input.totalAmount * 0.15);
 
   try {
     const response = await resend.emails.send({
       from: FROM_EMAIL,
       to: input.to,
-      subject: `Reservation ${input.status === 'RESERVED' ? 'Request Received' : input.status === 'CANCELLED' ? 'Cancelled' : 'Confirmed'} - ${hotelName}`,
+      subject: `Reservation ${input.status === "RESERVED" ? "Confirmed for Arrival" : input.status === "CANCELLED" ? "Cancelled" : "Confirmed"} - ${hotelName}`,
       html: `
         <table width="100%" cellpadding="0" cellspacing="0">
           <tr><td align="center" style="padding:40px 20px;background:#f9fafb;">
             <div style="max-width:560px;background:#ffffff;border-radius:16px;padding:40px;">
               ${logoImgTag()}
 
-              <h2 style="margin:20px 0 8px;${input.status === 'CANCELLED' ? 'color:#dc2626;' : 'color:#0f766e;'}font-size:24px;">
-                ${input.status === 'RESERVED' ? 'Reservation Request Received' : input.status === 'CANCELLED' ? 'Reservation Cancelled' : 'Reservation Confirmed'}
+              <h2 style="margin:20px 0 8px;${input.status === "CANCELLED" ? "color:#dc2626;" : "color:#0f766e;"}font-size:24px;">
+                ${input.status === "RESERVED" ? "Reservation Confirmed for Arrival" : input.status === "CANCELLED" ? "Reservation Cancelled" : "Reservation Confirmed"}
               </h2>
 
               <p style="font-size:16px;color:#374151;">Dear ${escapeHtml(input.guestName)},</p>
 
               <p style="font-size:16px;color:#374151;">
-                ${input.status === 'CANCELLED' ? 'Your reservation has been cancelled as requested. Details of the cancelled reservation are below.' : `Thank you for choosing ${escapeHtml(hotelName)}. Your reservation details are below.`}
+                ${input.status === "CANCELLED" ? "Your reservation has been cancelled as requested. Details of the cancelled reservation are below." : `Thank you for choosing ${escapeHtml(hotelName)}. Your reservation details are below.`}
               </p>
 
               <div style="margin:24px 0;padding:24px;background:#f3f4f6;border-radius:12px;">
-                <h3 style="margin:0 0 16px;${input.status === 'CANCELLED' ? 'color:#dc2626;' : 'color:#0f766e;'}font-size:18px;">${input.status === 'CANCELLED' ? 'Cancelled Reservation Details' : 'Reservation Details'}</h3>
+                <h3 style="margin:0 0 16px;${input.status === "CANCELLED" ? "color:#dc2626;" : "color:#0f766e;"}font-size:18px;">${input.status === "CANCELLED" ? "Cancelled Reservation Details" : "Reservation Details"}</h3>
                 <table style="width:100%;border-collapse:collapse;font-size:14px;">
                   <tr><td style="padding:6px 0;color:#6b7280;width:140px;">Reservation #</td><td style="padding:6px 0;font-weight:600;">${escapeHtml(input.reservationId)}</td></tr>
                   <tr><td style="padding:6px 0;color:#6b7280;">Guest Name</td><td style="padding:6px 0;font-weight:600;">${escapeHtml(input.guestName)}</td></tr>
                   <tr><td style="padding:6px 0;color:#6b7280;">Hotel</td><td style="padding:6px 0;font-weight:600;">${escapeHtml(hotelName)}</td></tr>
                   <tr><td style="padding:6px 0;color:#6b7280;">Address</td><td style="padding:6px 0;font-weight:600;">${escapeHtml(hotelAddress)}</td></tr>
-                  <tr><td style="padding:6px 0;color:#6b7280;">Room</td><td style="padding:6px 0;font-weight:600;">${escapeHtml(input.roomNumber)}${input.roomType ? ` (${escapeHtml(input.roomType)})` : ''}</td></tr>
+                  <tr><td style="padding:6px 0;color:#6b7280;">Room</td><td style="padding:6px 0;font-weight:600;">${escapeHtml(input.roomNumber)}${input.roomType ? ` (${escapeHtml(input.roomType)})` : ""}</td></tr>
                   <tr><td style="padding:6px 0;color:#6b7280;">Check-in</td><td style="padding:6px 0;font-weight:600;">${input.checkIn}</td></tr>
                   <tr><td style="padding:6px 0;color:#6b7280;">Check-out</td><td style="padding:6px 0;font-weight:600;">${input.checkOut}</td></tr>
                   <tr><td style="padding:6px 0;color:#6b7280;">Guests</td><td style="padding:6px 0;font-weight:600;">${escapeHtml(guests)}</td></tr>
                   <tr><td style="padding:6px 0;color:#6b7280;">Subtotal</td><td style="padding:6px 0;font-weight:600;">Rs ${input.totalAmount.toLocaleString()}</td></tr>
                   <tr><td style="padding:6px 0;color:#6b7280;">Tax (15%)</td><td style="padding:6px 0;font-weight:600;">Rs ${taxAmount.toLocaleString()}</td></tr>
                   <tr><td style="padding:6px 0;color:#6b7280;border-top:1px solid #d1d5db;">Total</td><td style="padding:6px 0;font-weight:700;font-size:16px;border-top:1px solid #d1d5db;color:#0f766e;">Rs ${(input.totalAmount + taxAmount).toLocaleString()}</td></tr>
-                  <tr><td style="padding:6px 0;color:#6b7280;">Payment Status</td><td style="padding:6px 0;font-weight:600;color:${paymentStatus === 'PAID' ? '#059669' : paymentStatus === 'CANCELLED' ? '#dc2626' : '#d97706'};">${escapeHtml(paymentStatus)}</td></tr>
+                  <tr><td style="padding:6px 0;color:#6b7280;">Payment Status</td><td style="padding:6px 0;font-weight:600;color:${paymentStatus === "PAID" ? "#059669" : paymentStatus === "CANCELLED" ? "#dc2626" : "#d97706"};">${escapeHtml(paymentStatus)}</td></tr>
                 </table>
               </div>
 
@@ -310,13 +284,19 @@ export async function sendReservationConfirmationEmail(input: {
                 <p style="margin:0;font-size:13px;color:#92400e;"><strong>Cancellation Policy:</strong><br>${escapeHtml(cancelPolicy)}</p>
               </div>
 
-              ${input.status === 'RESERVED' ? `
-              <p style="font-size:14px;color:#6b7280;">You can pre-book activities, spa sessions, and restaurant reservations through the La Pirogue mobile app. Room service will be available after check-in.</p>
-              ` : input.status === 'CANCELLED' ? `
+              ${
+                input.status === "RESERVED"
+                  ? `
+              <p style="font-size:14px;color:#6b7280;">Your reservation is verified. You will be checked in inside the guest app upon arrival at the hotel. You can pre-book activities, spa sessions, and restaurant reservations before arrival, while room service and in-stay hotel services unlock after check-in.</p>
+              `
+                  : input.status === "CANCELLED"
+                    ? `
               <p style="font-size:14px;color:#6b7280;">If you have any questions regarding your cancellation, please contact our front desk.</p>
-              ` : ''}
+              `
+                    : ""
+              }
 
-              <p style="font-size:14px;color:#6b7280;margin-top:24px;">${input.status === 'CANCELLED' ? 'We hope to welcome you again in the future.' : 'We look forward to welcoming you!'}</p>
+              <p style="font-size:14px;color:#6b7280;margin-top:24px;">${input.status === "CANCELLED" ? "We hope to welcome you again in the future." : "We look forward to welcoming you!"}</p>
               <p style="font-size:14px;color:#6b7280;">Warm regards,<br>The ${escapeHtml(hotelName)} Team</p>
             </div>
           </td></tr>
@@ -326,7 +306,7 @@ export async function sendReservationConfirmationEmail(input: {
 
     return { success: true, data: response };
   } catch (error) {
-    console.error('RESERVATION CONFIRMATION EMAIL ERROR:', error);
+    console.error("RESERVATION CONFIRMATION EMAIL ERROR:", error);
     throw error;
   }
 }

@@ -164,7 +164,6 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const supabase = getSupabaseAdmin();
-  await getAuditActor(request);
 
   try {
     const body = await request.json();

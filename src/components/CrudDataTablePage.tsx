@@ -1,24 +1,28 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Lock, Pencil, Plus, SearchIcon, Trash2, Unlock } from 'lucide-react';
-import { PageHeader } from '@/components/PageHeader';
-import { StatusBadge } from '@/components/StatusBadge';
-import Button from '@/components/ui/Button';
-import { ConfirmDialog } from '@/components/ConfirmDialog';
-import { useApi } from '@/hooks/useApi';
-import { toast } from 'sonner';
-import { AddReservationModal } from '@/components/modals/AddReservationModal';
-import { RoomModal } from '@/components/modals/RoomModal';
-import { AddActivityModal } from '@/components/modals/AddActivityModal';
-import { MenuItemModal } from '@/components/modals/MenuItemModal';
-import { PaymentModal } from '@/components/modals/PaymentModal';
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Lock, Pencil, Plus, SearchIcon, Trash2, Unlock } from "lucide-react";
+import { PageHeader } from "@/components/PageHeader";
+import { StatusBadge } from "@/components/StatusBadge";
+import Button from "@/components/ui/Button";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { useApi } from "@/hooks/useApi";
+import { toast } from "sonner";
+import { AddReservationModal } from "@/components/modals/AddReservationModal";
+import { RoomModal } from "@/components/modals/RoomModal";
+import { AddActivityModal } from "@/components/modals/AddActivityModal";
+import { MenuItemModal } from "@/components/modals/MenuItemModal";
+import { PaymentModal } from "@/components/modals/PaymentModal";
 
-import { LabeledTable } from '@/components/ui/LabeledTable';
-import { GuestTableCell } from '@/components/ui/GuestNameCell';
-import { formatTableValue, getTableValue, type TableColumnType } from '@/lib/table';
+import { LabeledTable } from "@/components/ui/LabeledTable";
+import { GuestTableCell } from "@/components/ui/GuestNameCell";
+import {
+  formatTableValue,
+  getTableValue,
+  type TableColumnType,
+} from "@/lib/table";
 
 export type CrudColumn = {
   key: string;
@@ -26,7 +30,12 @@ export type CrudColumn = {
   type?: TableColumnType;
 };
 
-export type CrudEntityType = 'reservation' | 'room' | 'activity' | 'menu-item' | 'payment';
+export type CrudEntityType =
+  | "reservation"
+  | "room"
+  | "activity"
+  | "menu-item"
+  | "payment";
 
 type CrudDataTablePageProps = {
   title: string;
@@ -46,6 +55,11 @@ type CrudDataTablePageProps = {
   tableCaption?: string;
   entityName?: string;
   emptyMessage?: string;
+  deleteDialogTitle?: string;
+  deleteDialogMessage?: string;
+  deleteConfirmLabel?: string;
+  deleteSuccessMessage?: string;
+  deleteErrorMessage?: string;
 };
 
 type EntityModalProps = {
@@ -55,17 +69,20 @@ type EntityModalProps = {
   editRow: Record<string, unknown> | null;
 };
 
-function EntityModal({ entityType, ...props }: EntityModalProps & { entityType: CrudEntityType }) {
+function EntityModal({
+  entityType,
+  ...props
+}: EntityModalProps & { entityType: CrudEntityType }) {
   switch (entityType) {
-    case 'reservation':
+    case "reservation":
       return <AddReservationModal {...props} />;
-    case 'room':
+    case "room":
       return <RoomModal {...props} />;
-    case 'activity':
+    case "activity":
       return <AddActivityModal {...props} />;
-    case 'menu-item':
+    case "menu-item":
       return <MenuItemModal {...props} />;
-    case 'payment':
+    case "payment":
       return <PaymentModal {...props} />;
     default:
       return null;
@@ -77,7 +94,7 @@ export default function CrudDataTablePage({
   subtitle,
   endpoint,
   columns,
-  searchPlaceholder = 'Search...',
+  searchPlaceholder = "Search...",
   addLabel,
   entityType,
   addHref,
@@ -90,26 +107,35 @@ export default function CrudDataTablePage({
   tableCaption,
   entityName,
   emptyMessage,
+  deleteDialogTitle = "Delete Record",
+  deleteDialogMessage = "Are you sure you want to delete this record? This action cannot be undone.",
+  deleteConfirmLabel = "Delete",
+  deleteSuccessMessage = "Record deleted",
+  deleteErrorMessage = "Unable to delete record",
 }: CrudDataTablePageProps) {
   const PAGE_SIZE = 15;
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editRow, setEditRow] = useState<Record<string, unknown> | null>(null);
-  const [deleteRow, setDeleteRow] = useState<Record<string, unknown> | null>(null);
+  const [deleteRow, setDeleteRow] = useState<Record<string, unknown> | null>(
+    null,
+  );
   const [isDeleting, setIsDeleting] = useState(false);
-  const [blockRow, setBlockRow] = useState<Record<string, unknown> | null>(null);
+  const [blockRow, setBlockRow] = useState<Record<string, unknown> | null>(
+    null,
+  );
   const [isBlocking, setIsBlocking] = useState(false);
   const router = useRouter();
 
   const url = useMemo(() => {
-    const [path, query = ''] = endpoint.split('?');
+    const [path, query = ""] = endpoint.split("?");
     const params = new URLSearchParams(query);
-    if (search) params.set('search', search);
-    return `${path}${params.toString() ? `?${params}` : ''}`;
+    if (search) params.set("search", search);
+    return `${path}${params.toString() ? `?${params}` : ""}`;
   }, [endpoint, search]);
 
-  const { data,  mutate, error } = useApi<Record<string, unknown>[]>(url);
+  const { data, mutate, error } = useApi<Record<string, unknown>[]>(url);
   const rows = data ?? [];
   const apiError = error;
   const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
@@ -134,16 +160,19 @@ export default function CrudDataTablePage({
     setIsDeleting(true);
     const deleteUrl = deleteEndpoint
       ? deleteEndpoint(String(deleteRow.id))
-      : `${endpoint.split('?')[0]}?id=${deleteRow.id}`;
-    const response = await fetch(deleteUrl, { method: 'DELETE', credentials: 'include' });
+      : `${endpoint.split("?")[0]}?id=${deleteRow.id}`;
+    const response = await fetch(deleteUrl, {
+      method: "DELETE",
+      credentials: "include",
+    });
     setIsDeleting(false);
 
     if (!response.ok) {
-      toast.error('Unable to delete record');
+      toast.error(deleteErrorMessage);
       return;
     }
 
-    toast.success('Record deleted');
+    toast.success(deleteSuccessMessage);
     setDeleteRow(null);
     await mutate();
   }
@@ -156,7 +185,7 @@ export default function CrudDataTablePage({
       setBlockRow(null);
       await mutate();
     } catch {
-      toast.error('Unable to update staff status');
+      toast.error("Unable to update staff status");
     } finally {
       setIsBlocking(false);
     }
@@ -185,7 +214,13 @@ export default function CrudDataTablePage({
               </Button>
             </Link>
           ) : (
-            <Button variant="primary" onClick={() => { setEditRow(null); setIsModalOpen(true); }}>
+            <Button
+              variant="primary"
+              onClick={() => {
+                setEditRow(null);
+                setIsModalOpen(true);
+              }}
+            >
               <Plus className="h-4 w-4" />
               {addLabel}
             </Button>
@@ -194,7 +229,7 @@ export default function CrudDataTablePage({
       />
 
       <div className="card">
-        {apiError &&  (
+        {apiError && (
           <p className="px-6 py-3 text-sm text-red-500">{apiError}</p>
         )}
         <div className="px-4 py-4">
@@ -217,140 +252,178 @@ export default function CrudDataTablePage({
         <div className="table-wrap">
           <LabeledTable
             caption={caption}
-            footer={
-           
-            `Showing ${rows.length === 0 ? 0 : start + 1}-${Math.min(start + PAGE_SIZE, rows.length)} of ${rows.length} ${rows.length === 1 ? rowLabel.replace(/s$/, '') : rowLabel}`
-            }
+            footer={`Showing ${rows.length === 0 ? 0 : start + 1}-${Math.min(start + PAGE_SIZE, rows.length)} of ${rows.length} ${rows.length === 1 ? rowLabel.replace(/s$/, "") : rowLabel}`}
           >
-              <thead>
+            <thead>
               <tr className="border-b border-border text-xs uppercase tracking-wider text-[var(--color-text-secondary)]">
                 {columns.map((column, index) => (
-                  <th key={column.key} scope="col" className={`${index > 0 ? 'border-l border-border' : ''} px-6 py-4 font-medium`}>
+                  <th
+                    key={column.key}
+                    scope="col"
+                    className={`${index > 0 ? "border-l border-border" : ""} px-6 py-4 font-medium`}
+                  >
                     {column.label}
                   </th>
                 ))}
                 {!disableEdit || !disableDelete ? (
-                  <th scope="col" className="border-l border-border px-6 py-4 text-right font-medium">Actions</th>
+                  <th
+                    scope="col"
+                    className="border-l border-border px-6 py-4 text-right font-medium"
+                  >
+                    Actions
+                  </th>
                 ) : null}
               </tr>
             </thead>
-              <tbody>
-                {rows.length === 0 && (
-                  <tr className="border-b border-border">
-                    <td colSpan={columns.length + (disableEdit && disableDelete ? 0 : 1)} className="px-6 py-12 text-center text-sm text-[var(--color-text-secondary)]">
-                      {emptyText}
-                    </td>
-                  </tr>
-                )}
-                {paginatedRows.map((row, index) => (
-                  <tr
-                    key={String(row.id ?? index)}
-                    className={`border-b border-border hover:bg-surface-secondary/50 ${rowHrefBase ? 'cursor-pointer' : ''}`}
-                    onClick={rowHrefBase && row.id != null ? () => router.push(`${rowHrefBase}/${String(row.id)}`) : undefined}
+            <tbody>
+              {rows.length === 0 && (
+                <tr className="border-b border-border">
+                  <td
+                    colSpan={
+                      columns.length + (disableEdit && disableDelete ? 0 : 1)
+                    }
+                    className="px-6 py-12 text-center text-sm text-[var(--color-text-secondary)]"
                   >
-                    {columns.map((column, idx) => {
-                      const value = getTableValue(row, column.key);
-                      return (
-                        <td key={column.key} className={`${idx > 0 ? 'border-l border-border' : ''} px-6 py-4 text-sm text-[var(--color-text-primary)]`}>
-                          {column.type === 'guest' || column.key === 'guest' ? (
-                            <GuestTableCell
-                              row={row}
-                              value={value}
-                              columnKey={column.key}
-                              columnType={column.type}
+                    {emptyText}
+                  </td>
+                </tr>
+              )}
+              {paginatedRows.map((row, index) => (
+                <tr
+                  key={String(row.id ?? index)}
+                  className={`border-b border-border hover:bg-surface-secondary/50 ${rowHrefBase ? "cursor-pointer" : ""}`}
+                  onClick={
+                    rowHrefBase && row.id != null
+                      ? () => router.push(`${rowHrefBase}/${String(row.id)}`)
+                      : undefined
+                  }
+                >
+                  {columns.map((column, idx) => {
+                    const value = getTableValue(row, column.key);
+                    return (
+                      <td
+                        key={column.key}
+                        className={`${idx > 0 ? "border-l border-border" : ""} px-6 py-4 text-sm text-[var(--color-text-primary)]`}
+                      >
+                        {column.type === "guest" || column.key === "guest" ? (
+                          <GuestTableCell
+                            row={row}
+                            value={value}
+                            columnKey={column.key}
+                            columnType={column.type}
+                          />
+                        ) : column.key === "name" ? (
+                          <GuestTableCell
+                            row={row}
+                            value={value}
+                            columnKey={column.key}
+                            columnType={column.type}
+                          />
+                        ) : column.type === "image" ? (
+                          value ? (
+                            <img
+                              src={String(value)}
+                              alt={column.label}
+                              className="h-10 w-10 shrink-0 rounded-full border border-border object-cover"
                             />
-                          ) : column.key === 'name' ? (
-                            <GuestTableCell
-                              row={row}
-                              value={value}
-                              columnKey={column.key}
-                              columnType={column.type}
-                            />
-                          ) : column.type === 'image' ? (
-                            value ? (
-                              <img
-                                src={String(value)}
-                                alt={column.label}
-                                className="h-10 w-10 shrink-0 rounded-full border border-border object-cover"
-                              />
-                            ) : (
-                              <span className="text-[var(--color-text-secondary)]">-</span>
-                            )
-                          ) : column.type === 'status' ? (
-                            <StatusBadge status={String(value ?? '')} />
                           ) : (
-                            formatTableValue(value, column.type)
-                          )}
-                        </td>
-                      );
-                    })}
-                    {!disableEdit || !disableDelete ? (
-                      <td className="border-l border-border px-6 py-4 text-right">
-                        <div className="inline-flex gap-2">
-                          {!disableEdit && (
-                            <button
-                              type="button"
-                              className="rounded-lg p-2 text-[var(--color-text-secondary)] hover:bg-surface-secondary hover:text-[var(--color-primary)]"
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                setEditRow(row);
-                                setIsModalOpen(true);
-                              }}
-                              aria-label={`Edit ${rowLabel}`}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </button>
-                          )}
-                            {blockable && (
-                              <button
-                                type="button"
-                                className={`rounded-lg p-2 ${
-                                  String(row.status ?? '') === 'ACTIVE'
-                                    ? 'text-[var(--color-text-secondary)] hover:bg-warning/10 hover:text-[var(--color-warning)]'
-                                    : 'text-[var(--color-text-secondary)] hover:bg-success/10 hover:text-[var(--color-success)]'
-                                }`}
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  setBlockRow(row);
-                                }}
-                                aria-label={String(row.status ?? '') === 'ACTIVE' ? `Block ${rowLabel}` : `Unblock ${rowLabel}`}
-                              >
-                                {String(row.status ?? '') === 'ACTIVE' ? (
-                                  <Lock className="h-4 w-4" />
-                                ) : (
-                                  <Unlock className="h-4 w-4" />
-                                )}
-                              </button>
-                            )}
-                            {!disableDelete && entityType !== 'payment' && (
-                            <button
-                              type="button"
-                              className="rounded-lg p-2 text-[var(--color-text-secondary)] hover:bg-danger/10 hover:text-[var(--color-danger)]"
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                setDeleteRow(row);
-                              }}
-                              aria-label={`Delete ${rowLabel}`}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          )}
-                        </div>
+                            <span className="text-[var(--color-text-secondary)]">
+                              -
+                            </span>
+                          )
+                        ) : column.type === "status" ? (
+                          <StatusBadge status={String(value ?? "")} />
+                        ) : (
+                          formatTableValue(value, column.type)
+                        )}
                       </td>
-                    ) : null}
-                  </tr>
-                ))}
-              </tbody>
+                    );
+                  })}
+                  {!disableEdit || !disableDelete ? (
+                    <td className="border-l border-border px-6 py-4 text-right">
+                      <div className="inline-flex gap-2">
+                        {!disableEdit && (
+                          <button
+                            type="button"
+                            className="rounded-lg p-2 text-[var(--color-text-secondary)] hover:bg-surface-secondary hover:text-[var(--color-primary)]"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setEditRow(row);
+                              setIsModalOpen(true);
+                            }}
+                            aria-label={`Edit ${rowLabel}`}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </button>
+                        )}
+                        {blockable && (
+                          <button
+                            type="button"
+                            className={`rounded-lg p-2 ${
+                              String(row.status ?? "") === "ACTIVE"
+                                ? "text-[var(--color-text-secondary)] hover:bg-warning/10 hover:text-[var(--color-warning)]"
+                                : "text-[var(--color-text-secondary)] hover:bg-success/10 hover:text-[var(--color-success)]"
+                            }`}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setBlockRow(row);
+                            }}
+                            aria-label={
+                              String(row.status ?? "") === "ACTIVE"
+                                ? `Block ${rowLabel}`
+                                : `Unblock ${rowLabel}`
+                            }
+                          >
+                            {String(row.status ?? "") === "ACTIVE" ? (
+                              <Lock className="h-4 w-4" />
+                            ) : (
+                              <Unlock className="h-4 w-4" />
+                            )}
+                          </button>
+                        )}
+                        {!disableDelete && entityType !== "payment" && (
+                          <button
+                            type="button"
+                            className="rounded-lg p-2 text-[var(--color-text-secondary)] hover:bg-danger/10 hover:text-[var(--color-danger)]"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setDeleteRow(row);
+                            }}
+                            aria-label={`Delete ${rowLabel}`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  ) : null}
+                </tr>
+              ))}
+            </tbody>
           </LabeledTable>
         </div>
         {rows.length > PAGE_SIZE ? (
           <div className="table-footer">
-            <span>Page {page} of {totalPages}</span>
+            <span>
+              Page {page} of {totalPages}
+            </span>
             <div className="flex items-center gap-2">
-              <button type="button" className="btn-secondary" disabled={page <= 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>
+              <button
+                type="button"
+                className="btn-secondary"
+                disabled={page <= 1}
+                onClick={() => setPage((current) => Math.max(1, current - 1))}
+              >
                 Previous
               </button>
-              <button type="button" className="btn-secondary" disabled={page >= totalPages} onClick={() => setPage((current) => Math.min(totalPages, current + 1))}>
+              <button
+                type="button"
+                className="btn-secondary"
+                disabled={page >= totalPages}
+                onClick={() =>
+                  setPage((current) => Math.min(totalPages, current + 1))
+                }
+              >
                 Next
               </button>
             </div>
@@ -366,14 +439,14 @@ export default function CrudDataTablePage({
         editRow={editRow}
       />
 
-      {!disableDelete && entityType !== 'payment' && (
+      {!disableDelete && entityType !== "payment" && (
         <ConfirmDialog
           isOpen={Boolean(deleteRow)}
           onClose={() => setDeleteRow(null)}
           onConfirm={handleDelete}
-          title="Delete Record"
-          message="Are you sure you want to delete this record? This action cannot be undone."
-          confirmLabel="Delete"
+          title={deleteDialogTitle}
+          message={deleteDialogMessage}
+          confirmLabel={deleteConfirmLabel}
           isLoading={isDeleting}
         />
       )}
@@ -383,13 +456,19 @@ export default function CrudDataTablePage({
           isOpen={Boolean(blockRow)}
           onClose={() => setBlockRow(null)}
           onConfirm={handleBlockToggle}
-          title={String(blockRow?.status ?? '') === 'ACTIVE' ? 'Block Staff' : 'Unblock Staff'}
-          message={
-            String(blockRow?.status ?? '') === 'ACTIVE'
-              ? `Are you sure you want to block ${String(blockRow?.name ?? 'this staff member')}? They will not be able to log in until unblocked.`
-              : `Are you sure you want to unblock ${String(blockRow?.name ?? 'this staff member')}? They will regain access to the system.`
+          title={
+            String(blockRow?.status ?? "") === "ACTIVE"
+              ? "Block Staff"
+              : "Unblock Staff"
           }
-          confirmLabel={String(blockRow?.status ?? '') === 'ACTIVE' ? 'Block' : 'Unblock'}
+          message={
+            String(blockRow?.status ?? "") === "ACTIVE"
+              ? `Are you sure you want to block ${String(blockRow?.name ?? "this staff member")}? They will not be able to log in until unblocked.`
+              : `Are you sure you want to unblock ${String(blockRow?.name ?? "this staff member")}? They will regain access to the system.`
+          }
+          confirmLabel={
+            String(blockRow?.status ?? "") === "ACTIVE" ? "Block" : "Unblock"
+          }
           isLoading={isBlocking}
         />
       )}

@@ -37,8 +37,6 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = notificationSchema.parse(await request.json());
-    const actor = await getAuditActor(request);
-    const actorId = actor?.id ?? null;
     const { data, error } = await getSupabaseAdmin()
       .from('notifications')
       .insert({
@@ -64,8 +62,6 @@ export async function PATCH(request: NextRequest) {
     const { searchParams } = request.nextUrl;
     const id = searchParams.get('id');
     const all = searchParams.get('all') === 'true';
-    const actor = await getAuditActor(request);
-    const actorId = actor?.id ?? null;
 
     if (all) {
       const { error } = await getSupabaseAdmin()

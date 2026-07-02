@@ -53,10 +53,10 @@ export async function POST(request: NextRequest) {
 
     const { data: profileRow } = await supabase
       .from('profiles')
-      .select('name')
+      .select('full_name')
       .eq('email', validatedData.email)
       .maybeSingle();
-    const userName = profileRow?.name ?? validatedData.email.split('@')[0];
+    const userName = profileRow?.full_name ?? validatedData.email.split('@')[0];
 
     await sendPasswordResetEmail({
       to: validatedData.email,
