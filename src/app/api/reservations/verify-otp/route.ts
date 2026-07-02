@@ -8,13 +8,28 @@ import { getSupabaseAdmin } from "@/lib/supabase";
 const verifySchema = z.object({
   email: z.string().email(),
   token: z.string().min(1),
-  code: z.string().length(6).optional(),
+  code: z.string().length(6),
 });
 
 export async function POST(request: NextRequest) {
   try {
     const body = verifySchema.parse(await request.json());
     const supabaseAdmin = getSupabaseAdmin();
+
+    // Verify OTP via Supabase Auth reauthentication (uses service_role key)
+    const { error: verifyError } = await supabaseAdmin.auth.verifyOtp({
+      email: body.email,
+      token: body.code,
+      type: "reauthentication",
+    });
+
+    if (verifyError) {
+      return createApiResponse(
+        false,
+        "Invalid or expired verification code",
+        { status: 400 },
+      );
+    }
 
     // Get pending reservation details
     const { data: pendingRes, error: pendingError } = await supabaseAdmin
@@ -35,10 +50,6 @@ export async function POST(request: NextRequest) {
         },
       );
     }
-
-    // OTP verification now happens client-side via Supabase reauthentication.
-    // The mobile app calls supabase.auth.verifyOTP(type: reauthentication)
-    // before hitting this endpoint, so we skip server-side OTP verification here.
 
     // Call RPC to verify pending reservation and create actual reservation
     const { data: reservationResult, error: rpcError } =
