@@ -32,6 +32,16 @@ function isPublicRoute(pathname: string) {
   return PUBLIC_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`));
 }
 
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, apikey',
+};
+
+function corsResponse(status = 204) {
+  return new NextResponse(null, { status, headers: CORS_HEADERS });
+}
+
 function nextResponse(request: NextRequest) {
   const response = NextResponse.next({
     request: {
@@ -39,25 +49,11 @@ function nextResponse(request: NextRequest) {
     },
   });
   if (request.nextUrl.pathname.startsWith('/api/')) {
-    response.headers.set('Access-Control-Allow-Origin', '*');
-    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, apikey');
-  }
-  return response;
-}
-
-export async function OPTIONS(request: NextRequest) {
-  if (request.nextUrl.pathname.startsWith('/api/')) {
-    return new NextResponse(null, {
-      status: 204,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization, apikey',
-      },
+    Object.entries(CORS_HEADERS).forEach(([key, value]) => {
+      response.headers.set(key, value);
     });
   }
-  return NextResponse.next();
+  return response;
 }
 
 function createSupabase(request: NextRequest, response: NextResponse, supabaseUrl: string, supabaseAnonKey: string) {
@@ -85,14 +81,19 @@ async function isGuestUser(supabase: ReturnType<typeof createServerClient>, user
 }
 
 export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // CORS preflight — respond immediately for all API routes
+  if (request.method === 'OPTIONS' && pathname.startsWith('/api/')) {
+    return corsResponse(204);
+  }
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
   if (!supabaseUrl || !supabaseAnonKey) {
     throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY environment variables');
   }
-
-  const { pathname } = request.nextUrl;
 
   if (pathname.startsWith('/api/')) {
     if (isPublicApi(pathname)) {
@@ -166,7 +167,8 @@ export const config = {
   matcher: [
     '/',
     '/(login|forgot-password|reset-password|register)(/.*)?',
-    '/((?!api/(?:auth/(?:login|forgot-password|verify|password-sync|me|staff/register)|reservations|rooms|activities|dining|spa|menu-items|health)|dining|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/api/:path*',
+    '/((?!dining|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };
 

@@ -46,6 +46,8 @@ async function run() {
   const files = [
     { name: 'cleanup_complete.sql', path: 'supabase/cleanup_complete.sql' },
     { name: 'laprogue_v2_migration.sql', path: 'supabase/laprogue_v2_migration.sql' },
+    { name: 'supabase_migration_v7.sql', path: 'supabase/supabase_migration_v7.sql' },
+    { name: '008_pending_reservations_fix.sql', path: 'supabase/migrations/008_pending_reservations_fix.sql' },
   ];
 
   for (const file of files) {

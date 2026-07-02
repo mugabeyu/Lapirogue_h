@@ -36,24 +36,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // If code is provided, verify it with Supabase Auth
-    if (body.code) {
-      const { error: verifyError } = await supabaseAdmin.auth.verifyOtp({
-        email: body.email,
-        token: body.code,
-        type: "email",
-      });
-
-      if (verifyError) {
-        return createApiResponse(
-          false,
-          "Invalid or expired verification code",
-          {
-            status: 400,
-          },
-        );
-      }
-    }
+    // OTP verification now happens client-side via Supabase reauthentication.
+    // The mobile app calls supabase.auth.verifyOTP(type: reauthentication)
+    // before hitting this endpoint, so we skip server-side OTP verification here.
 
     // Call RPC to verify pending reservation and create actual reservation
     const { data: reservationResult, error: rpcError } =

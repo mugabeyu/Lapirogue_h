@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
 
-import { createApiResponse, validationErrorResponse } from "@/lib/api-response";
+import { createApiResponse, handleError, validationErrorResponse } from "@/lib/api-response";
 import { getSupabaseAdmin } from "@/lib/supabase";
 
 const requestSchema = z.object({
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create pending reservation using RPC
+    // Create pending reservation using RPC (stages the booking for OTP verification)
     const { data: pendingRes, error: pendingError } = await supabase.rpc(
       "create_pending_reservation",
       {
@@ -81,22 +81,11 @@ export async function POST(request: NextRequest) {
       throw pendingError ?? new Error("Failed to create pending reservation");
     }
 
-    // Send Supabase Auth OTP (uses built-in email verification)
-    const { error: otpError } = await supabase.auth.signInWithOtp({
-      email: body.email,
-      options: {
-        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback?token=${pendingRes.token}`,
-      },
-    });
-
-    if (otpError) {
-      // If Supabase OTP fails, clean up pending reservation
-      await supabase
-        .from("pending_reservations")
-        .delete()
-        .eq("verification_token", pendingRes.token);
-      throw otpError;
-    }
+    // OTP is sent client-side via Supabase reauthentication.
+    // The mobile app calls supabase.auth.reauthenticate() to trigger the OTP,
+    // then supabase.auth.verifyOTP(type: reauthentication) to verify it.
+    // After client-side verification, the app calls /api/reservations/verify-otp
+    // to finalize this pending reservation.
 
     return createApiResponse(
       true,
@@ -104,16 +93,13 @@ export async function POST(request: NextRequest) {
         verificationToken: pendingRes.token,
         expiresInSeconds: pendingRes.expires_in_seconds,
         email: body.email,
-        message: "Verification code sent to email. Check your inbox.",
+        message: "Pending reservation created. Please verify via the OTP sent to your email.",
       },
       { status: 201 },
     );
   } catch (error) {
     const validation = validationErrorResponse(error);
     if (validation) return validation;
-    return createApiResponse(
-      false,
-      "Failed to initiate reservation verification",
-    );
+    return handleError(error, "Failed to initiate reservation verification");
   }
 }
