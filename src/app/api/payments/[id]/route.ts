@@ -57,6 +57,8 @@ export async function GET(_request: NextRequest, context: { params: Promise<unkn
             .from('reservations')
             .select('id,reservation_id,check_in,check_out,total_amount,rooms(room_number,type)')
             .eq('guest_id', guestId)
+            .neq('status', 'CANCELLED')
+            .neq('status', 'NO_SHOW')
             .order('check_in', { ascending: false })
         : Promise.resolve({ data: [] }),
       guestId
@@ -64,6 +66,7 @@ export async function GET(_request: NextRequest, context: { params: Promise<unkn
             .from('food_orders')
             .select('id,order_id,subtotal,service_charge,tax_amount,total,created_at,status,notes')
             .eq('guest_id', guestId)
+            .neq('status', 'CANCELLED')
             .order('created_at', { ascending: false })
         : Promise.resolve({ data: [] }),
       guestId
@@ -71,6 +74,7 @@ export async function GET(_request: NextRequest, context: { params: Promise<unkn
             .from('activity_bookings')
             .select('id,booking_date,participants,status,notes,activities(name,price)')
             .eq('guest_id', guestId)
+            .neq('status', 'CANCELLED')
             .order('booking_date', { ascending: false })
         : Promise.resolve({ data: [] }),
       guestId

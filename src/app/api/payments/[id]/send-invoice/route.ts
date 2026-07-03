@@ -104,13 +104,13 @@ export async function POST(_request: NextRequest, context: { params: Promise<unk
 
     const [reservationsResult, foodOrdersResult, activityBookingsResult, paymentsResult] = await Promise.all([
       guestId
-        ? supabase.from('reservations').select('id,reservation_id,check_in,check_out,total_amount,rooms(room_number,type)').eq('guest_id', guestId).order('check_in', { ascending: false })
+        ? supabase.from('reservations').select('id,reservation_id,check_in,check_out,total_amount,rooms(room_number,type)').eq('guest_id', guestId).neq('status', 'CANCELLED').neq('status', 'NO_SHOW').order('check_in', { ascending: false })
         : Promise.resolve({ data: [] }),
       guestId
-        ? supabase.from('food_orders').select('id,order_id,subtotal,service_charge,tax_amount,total,created_at,status,notes').eq('guest_id', guestId).order('created_at', { ascending: false })
+        ? supabase.from('food_orders').select('id,order_id,subtotal,service_charge,tax_amount,total,created_at,status,notes').eq('guest_id', guestId).neq('status', 'CANCELLED').order('created_at', { ascending: false })
         : Promise.resolve({ data: [] }),
       guestId
-        ? supabase.from('activity_bookings').select('id,booking_date,participants,status,notes,activities(name,price)').eq('guest_id', guestId).order('booking_date', { ascending: false })
+        ? supabase.from('activity_bookings').select('id,booking_date,participants,status,notes,activities(name,price)').eq('guest_id', guestId).neq('status', 'CANCELLED').order('booking_date', { ascending: false })
         : Promise.resolve({ data: [] }),
       guestId
         ? supabase.from('payments').select('id,payment_id,amount,method,status,reference,created_at').eq('guest_id', guestId).order('created_at', { ascending: false })

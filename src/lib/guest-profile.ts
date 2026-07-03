@@ -137,24 +137,28 @@ export async function loadGuestProfileData(guestId: string): Promise<GuestProfil
     createdAt: p.created_at,
   }));
 
-const roomCharges = (reservationsData ?? []).map((r) => ({
-    amount: Number(r.total_amount ?? 0),
-    label: r.reservation_id ?? `Reservation ${r.id}`,
-    sourceId: r.id,
-    createdAt: r.created_at,
-  }));
+const roomCharges = (reservationsData ?? [])
+    .filter((r) => r.status !== 'CANCELLED' && r.status !== 'NO_SHOW')
+    .map((r) => ({
+      amount: Number(r.total_amount ?? 0),
+      label: r.reservation_id ?? `Reservation ${r.id}`,
+      sourceId: r.id,
+      createdAt: r.created_at,
+    }));
 
-  const activityCharges = (activityBookingsData ?? []).map((ab) => ({
-    amount: ((ab.activities as { price?: number | null } | null)?.price ?? 0) * (ab.participants ?? 1),
-    label: (ab.activities as { name?: string | null } | null)?.name ?? `Activity ${ab.id}`,
-    sourceId: ab.id,
-    createdAt: ab.booking_date,
-  }));
+  const activityCharges = (activityBookingsData ?? [])
+    .filter((ab) => ab.status !== 'CANCELLED')
+    .map((ab) => ({
+      amount: ((ab.activities as { price?: number | null } | null)?.price ?? 0) * (ab.participants ?? 1),
+      label: (ab.activities as { name?: string | null } | null)?.name ?? `Activity ${ab.id}`,
+      sourceId: ab.id,
+      createdAt: ab.booking_date,
+    }));
 
   const billingSummary = buildBillingSummary({
     roomCharges,
     activityCharges,
-    foodOrders,
+    foodOrders: foodOrders.filter((fo) => fo.status !== 'CANCELLED'),
     payments: (paymentsData ?? []).map((p) => ({
       amount: Number(p.amount ?? 0),
       status: p.status,
