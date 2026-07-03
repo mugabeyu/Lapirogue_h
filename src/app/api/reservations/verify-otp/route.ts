@@ -5,6 +5,8 @@ import { createApiResponse, validationErrorResponse } from "@/lib/api-response";
 import { sendReservationConfirmationEmail } from "@/lib/mailer";
 import { getSupabaseAdmin } from "@/lib/supabase";
 
+const MAX_FAILED_ATTEMPTS = 5;
+
 const verifySchema = z.object({
   email: z.string().email(),
   token: z.string().min(1),
@@ -16,26 +18,11 @@ export async function POST(request: NextRequest) {
     const body = verifySchema.parse(await request.json());
     const supabaseAdmin = getSupabaseAdmin();
 
-    // Verify OTP via Supabase Auth reauthentication (uses service_role key)
-    const { error: verifyError } = await supabaseAdmin.auth.verifyOtp({
-      email: body.email,
-      token: body.code,
-      type: "reauthentication",
-    });
-
-    if (verifyError) {
-      return createApiResponse(
-        false,
-        "Invalid or expired verification code",
-        { status: 400 },
-      );
-    }
-
     // Get pending reservation details
     const { data: pendingRes, error: pendingError } = await supabaseAdmin
       .from("pending_reservations")
       .select(
-        "id, guest_id, room_id, check_in, check_out, adults, children, total_amount, origin",
+        "id, guest_id, room_id, check_in, check_out, adults, children, total_amount, origin, verification_code, failed_attempts",
       )
       .eq("verification_token", body.token)
       .eq("email", body.email)
@@ -50,6 +37,36 @@ export async function POST(request: NextRequest) {
         },
       );
     }
+
+    // Rate limit: too many failed attempts
+    if ((pendingRes.failed_attempts ?? 0) >= MAX_FAILED_ATTEMPTS) {
+      return createApiResponse(
+        false,
+        "Too many failed attempts. Please request a new verification code.",
+        { status: 429 },
+      );
+    }
+
+    // Compare the submitted OTP code with the stored one
+    if (!pendingRes.verification_code || pendingRes.verification_code !== body.code) {
+      // Increment failed attempts
+      await supabaseAdmin
+        .from("pending_reservations")
+        .update({ failed_attempts: (pendingRes.failed_attempts ?? 0) + 1 })
+        .eq("id", pendingRes.id);
+
+      return createApiResponse(
+        false,
+        "Invalid or expired verification code",
+        { status: 400 },
+      );
+    }
+
+    // Reset failed attempts on success
+    await supabaseAdmin
+      .from("pending_reservations")
+      .update({ failed_attempts: 0 })
+      .eq("id", pendingRes.id);
 
     // Call RPC to verify pending reservation and create actual reservation
     const { data: reservationResult, error: rpcError } =

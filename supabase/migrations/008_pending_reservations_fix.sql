@@ -47,6 +47,8 @@ CREATE TABLE IF NOT EXISTS public.pending_reservations (
     total_amount numeric(10,2) NOT NULL,
     origin text DEFAULT 'MOBILE_APP',
     verification_token text UNIQUE,
+    verification_code text,
+    failed_attempts int DEFAULT 0,
     verified_at timestamptz,
     created_at timestamptz DEFAULT now(),
     expires_at timestamptz DEFAULT (now() + interval '30 minutes'),
@@ -61,6 +63,11 @@ CREATE INDEX IF NOT EXISTS idx_pending_reservations_token
 
 CREATE INDEX IF NOT EXISTS idx_pending_reservations_expires
     ON public.pending_reservations(expires_at);
+
+-- Add columns for custom OTP verification (idempotent for existing tables)
+ALTER TABLE IF EXISTS public.pending_reservations
+    ADD COLUMN IF NOT EXISTS verification_code text,
+    ADD COLUMN IF NOT EXISTS failed_attempts int DEFAULT 0;
 
 -- 5. FUNCTION: cleanup_expired_pending_reservations
 CREATE OR REPLACE FUNCTION public.cleanup_expired_pending_reservations()

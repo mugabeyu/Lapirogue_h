@@ -346,3 +346,50 @@ export async function sendPasswordResetEmail(input: {
     throw error;
   }
 }
+
+export async function sendReservationOTPEmail(input: {
+  to: string;
+  guestName: string;
+  otpCode: string;
+  hotelName?: string;
+}) {
+  const hotelName = input.hotelName || "La Pirogue Hotel Mauritius";
+
+  try {
+    const response = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: input.to,
+      subject: `Your Verification Code - ${hotelName}`,
+      html: `
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr><td align="center" style="padding:40px 20px;background:#f9fafb;">
+            <div style="max-width:480px;background:#ffffff;border-radius:16px;padding:40px;text-align:center;">
+              ${logoImgTag()}
+              <h2 style="margin-top:24px;color:#1e293b;">Reservation Verification</h2>
+              <p style="color:#475569;font-size:15px;line-height:1.6;">
+                Hi ${escapeHtml(input.guestName)},<br/><br/>
+                Use the code below to confirm your room reservation.
+              </p>
+              <div style="background:#f1f5f9;border-radius:12px;padding:16px 32px;margin:24px 0;letter-spacing:8px;font-size:36px;font-weight:700;color:#0f172a;">
+                ${escapeHtml(input.otpCode)}
+              </div>
+              <p style="color:#94a3b8;font-size:13px;">
+                This code expires in 30 minutes.
+              </p>
+              <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0;"/>
+              <p style="color:#94a3b8;font-size:12px;">
+                ${escapeHtml(hotelName)}<br/>
+                If you did not request this code, please ignore this email.
+              </p>
+            </div>
+          </td></tr>
+        </table>
+      `,
+    });
+
+    return { success: true, data: response };
+  } catch (error) {
+    console.error("OTP EMAIL ERROR:", error);
+    throw error;
+  }
+}

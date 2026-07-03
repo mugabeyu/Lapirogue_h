@@ -1,8 +1,10 @@
+import { randomInt } from "crypto";
 import { NextRequest } from "next/server";
 import { z } from "zod";
 
 import { createApiResponse, handleError, validationErrorResponse } from "@/lib/api-response";
 import { getSupabaseAdmin } from "@/lib/supabase";
+import { sendReservationOTPEmail } from "@/lib/mailer";
 
 const requestSchema = z.object({
   guestId: z.string().uuid(),
@@ -15,6 +17,10 @@ const requestSchema = z.object({
   email: z.string().email(),
   origin: z.enum(["MOBILE_APP", "RECEPTION_DESK", "MANAGER_PORTAL"]).optional(),
 });
+
+function generateOtpCode(): string {
+  return String(randomInt(100000, 999999));
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -61,7 +67,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create pending reservation using RPC (stages the booking for OTP verification)
+    // Create pending reservation using RPC
     const { data: pendingRes, error: pendingError } = await supabase.rpc(
       "create_pending_reservation",
       {
@@ -81,11 +87,25 @@ export async function POST(request: NextRequest) {
       throw pendingError ?? new Error("Failed to create pending reservation");
     }
 
-    // OTP is sent client-side via Supabase reauthentication.
-    // The mobile app calls supabase.auth.reauthenticate() to trigger the OTP,
-    // then supabase.auth.verifyOTP(type: reauthentication) to verify it.
-    // After client-side verification, the app calls /api/reservations/verify-otp
-    // to finalize this pending reservation.
+    // Generate 6-digit OTP, store it, and email it
+    const otpCode = generateOtpCode();
+
+    const { error: updateError } = await supabase
+      .from("pending_reservations")
+      .update({ verification_code: otpCode })
+      .eq("verification_token", pendingRes.token);
+
+    if (updateError) {
+      await supabase.from("pending_reservations").delete().eq("verification_token", pendingRes.token);
+      throw updateError;
+    }
+
+    const guestName = `${guest.first_name ?? ""} ${guest.last_name ?? ""}`.trim();
+    await sendReservationOTPEmail({
+      to: body.email,
+      guestName,
+      otpCode,
+    });
 
     return createApiResponse(
       true,
@@ -93,7 +113,7 @@ export async function POST(request: NextRequest) {
         verificationToken: pendingRes.token,
         expiresInSeconds: pendingRes.expires_in_seconds,
         email: body.email,
-        message: "Pending reservation created. Please verify via the OTP sent to your email.",
+        message: "Verification code sent to your email.",
       },
       { status: 201 },
     );
