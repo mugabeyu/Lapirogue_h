@@ -7,4 +7,4 @@ if (!resendApiKey) {
 
 export const resend = new Resend(resendApiKey ?? '');
 
-export const FROM_EMAIL = 'Lapirogue Hotel <no-reply@lapirogue-hotel.yunusu.me>';
+export const FROM_EMAIL = 'Lapirogue Hotel <no-reply@send.lapirogue-hotel.yunusu.me>';
