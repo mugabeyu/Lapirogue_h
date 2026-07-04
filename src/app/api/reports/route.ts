@@ -12,10 +12,16 @@ export async function GET() {
       supabase.from('food_orders').select('total,status'),
     ]);
 
-    const revenue = (payments.data ?? []).reduce((sum, payment) => (
-      payment.status === 'PAID' || payment.status === 'PARTIALLY_PAID' ? sum + Number(payment.amount) : sum
-    ), 0);
-    const foodRevenue = (orders.data ?? []).reduce((sum, order) => sum + Number(order.total), 0);
+    const revenue = (payments.data ?? []).reduce((sum, payment) => {
+      const s = String(payment.status ?? '').toUpperCase();
+      if (s === 'REFUNDED') return sum - Number(payment.amount);
+      if (s === 'PAID' || s === 'COMPLETED' || s === 'PARTIALLY_PAID') return sum + Number(payment.amount);
+      return sum;
+    }, 0);
+    const foodRevenue = (orders.data ?? []).reduce((sum, order) => {
+      if (order.status === 'CANCELLED') return sum;
+      return sum + Number(order.total);
+    }, 0);
 
     return NextResponse.json({
       success: true,

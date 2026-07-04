@@ -1,6 +1,6 @@
 import { getSupabaseAdmin } from '@/lib/supabase';
 
-export type EcoAwardSourceType = 'ACTIVITY_BOOKING' | 'SERVICE_REQUEST' | 'MANUAL';
+export type EcoAwardSourceType = 'ACTIVITY_BOOKING' | 'SERVICE_REQUEST' | 'MANUAL' | 'FOOD_ORDER';
 
 export type EcoAwardInput = {
   sourceType: EcoAwardSourceType;
@@ -52,22 +52,19 @@ export async function findEcoActivity(activityName?: string | null, activityCate
 export async function awardEcoPoints(input: EcoAwardInput) {
   const admin = getSupabaseAdmin();
   const ecoActivity = await findEcoActivity(input.activityName, input.activityCategory);
-  if (!ecoActivity) {
-    return { awarded: false as const, reason: 'No matching eco activity' };
-  }
 
-  const points = Number(input.points ?? ecoActivity.default_points);
+  const points = Number(input.points ?? ecoActivity?.default_points ?? 25);
   if (!Number.isFinite(points) || points <= 0) {
     return { awarded: false as const, reason: 'No points configured' };
   }
 
-  const carbonOffsetKg = Number(input.carbonOffsetKg ?? ecoActivity.carbon_offset_kg ?? 0);
+  const carbonOffsetKg = Number(input.carbonOffsetKg ?? ecoActivity?.carbon_offset_kg ?? 0);
   const payload = {
     guest_id: input.guestId,
-    activity_id: ecoActivity.id,
+    activity_id: ecoActivity?.id ?? null,
     source_type: input.sourceType,
     source_record_id: input.sourceRecordId,
-    source_label: input.label ?? ecoActivity.name,
+    source_label: input.label ?? ecoActivity?.name ?? 'Activity completed',
     points,
     carbon_offset_kg: Number.isFinite(carbonOffsetKg) ? carbonOffsetKg : 0,
     metadata: input.metadata ?? {},

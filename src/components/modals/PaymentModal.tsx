@@ -220,7 +220,10 @@ export function PaymentModal({ isOpen, onClose, onSaved, editRow }: PaymentModal
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Reference</label>
-            <input name="reference" className="input-field w-full" defaultValue={String(editRow?.reference ?? '')} />
+            <input name="reference" className="input-field w-full" defaultValue={String(editRow?.reference ?? '')} placeholder={isEdit ? '' : 'Auto-generated as PAY-YYYY-XXXX'} />
+            {!isEdit && (
+              <p className="mt-1 text-xs text-[var(--color-text-secondary)]">Leave blank to auto-generate</p>
+            )}
           </div>
         </div>
 

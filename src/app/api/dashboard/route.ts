@@ -192,13 +192,17 @@ export async function GET(request: NextRequest) {
       return checkOutDate === today;
     });
 
-    const completedPayments = (paymentsResult.data ?? []).filter(
-      (payment) => String(payment.status ?? '').toUpperCase() !== 'PENDING',
-    );
-    const totalRevenue = completedPayments.reduce(
-      (sum, payment) => sum + Number(payment.amount ?? 0),
-      0,
-    );
+    const isPaymentCompleted = (status: string): boolean => {
+      const s = status.toUpperCase();
+      return s === 'PAID' || s === 'COMPLETED' || s === 'PARTIALLY_PAID';
+    };
+
+    const totalRevenue = (paymentsResult.data ?? []).reduce((sum, payment) => {
+      const status = String(payment.status ?? '').toUpperCase();
+      if (status === 'REFUNDED') return sum - Number(payment.amount ?? 0);
+      if (isPaymentCompleted(status)) return sum + Number(payment.amount ?? 0);
+      return sum;
+    }, 0);
 
     const guestBalances: Record<string, { charges: number; paid: number }> = {};
 
@@ -216,7 +220,7 @@ export async function GET(request: NextRequest) {
       const status = String(p.status ?? '').toUpperCase();
       if (status === 'REFUNDED') {
         guestBalances[guestId].paid -= Number(p.amount ?? 0);
-      } else if (status !== 'PENDING') {
+      } else if (isPaymentCompleted(status)) {
         guestBalances[guestId].paid += Number(p.amount ?? 0);
       }
     });

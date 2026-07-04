@@ -152,15 +152,6 @@ export default function Topbar() {
     <header className="border-b border-card-border bg-surface px-6 lg:px-8">
       <div className="flex min-h-20 items-center justify-between gap-4 py-4">
         <div className="flex items-center gap-4">
-          <button
-            type="button"
-            onClick={toggle}
-            className="flex items-center justify-center rounded-xl p-2 hover:bg-surface-secondary transition-colors"
-            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          >
-            <MenuIcon className="h-5 w-5 text-icon-body" strokeWidth={1.5} />
-          </button>
           <div className="hidden sm:flex items-center gap-2 text-sm text-[var(--color-text-secondary)]">
             <span>{todayLabel}</span>
           </div>

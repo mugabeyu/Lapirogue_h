@@ -189,7 +189,9 @@ SELECT * FROM (VALUES
     ('Beach Clean-up', 'Activity', 50, 2.5, '#3b82f6', true),
     ('Recycling', 'Waste', 10, 0.3, '#eab308', true),
     ('Energy Saving', 'Energy', 10, 1.0, '#f97316', true),
-    ('Water Conservation', 'Water', 10, 0.2, '#06b6d4', true)
+    ('Water Conservation', 'Water', 10, 0.2, '#06b6d4', true),
+    ('Food & Beverage', 'Dining', 25, 0.5, '#f59e0b', true),
+    ('Room Service', 'Dining', 20, 0.3, '#d97706', true)
 ) AS v(name, category, default_points, carbon_offset_kg, color, is_active)
 WHERE NOT EXISTS (SELECT 1 FROM public.sustainability_activities LIMIT 1);
 

@@ -7,7 +7,7 @@ import Button from '@/components/ui/Button';
 import { Modal } from '@/components/Modal';
 import { useApi } from '@/hooks/useApi';
 import { toast } from 'sonner';
-import { Plus, Pencil, SearchIcon, ShieldOff, ShieldCheck, UserCog, LayoutDashboard } from 'lucide-react';
+import { Plus, Pencil, SearchIcon, ShieldOff, ShieldCheck, UserCog } from 'lucide-react';
 import { StatusBadge } from '@/components/StatusBadge';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import type { Receptionist, Department, Manager, User } from '@/types';
@@ -103,16 +103,11 @@ export default function ReceptionistsPage() {
         title="Receptionists"
         subtitle={isManager ? 'Create, view, and manage receptionist accounts.' : 'View receptionist profiles.'}
         action={
-          <div className="flex items-center gap-3">
-            <Button variant="secondary" onClick={() => router.push('/receptionists/room-board')}>
-              <LayoutDashboard className="h-4 w-4 mr-2" /> Room Board
+          isManager && (
+            <Button variant="primary" onClick={() => { setEditRec(null); setIsModalOpen(true); }}>
+              <Plus className="h-4 w-4 mr-2" /> Add Receptionist
             </Button>
-            {isManager && (
-              <Button variant="primary" onClick={() => { setEditRec(null); setIsModalOpen(true); }}>
-                <Plus className="h-4 w-4 mr-2" /> Add Receptionist
-              </Button>
-            )}
-          </div>
+          )
         }
       />
 

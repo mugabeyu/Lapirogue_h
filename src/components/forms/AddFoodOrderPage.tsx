@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
-import { ArrowLeft, Minus, Plus, Search, Trash2 } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, Minus, Plus, Search, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { GuestRoomSearchField } from '@/components/pickers/GuestRoomSearchField';
 import { MENU_CATEGORIES, MenuItemRecord, formatMenuPrice } from '@/lib/menu';
@@ -22,13 +22,22 @@ const VAT_RATE = 0.15;
 
 const ORDER_MENU_CATEGORIES = ['All', ...MENU_CATEGORIES.filter((c) => c !== 'Local Specials'), 'Mains'] as const;
 
+const TIME_SLOTS = [
+  '09:00 AM', '10:30 AM', '12:00 PM', '02:00 PM',
+  '04:00 PM', '04:30 PM', '06:00 PM',
+];
+
 export default function AddFoodOrderPage() {
   const router = useRouter();
+  const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
+
   const [menuSearch, setMenuSearch] = useState('');
   const [category, setCategory] = useState('All');
   const [selectedGuest, setSelectedGuest] = useState<Guest | null>(null);
   const [cart, setCart] = useState<CartLine[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [scheduledDate, setScheduledDate] = useState(todayStr);
+  const [scheduledTime, setScheduledTime] = useState(TIME_SLOTS[0]);
 
   const menuUrl = useMemo(() => {
     const params = new URLSearchParams();
@@ -65,6 +74,17 @@ export default function AddFoodOrderPage() {
     );
   }
 
+  function parseTimeTo24(time12: string): string {
+    const match = time12.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+    if (!match) return `${time12}:00`;
+    let hour = parseInt(match[1], 10);
+    const minute = match[2];
+    const ampm = match[3].toUpperCase();
+    if (ampm === 'PM' && hour !== 12) hour += 12;
+    if (ampm === 'AM' && hour === 12) hour = 0;
+    return `${hour.toString().padStart(2, '0')}:${minute}:00`;
+  }
+
   async function handleAddOrder() {
     if (!selectedGuest) {
       toast.error('Search and select a guest first');
@@ -93,6 +113,8 @@ export default function AddFoodOrderPage() {
         taxAmount: vat,
         total,
         notes: `Service ${(SERVICE_RATE * 100).toFixed(0)}%, VAT ${(VAT_RATE * 100).toFixed(0)}%`,
+        scheduledDate,
+        scheduledTime: parseTimeTo24(scheduledTime),
       }),
     });
 
@@ -178,6 +200,31 @@ export default function AddFoodOrderPage() {
 
         <div className="mt-4">
           <GuestRoomSearchField selectedGuest={selectedGuest} onSelect={setSelectedGuest} />
+        </div>
+
+        <div className="mt-5 space-y-3">
+          <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">Scheduled delivery</p>
+          <div className="flex items-center gap-2 rounded-xl border border-border p-3">
+            <Calendar className="h-4 w-4 shrink-0 text-[var(--color-text-secondary)]" />
+            <input
+              type="date"
+              value={scheduledDate}
+              onChange={(e) => setScheduledDate(e.target.value)}
+              className="min-w-0 flex-1 bg-transparent text-sm text-[var(--color-text-primary)] outline-none [color-scheme:var(--color-scheme)]"
+            />
+          </div>
+          <div className="flex items-center gap-2 rounded-xl border border-border p-3">
+            <Clock className="h-4 w-4 shrink-0 text-[var(--color-text-secondary)]" />
+            <select
+              value={scheduledTime}
+              onChange={(e) => setScheduledTime(e.target.value)}
+              className="min-w-0 flex-1 bg-transparent text-sm text-[var(--color-text-primary)] outline-none"
+            >
+              {TIME_SLOTS.map((slot) => (
+                <option key={slot} value={slot}>{slot}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
         <div className="mt-5 space-y-3">

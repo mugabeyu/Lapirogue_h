@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { awardEcoPoints } from '@/lib/eco-points';
 import { z } from 'zod';
 
 const foodOrderSchema = z.object({
@@ -19,6 +20,8 @@ const foodOrderSchema = z.object({
   serviceCharge: z.number().min(0).optional(),
   taxAmount: z.number().min(0).optional(),
   origin: z.enum(['MOBILE_APP', 'RECEPTION_DESK', 'MANAGER_PORTAL']).optional(),
+  scheduledDate: z.string().optional(),
+  scheduledTime: z.string().optional(),
 });
 
 type FoodOrderRow = {
@@ -182,6 +185,8 @@ export async function POST(request: NextRequest) {
         status: body.status ?? 'PENDING',
         notes: body.notes,
         origin: body.origin ?? 'RECEPTION_DESK',
+        scheduled_date: body.scheduledDate ?? null,
+        scheduled_time: body.scheduledTime ?? null,
       })
       .select('*')
       .single();
@@ -201,6 +206,15 @@ export async function PUT(request: NextRequest) {
     const body = foodOrderSchema.partial().extend({ id: z.string().uuid() }).parse(await request.json());
     const { id, guestId, roomId, items, subtotal, serviceCharge, taxAmount, total, status, notes } = body;
 
+    const supabase = getSupabaseAdmin();
+
+    const { data: existing, error: fetchError } = await supabase
+      .from('food_orders')
+      .select('guest_id, status, items')
+      .eq('id', id)
+      .single();
+    if (fetchError) throw fetchError;
+
     const updatePayload: Record<string, unknown> = {};
     if (items !== undefined) updatePayload.items = items;
     if (subtotal !== undefined) updatePayload.subtotal = subtotal;
@@ -212,7 +226,7 @@ export async function PUT(request: NextRequest) {
     if (guestId !== undefined) updatePayload.guest_id = guestId;
     if (roomId !== undefined) updatePayload.room_id = roomId;
 
-    const { data, error } = await getSupabaseAdmin()
+    const { data, error } = await supabase
       .from('food_orders')
       .update(updatePayload)
       .eq('id', id)
@@ -220,6 +234,19 @@ export async function PUT(request: NextRequest) {
       .single();
 
     if (error) throw error;
+
+    if (status === 'SERVED' && existing.status !== 'SERVED' && existing.guest_id) {
+      await awardEcoPoints({
+        sourceType: 'FOOD_ORDER',
+        sourceRecordId: id,
+        guestId: existing.guest_id,
+        activityName: 'Food Order',
+        activityCategory: 'dining',
+        label: 'Food order completed',
+        points: 25,
+      }).catch((ecoError) => console.error('Failed to award eco points for food order', ecoError));
+    }
+
     return NextResponse.json({ success: true, data });
   } catch (error) {
     if (error instanceof z.ZodError) {

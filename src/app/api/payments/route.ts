@@ -80,6 +80,27 @@ function guestNameFromRows(guest?: GuestRow | null, reservation?: ReservationRow
   return reservationGuest ? `${reservationGuest.first_name ?? ''} ${reservationGuest.last_name ?? ''}`.trim() || null : null;
 }
 
+async function generatePaymentReference(admin: ReturnType<typeof getSupabaseAdmin>): Promise<string> {
+  const year = new Date().getFullYear();
+  const prefix = `PAY-${year}-`;
+
+  const { data } = await admin
+    .from('payments')
+    .select('reference')
+    .like('reference', `${prefix}%`)
+    .order('created_at', { ascending: false })
+    .limit(1);
+
+  let nextSeq = 1;
+  if (data && data.length > 0 && data[0]?.reference) {
+    const parts = data[0].reference.split('-');
+    const lastNum = parseInt(parts[parts.length - 1], 10);
+    if (!Number.isNaN(lastNum)) nextSeq = lastNum + 1;
+  }
+
+  return `${prefix}${String(nextSeq).padStart(4, '0')}`;
+}
+
 export async function GET(request: NextRequest) {
   const { user, error: userError, response } = await getRouteHandlerSupabaseSession(request);
   if (!user || userError) {
@@ -149,6 +170,8 @@ export async function POST(request: NextRequest) {
     const admin = getSupabaseAdmin();
     await getAuditActor(request);
 
+    const reference = body.reference || (await generatePaymentReference(admin));
+
     const { data, error } = await admin
       .from('payments')
       .insert({
@@ -157,7 +180,7 @@ export async function POST(request: NextRequest) {
         amount: body.amount,
         method: body.method,
         status: body.status ?? 'PENDING',
-        reference: body.reference,
+        reference,
         notes: body.notes,
       })
       .select('*')

@@ -107,10 +107,16 @@ export function buildBillingSummary({
     items.push({ category: item.category, label: item.label, amount: item.amount, sourceId: item.sourceId, createdAt: item.createdAt });
   });
 
+  function isPaymentCompleted(status: string): boolean {
+    const s = status.toUpperCase();
+    return s === 'PAID' || s === 'COMPLETED' || s === 'PARTIALLY_PAID';
+  }
+
   const totalCharges = Object.values(totals).reduce((sum, amount) => sum + amount, 0);
   const totalPaid = payments.reduce((sum, payment) => {
     if (payment.status === 'REFUNDED') return sum - payment.amount;
-    return sum + payment.amount;
+    if (isPaymentCompleted(payment.status)) return sum + payment.amount;
+    return sum;
   }, 0);
   const balanceDue = Math.max(totalCharges - totalPaid, 0);
 
