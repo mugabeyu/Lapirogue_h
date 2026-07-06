@@ -178,6 +178,7 @@ export default function Topbar() {
         )}
 
         <div className="flex items-center gap-4">
+          {!isAdmin && (
           <div className="relative">
             <button
               type="button"
@@ -270,6 +271,7 @@ export default function Topbar() {
               </div>
             )}
           </div>
+          )}
           <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border border-card-border bg-surface-secondary text-base font-semibold text-[var(--color-text-primary)]">
             {avatarUrl ? (
               <img
