@@ -14,8 +14,17 @@ export async function POST(request: NextRequest) {
 
     const supabase = getSupabaseAdmin();
 
-   
-    const redirectUrl = new URL('/reset-password', request.url).toString();
+    // Always base the reset link on the host that actually received the
+    // request. Using NEXT_PUBLIC_APP_URL can poison the link with "localhost"
+    // when that var is mis-set in a production build, causing Supabase to
+    // reject the redirectTo and fall back to the Site URL.
+    const requestOrigin = new URL(request.url).origin;
+    const appUrl =
+      process.env.NEXT_PUBLIC_APP_URL &&
+      !/localhost|127\.0\.0\.1|^\/$/.test(process.env.NEXT_PUBLIC_APP_URL)
+        ? process.env.NEXT_PUBLIC_APP_URL
+        : requestOrigin;
+    const redirectUrl = new URL('/reset-password', appUrl).toString();
 
     let data;
     let resetError;

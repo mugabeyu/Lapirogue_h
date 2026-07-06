@@ -24,6 +24,24 @@ export default function LoginPage() {
 
   useEffect(() => {
     let cancelled = false;
+
+    // If this page was opened from a password-reset email, the recovery
+    // tokens arrive in the URL hash (type=recovery). Forward to the
+    // reset-password page which consumes the session, so a misconfigured
+    // redirectTo still completes the flow.
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash.startsWith('#')
+        ? window.location.hash.slice(1)
+        : window.location.hash;
+      const params = new URLSearchParams(hash);
+      if (params.get('type') === 'recovery' && params.get('access_token')) {
+        const target = new URL('/reset-password', window.location.href);
+        target.hash = window.location.hash;
+        router.replace(target.toString());
+        return;
+      }
+    }
+
     fetch('/api/auth/me', { credentials: 'include' })
       .then((response) => (response.ok ? response.json() : null))
       .then((result) => {
