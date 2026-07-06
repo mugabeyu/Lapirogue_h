@@ -22,6 +22,12 @@ function setCachedResponse<T>(key: string, data: T): void {
   dashboardCache.set(key, { data, timestamp: Date.now() });
 }
 
+function normalizeRole(role?: string | null): 'ADMIN' | 'MANAGER' | 'RECEPTIONIST' {
+  if (role === 'ADMIN') return 'ADMIN';
+  if (role === 'MANAGER') return 'MANAGER';
+  return 'RECEPTIONIST';
+}
+
 export async function GET(request: NextRequest) {
   const { user, error: userError, response } = await getRouteHandlerSupabaseSession(request);
   if (!user || userError) {
@@ -29,8 +35,19 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    const adminClient = getSupabaseAdmin();
+
+    // The Auth user object has no `role` field; the role lives on the
+    // `profiles` table. Resolve it there (service role bypasses RLS).
+    const { data: profileRow } = await adminClient
+      .from('profiles')
+      .select('role')
+      .eq('auth_id', user.id)
+      .maybeSingle();
+    const role = normalizeRole(profileRow?.role);
+
     const today = toDateKey(new Date());
-    const cacheKey = `dashboard-${today}-${user.role}`;
+    const cacheKey = `dashboard-${today}-${role}`;
     const cached = getCachedResponse<{
       stats: unknown;
       todaysCheckins: unknown[];
@@ -46,12 +63,16 @@ export async function GET(request: NextRequest) {
     const tomorrow = toDateKey(addDays(new Date(), 1));
 
     // ── Admin Dashboard: System Health & Audits ──────────────
-    if (user.role === 'ADMIN') {
+    if (role === 'ADMIN') {
       const [managerCount, departmentCount, auditCount] = await Promise.all([
         supabase.from('managers').select('id', { count: 'exact', head: true }).eq('is_active', true),
         supabase.from('departments').select('id', { count: 'exact', head: true }).eq('is_active', true),
         supabase.from('audit_logs').select('id', { count: 'exact', head: true }).gte('created_at', today),
       ]);
+
+      if (managerCount.error) console.error('Admin dashboard managers count error:', managerCount.error.message);
+      if (departmentCount.error) console.error('Admin dashboard departments count error:', departmentCount.error.message);
+      if (auditCount.error) console.error('Admin dashboard audit count error:', auditCount.error.message);
 
       const stats = {
         totalManagers: managerCount.count ?? 0,
@@ -65,7 +86,7 @@ export async function GET(request: NextRequest) {
     }
 
     // ── Receptionist Dashboard: Arrivals, Departures, Cleanliness ──
-    if (user.role === 'RECEPTIONIST') {
+    if (role === 'RECEPTIONIST') {
       const [roomsResult, todayReservationsResult] = await Promise.all([
         supabase.from('rooms').select('status'),
         supabase
