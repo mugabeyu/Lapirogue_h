@@ -75,6 +75,10 @@
 }
 
 @layer base {
+  html {
+    /* 100% = 16px base, so 1rem = 16px and Tailwind's rem scale stays unchanged */
+    font-size: 100%;
+  }
   body {
     background-color: var(--color-background);
     color: var(--color-black);
@@ -85,6 +89,9 @@
       BlinkMacSystemFont,
       "Segoe UI",
       sans-serif;
+    /* Accessible body copy: 16px (1rem) minimum, prevents iOS auto-zoom */
+    font-size: 1rem;
+    line-height: 1.5;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -102,8 +109,39 @@
       "Segoe UI",
       sans-serif;
     font-weight: 600 !important;
-    font-size: 1.05em;
     line-height: 1.2;
+  }
+  /* Typographic hierarchy (accessibility-aligned) */
+  h1 {
+    font-size: 2.25rem; /* 36px */
+  }
+  h2 {
+    font-size: 1.75rem; /* 28px */
+  }
+  h3 {
+    font-size: 1.5rem; /* 24px */
+  }
+  h4 {
+    font-size: 1.25rem; /* 20px */
+  }
+  h5 {
+    font-size: 1.125rem; /* 18px */
+  }
+  h6 {
+    font-size: 1rem; /* 16px */
+  }
+
+  /* GLOBAL FONT-SIZE FLOOR (accessibility enforcement)
+     Clamps any utility that would render below the recommended minimums:
+       - Microcopy floor: 12px (0.75rem)
+       - Body / form-text floor: 16px (1rem)
+     These !important overrides win over the matching Tailwind utilities. */
+  .text-\[10px\],
+  .text-\[11px\] {
+    font-size: 0.75rem !important; /* 12px */
+  }
+  .text-\[15px\] {
+    font-size: 1rem !important; /* 16px */
   }
 }
 

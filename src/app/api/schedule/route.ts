@@ -164,7 +164,7 @@ export async function GET(request: NextRequest) {
         });
       });
 
-      const [customItemsResult, activityBookingsResult, foodOrdersResult, guestOrdersResult, itineraryEventsResult] = await Promise.all([
+      const [customItemsResult, activityBookingsResult, foodOrdersResult] = await Promise.all([
         supabase
           .from('guest_schedule_items')
           .select('id,guest_id,title,item_type,start_at,end_at,status,color,created_at,updated_at,source_module,source_record_id,notes')
@@ -177,21 +177,11 @@ export async function GET(request: NextRequest) {
           .from('food_orders')
           .select('id,guest_id,order_id,created_at,status,notes,items,guests(first_name,last_name)')
           .eq('guest_id', selectedGuestId),
-        supabase
-          .from('guest_orders')
-          .select('id,guest_id,order_id,order_time,status,notes,order_type,guests(first_name,last_name)')
-          .eq('guest_id', selectedGuestId),
-        supabase
-          .from('itinerary_events')
-          .select('id,guest_id,title,category,description,start_at,end_at,location,status,guests(first_name,last_name)')
-          .eq('guest_id', selectedGuestId),
       ]);
 
       if (customItemsResult.error) throw customItemsResult.error;
       if (activityBookingsResult.error) throw activityBookingsResult.error;
       if (foodOrdersResult.error) throw foodOrdersResult.error;
-      if (guestOrdersResult.error) throw guestOrdersResult.error;
-      if (itineraryEventsResult.error) throw itineraryEventsResult.error;
 
       const customItems = (customItemsResult.data ?? []) as ScheduleRow[];
       customItems.forEach((item) => scheduledItems.push({
@@ -256,47 +246,6 @@ export async function GET(request: NextRequest) {
           color: colorForType('ORDER'),
           created_at: createdAt,
           updated_at: createdAt,
-        });
-      });
-
-      (guestOrdersResult.data ?? []).forEach((order) => {
-        const createdAt = order.order_time ?? requestedWeekStart.toISOString();
-        const endAt = new Date(createdAt);
-        endAt.setMinutes(endAt.getMinutes() + 60);
-        scheduledItems.push({
-          id: order.id,
-          guest_id: selectedGuestId,
-          title: 'Guest order',
-          item_type: 'ORDER',
-          source_module: 'guest_orders',
-          source_record_id: order.id,
-          start_at: createdAt,
-          end_at: endAt.toISOString(),
-          status: (order.status as ScheduleRow['status']) ?? 'SCHEDULED',
-          notes: order.notes ?? null,
-          color: colorForType('ORDER'),
-          created_at: createdAt,
-          updated_at: createdAt,
-        });
-      });
-
-      (itineraryEventsResult.data ?? []).forEach((event) => {
-        const startAt = event.start_at ?? requestedWeekStart.toISOString();
-        const endAt = event.end_at ?? new Date(new Date(startAt).getTime() + 60 * 60 * 1000).toISOString();
-        scheduledItems.push({
-          id: event.id,
-          guest_id: selectedGuestId,
-          title: event.title,
-          item_type: 'SERVICE',
-          source_module: 'itinerary_events',
-          source_record_id: event.id,
-          start_at: startAt,
-          end_at: endAt,
-          status: (event.status as ScheduleRow['status']) ?? 'CONFIRMED',
-          notes: event.description ?? null,
-          color: colorForType('SERVICE'),
-          created_at: startAt,
-          updated_at: startAt,
         });
       });
 
