@@ -76,8 +76,21 @@
 
 @layer base {
   html {
-    /* 100% = 16px base, so 1rem = 16px and Tailwind's rem scale stays unchanged */
-    font-size: 100%;
+    /* Root size drives every rem-based Tailwind text-* utility.
+       17px default, scaling up on large screens and down on mobile. */
+    font-size: 17px;
+  }
+
+  @media (min-width: 1600px) {
+    html {
+      font-size: 18px;
+    }
+  }
+
+  @media (max-width: 640px) {
+    html {
+      font-size: 16px;
+    }
   }
   body {
     background-color: var(--color-background);
@@ -129,6 +142,12 @@
   }
   h6 {
     font-size: 1rem; /* 16px */
+  }
+
+  /* Stylized numeric displays (dashboard stats) — Rajdhani, independent of size */
+  .font-display {
+    font-family: var(--font-rajdhani), "Rajdhani", sans-serif;
+    font-weight: 700;
   }
 
   /* GLOBAL FONT-SIZE FLOOR (accessibility enforcement)

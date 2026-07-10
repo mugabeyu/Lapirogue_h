@@ -1,12 +1,19 @@
 import './globals.css';
 import type { Metadata } from 'next';
 import { Toaster } from 'sonner';
-import { Inter } from 'next/font/google';
+import { Inter, Rajdhani } from 'next/font/google';
 
-const inter = Inter({ 
+const inter = Inter({
   subsets: ['latin'],
   weight: ['400', '500', '600', '700', '800'],
   variable: '--font-inter',
+  display: 'swap',
+});
+
+const rajdhani = Rajdhani({
+  subsets: ['latin'],
+  weight: ['700'],
+  variable: '--font-rajdhani',
   display: 'swap',
 });
 
@@ -22,7 +29,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} font-sans antialiased`}>
+      <body className={`${inter.variable} ${rajdhani.variable} font-sans antialiased`}>
         {children}
         <Toaster position="top-center" richColors />
       </body>
