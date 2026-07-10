@@ -150,13 +150,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (guestCheck.account_status === "PENDING") {
-      return createApiResponse(
-        false,
-        "Account is pending activation. Please verify your email first.",
-        { status: 403 },
-      );
-    }
+    // PENDING guests (created via reception desk / website booking, not yet
+    // registered on the guest portal) do not need email/OTP verification to
+    // book — they get a set-password invite email with their stay details
+    // instead. Only frozen/banned accounts are blocked above.
 
     const { data: conflicting, error: conflictError } = await supabase
       .from("reservations")
@@ -214,8 +211,29 @@ export async function POST(request: NextRequest) {
         .maybeSingle(),
     ]);
 
-    // Send confirmation email with full details
-    if (guestRow?.email && roomRow?.room_number) {
+    // Guests who haven't set up their portal login yet get a combined
+    // set-password + reservation email instead of a plain confirmation,
+    // since they still need a way to access the guest portal.
+    if (guestRow?.email && roomRow?.room_number && !guestRow.auth_id) {
+      try {
+        const registerUrl = new URL("/register", request.url);
+        registerUrl.searchParams.set("guestId", body.guestId);
+
+        await sendGuestPortalInvitationEmail({
+          to: guestRow.email,
+          guestName:
+            `${guestRow.first_name || ""} ${guestRow.last_name || ""}`.trim(),
+          guestId: guestRow.guest_id || body.guestId,
+          guestEmail: guestRow.email,
+          roomNumber: roomRow.room_number,
+          checkIn: body.checkIn,
+          checkOut: body.checkOut,
+          registerUrl: registerUrl.toString(),
+        });
+      } catch (emailError) {
+        console.warn("Guest portal invitation email could not be sent:", emailError);
+      }
+    } else if (guestRow?.email && roomRow?.room_number) {
       try {
         const { sendReservationConfirmationEmail } =
           await import("@/lib/mailer");
