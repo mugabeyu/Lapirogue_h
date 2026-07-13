@@ -12,6 +12,7 @@ const PUBLIC_API_PREFIXES = [
   '/api/auth/password-sync',
   '/api/auth/me',
   '/api/staff/register',
+  '/api/guests/register-account',
   '/api/reservations',
   '/api/rooms',
   '/api/activities',
