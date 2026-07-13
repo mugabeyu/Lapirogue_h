@@ -20,6 +20,47 @@ function logoImgTag() {
   return `<img src="${LOGO_URL}" alt="La Pirogue Hotel" style="max-width: 200px; height: auto; display: block;" />`;
 }
 
+export async function sendSecurityAlertEmail(input: {
+  to: string;
+  name?: string;
+  lockedUntil: string;
+}) {
+  try {
+    const lockedUntilDate = new Date(input.lockedUntil);
+    const formatted = lockedUntilDate.toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' });
+    const response = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: input.to,
+      subject: 'Security Alert: Multiple Failed Login Attempts on Your Account',
+      html: `
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;margin:0;font-family:Arial,sans-serif;color:#1f2937;line-height:1.6">
+          <tr><td style="padding:16px;">
+            <div style="margin-bottom: 20px;">
+              ${logoImgTag()}
+            </div>
+
+            <h2 style="margin:0 0 12px;color:#dc2626;font-size:24px;">Security Alert</h2>
+
+            <p style="font-size:16px;">Hello${input.name ? ` <strong>${escapeHtml(input.name)}</strong>` : ''},</p>
+
+            <p style="font-size:16px;">We detected <strong>3 consecutive failed login attempts</strong> on your La Pirogue Hotel account (${escapeHtml(input.to)}).</p>
+
+            <p style="font-size:16px;">As a precaution, your account has been temporarily locked until <strong>${escapeHtml(formatted)}</strong>.</p>
+
+            <p style="font-size:16px;">If this was you, simply wait until the lock expires and try again with the correct password, or use the "Forgot Password" link to reset it.</p>
+
+            <p style="font-size:16px;color:#dc2626;">If you do not recognise this activity, please reset your password as soon as the lock expires and contact hotel management.</p>
+          </td></tr>
+        </table>
+      `,
+    });
+    return { success: true, data: response };
+  } catch (error) {
+    console.error('SECURITY ALERT EMAIL ERROR:', error);
+    throw error;
+  }
+}
+
 export async function sendGuestPortalInvitationEmail(input: {
   to: string;
   guestName: string;

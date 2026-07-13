@@ -7,6 +7,7 @@ const PUBLIC_ROUTES = ['/register', '/dining'];
 const PUBLIC_API_PREFIXES = [
   '/api/auth/login',
   '/api/auth/forgot-password',
+  '/api/auth/security-alert',
   '/api/auth/verify',
   '/api/auth/password-sync',
   '/api/auth/me',

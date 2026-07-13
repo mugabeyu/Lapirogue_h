@@ -1,11 +1,45 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { attachSupabaseCookies, createRouteHandlerSupabaseContext } from '@/lib/supabase-server';
+import { getSupabaseAdmin } from '@/lib/supabase';
+import { sendSecurityAlertEmail } from '@/lib/mailer';
 import { z } from 'zod';
 
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
 });
+
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+type LockoutState = {
+  locked: boolean;
+  lockedUntil?: string;
+  remainingSeconds?: number;
+  attempts?: number;
+  remainingAttempts?: number;
+  shouldAlert?: boolean;
+};
+
+async function checkLockout(email: string): Promise<LockoutState> {
+  const admin = getSupabaseAdmin();
+  const { data, error } = await admin.rpc('check_login_lockout', { p_email: email });
+  if (error) return { locked: false };
+  return data as LockoutState;
+}
+
+async function recordAttempt(email: string, success: boolean): Promise<LockoutState> {
+  const admin = getSupabaseAdmin();
+  const { data, error } = await admin.rpc('record_login_attempt', { p_email: email, p_success: success });
+  if (error) return { locked: false };
+  return data as LockoutState;
+}
+
+function lockoutMessage(state: LockoutState) {
+  const minutes = state.remainingSeconds ? Math.ceil(state.remainingSeconds / 60) : 15;
+  return `This account is temporarily locked due to repeated failed login attempts. Please try again in ${minutes} minute${minutes === 1 ? '' : 's'}.`;
+}
 
 function isNetworkLikeSupabaseError(error: unknown) {
   if (!(error instanceof Error)) {
@@ -30,6 +64,13 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const validatedData = loginSchema.parse(body);
+
+    // Check account lockout BEFORE attempting authentication.
+    const lockoutState = await checkLockout(validatedData.email);
+    if (lockoutState.locked) {
+      return NextResponse.json({ success: false, error: lockoutMessage(lockoutState), locked: true }, { status: 423 });
+    }
+
     // Sign in through Supabase Auth.
     const { supabase: authClient, response } = createRouteHandlerSupabaseContext(request);
 
@@ -64,8 +105,24 @@ export async function POST(request: NextRequest) {
     }
 
     if (signInError) {
-      return NextResponse.json({ success: false, error: signInError.message }, { status: 401 });
+      const attemptState = await recordAttempt(validatedData.email, false);
+
+      // Progressive delay: each additional failed attempt waits longer before responding.
+      await delay((attemptState.attempts ?? 1) * 1000);
+
+      if (attemptState.locked && attemptState.lockedUntil) {
+        sendSecurityAlertEmail({ to: validatedData.email, lockedUntil: attemptState.lockedUntil }).catch((e) =>
+          console.error('Failed to send lockout alert email', e),
+        );
+        return NextResponse.json({ success: false, error: lockoutMessage(attemptState), locked: true }, { status: 423 });
+      }
+
+      const remaining = attemptState.remainingAttempts;
+      const suffix = typeof remaining === 'number' ? ` ${remaining} attempt${remaining === 1 ? '' : 's'} remaining before your account is temporarily locked.` : '';
+      return NextResponse.json({ success: false, error: `${signInError.message}.${suffix}` }, { status: 401 });
     }
+
+    await recordAttempt(validatedData.email, true);
 
     const userId = signInData.user?.id ?? '';
     const metadata = signInData.user?.user_metadata ?? {};
