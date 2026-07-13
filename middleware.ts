@@ -95,7 +95,7 @@ async function getStaffRole(supabase: ReturnType<typeof createServerClient>, use
 // behaviour. This exists because the Sidebar only hides nav links client-side —
 // it does not by itself prevent a user from navigating directly to a hidden route.
 const ROLE_RESTRICTED_PATHS: { prefixes: string[]; roles: string[] }[] = [
-  { prefixes: ['/departments', '/managers', '/api/departments', '/api/managers'], roles: ['ADMIN'] },
+  { prefixes: ['/departments', '/managers', '/audit-log', '/api/departments', '/api/managers', '/api/audit-log'], roles: ['ADMIN'] },
   {
     prefixes: [
       '/receptionists', '/payments', '/sustainability', '/feedback', '/hotel-information', '/reports',
