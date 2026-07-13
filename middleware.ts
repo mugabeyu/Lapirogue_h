@@ -80,6 +80,38 @@ async function isGuestUser(supabase: ReturnType<typeof createServerClient>, user
   return !!guest;
 }
 
+async function getStaffRole(supabase: ReturnType<typeof createServerClient>, userId: string): Promise<string | null> {
+  const { data } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('auth_id', userId)
+    .maybeSingle();
+  return data?.role ?? null;
+}
+
+// Route-level role restrictions. Each entry lists the ONLY roles permitted to access
+// a path (and everything under it). Paths not listed here are accessible to any
+// authenticated staff member (Admin/Manager/Receptionist), matching pre-existing
+// behaviour. This exists because the Sidebar only hides nav links client-side —
+// it does not by itself prevent a user from navigating directly to a hidden route.
+const ROLE_RESTRICTED_PATHS: { prefixes: string[]; roles: string[] }[] = [
+  { prefixes: ['/departments', '/managers', '/api/departments', '/api/managers'], roles: ['ADMIN'] },
+  {
+    prefixes: [
+      '/receptionists', '/payments', '/sustainability', '/feedback', '/hotel-information', '/reports',
+      '/api/receptionists', '/api/payments', '/api/sustainability', '/api/feedback', '/api/content', '/api/reports',
+    ],
+    roles: ['MANAGER'],
+  },
+  { prefixes: ['/schedule', '/messages', '/api/schedule', '/api/messages'], roles: ['RECEPTIONIST'] },
+];
+
+function matchRestriction(pathname: string) {
+  return ROLE_RESTRICTED_PATHS.find((entry) =>
+    entry.prefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))
+  );
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -112,6 +144,14 @@ export async function middleware(request: NextRequest) {
 
     if (await isGuestUser(supabase, user.id)) {
       return NextResponse.json({ success: false, error: 'Guests must access via the mobile app' }, { status: 403 });
+    }
+
+    const restriction = matchRestriction(pathname);
+    if (restriction) {
+      const role = await getStaffRole(supabase, user.id);
+      if (!role || !restriction.roles.includes(role)) {
+        return NextResponse.json({ success: false, error: 'Forbidden: insufficient role permissions' }, { status: 403 });
+      }
     }
 
     return response;
@@ -158,6 +198,14 @@ export async function middleware(request: NextRequest) {
     const loginUrl = new URL('/login', request.url);
     await supabase.auth.signOut();
     return NextResponse.redirect(loginUrl);
+  }
+
+  const restriction = matchRestriction(pathname);
+  if (restriction) {
+    const role = await getStaffRole(supabase, user.id);
+    if (!role || !restriction.roles.includes(role)) {
+      return NextResponse.redirect(new URL('/', request.url));
+    }
   }
 
   return response;
