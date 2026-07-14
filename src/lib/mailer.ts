@@ -218,21 +218,34 @@ export async function sendInvoiceEmail(input: {
       html:
         input.summaryHtml ??
         `
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;margin:0;font-family:Arial,sans-serif;color:#1f2937;line-height:1.6">
-          <tr><td style="padding:16px;">
-            <div style="margin-bottom: 20px;">
-              ${logoImgTag()}
-            </div>
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0;padding:0;">
+          <tr><td align="center" style="padding:40px 20px;background:#f9fafb;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;margin:0 auto;font-family:Arial,sans-serif;color:#1f2937;line-height:1.6;background:#ffffff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+              <tr><td style="padding:40px 24px;">
+                <div style="margin-bottom: 24px;text-align:center;">
+                  ${logoImgTag()}
+                </div>
 
-            <h2 style="margin:0 0 12px;color:#0f766e;font-size:24px;">Your Invoice Is Attached</h2>
+                <h2 style="margin:0 0 16px;color:#0f766e;font-size:26px;text-align:center;">Your Invoice Is Attached</h2>
 
-            <p style="font-size:16px;">Hello <strong>${escapeHtml(input.guestName)}</strong>,</p>
+                <p style="font-size:16px;margin:16px 0;text-align:center;">Hello <strong>${escapeHtml(input.guestName)}</strong>,</p>
 
-            <p style="font-size:16px;">Your invoice <strong>#${escapeHtml(input.invoiceReference)}</strong> is attached as a PDF receipt.</p>
+                <div style="margin:24px 0;padding:20px;background:#f0fdf4;border-radius:8px;border-left:4px solid #10b981;">
+                  <p style="font-size:15px;margin:0;color:#065f46;"><strong>Invoice Reference:</strong> #${escapeHtml(input.invoiceReference)}</p>
+                </div>
 
-            <p style="font-size:16px;">You can download and keep it for your records.</p>
+                <p style="font-size:15px;margin:20px 0;line-height:1.8;">Your invoice is attached to this email as a PDF receipt. Please download and keep it for your records.</p>
 
-            <p style="font-size:16px;margin-top:24px;">Thank you for choosing La Pirogue Hotel. We are thrilled to host you and our entire team is fully ready to serve you to ensure you have an unforgettable stay.</p>
+                <div style="margin:24px 0;padding:16px;background:#f3f4f6;border-radius:8px;text-align:center;">
+                  <p style="font-size:13px;color:#6b7280;margin:0;"><strong>Need Help?</strong><br>If you have questions about your invoice, please contact our front desk at +230 403 3900 or info@lapirogue.mu</p>
+                </div>
+
+                <p style="font-size:14px;margin-top:28px;color:#6b7280;line-height:1.8;">Thank you for choosing La Pirogue Hotel. We are thrilled to host you and our entire team is fully ready to serve you to ensure you have an unforgettable stay.</p>
+
+                <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;"/>
+                <p style="font-size:12px;color:#9ca3af;margin:0;text-align:center;">La Pirogue Hotel | Wolmar, Flic en Flac, Mauritius<br/>This email and its attachments are confidential.</p>
+              </td></tr>
+            </table>
           </td></tr>
         </table>
       `,
