@@ -193,7 +193,6 @@ export async function POST(request: NextRequest) {
         body.extraCharges.map((item) => ({
           payment_id: data.id,
           guest_id: body.guestId,
-          reservation_id: body.reservationId ?? null,
           category: item.category,
           label: item.label,
           amount: item.amount,
@@ -268,7 +267,6 @@ export async function PUT(request: NextRequest) {
         extraCharges.map((item) => ({
           payment_id: id,
           guest_id: guestId,
-          reservation_id: reservationId ?? null,
           category: item.category,
           label: item.label,
           amount: item.amount,

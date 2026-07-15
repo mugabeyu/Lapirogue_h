@@ -1,4 +1,4 @@
-export type Role = 'ADMIN' | 'MANAGER' | 'RECEPTIONIST';
+export type Role = 'ADMIN' | 'MANAGER' | 'RECEPTIONIST' | 'MAIN_RECEPTIONIST';
 
 export type GuestAccountStatus = 'PENDING' | 'ACTIVE' | 'FROZEN' | 'BANNED';
 
@@ -389,21 +389,3 @@ export interface GuestEcoPointEvent {
   createdAt: string;
 }
 
-export interface EcoPointsBalance {
-  id: string;
-  guestId: string;
-  balance: number;
-  tier: string;
-  updatedAt: string;
-}
-
-export interface EcoPointsTx {
-  id: string;
-  guestId: string;
-  amount: number;
-  type: 'EARN' | 'SPEND' | 'ADJUST';
-  status: 'COMPLETED' | 'PENDING' | 'FAILED';
-  reference?: string;
-  notes?: string;
-  createdAt: string;
-}

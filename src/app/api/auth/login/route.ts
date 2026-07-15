@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Guests must access via the mobile app' }, { status: 403 });
     }
 
-    if (!profileRow || !['ADMIN', 'MANAGER', 'RECEPTIONIST'].includes(profileRow.role)) {
+    if (!profileRow || !['ADMIN', 'MANAGER', 'RECEPTIONIST', 'MAIN_RECEPTIONIST'].includes(profileRow.role)) {
       await authClient.auth.signOut();
       return NextResponse.json({ success: false, error: 'Access denied. Staff account not found.' }, { status: 403 });
     }

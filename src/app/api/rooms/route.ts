@@ -204,6 +204,7 @@ export async function POST(request: NextRequest) {
         description: validatedData.description,
         amenities: validatedData.amenities ?? [],
         image_path: validatedData.imagePath ?? null,
+        image_paths: validatedData.imagePaths ?? [],
       })
       .select('*')
       .single();
@@ -256,6 +257,7 @@ export async function PUT(request: NextRequest) {
         description: updateData.description,
         amenities: updateData.amenities,
         image_path: updateData.imagePath ?? undefined,
+        image_paths: updateData.imagePaths ?? undefined,
       })
       .eq('id', id)
       .select('*')

@@ -9,7 +9,6 @@ const schema = z.object({
   description: z.string().optional().default(''),
   iconName: z.string().optional().default('room_service'),
   colorHex: z.string().optional().default('#9B59B6'),
-  bgColorHex: z.string().optional().nullable(),
   displayOrder: z.number().int().optional().default(0),
   isActive: z.boolean().optional().default(true),
 });
@@ -30,7 +29,6 @@ export async function GET(request: NextRequest) {
         description: row.description,
         iconName: row.icon_name,
         colorHex: row.color_hex,
-        bgColorHex: row.bg_color_hex,
         displayOrder: row.display_order,
         isActive: row.is_active,
       })),
@@ -50,7 +48,6 @@ export async function POST(request: NextRequest) {
       description: body.description,
       icon_name: body.iconName,
       color_hex: body.colorHex,
-      bg_color_hex: body.bgColorHex,
       display_order: body.displayOrder,
       is_active: body.isActive,
     }).select('*').single();
@@ -76,7 +73,6 @@ export async function PUT(request: NextRequest) {
       description: updateData.description,
       icon_name: updateData.iconName,
       color_hex: updateData.colorHex,
-      bg_color_hex: updateData.bgColorHex,
       display_order: updateData.displayOrder,
       is_active: updateData.isActive,
     }).eq('id', id).select('*').single();

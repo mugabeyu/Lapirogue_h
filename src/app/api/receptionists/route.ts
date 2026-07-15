@@ -209,6 +209,7 @@ export async function PUT(request: NextRequest) {
 
     if (existing.auth_id) {
       const profileUpdate: Record<string, unknown> = {
+        auth_id: existing.auth_id,
         email: body.email,
         full_name: `${body.firstName} ${body.lastName}`,
         phone: body.phone || null,
