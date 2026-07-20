@@ -88,8 +88,6 @@ export async function POST(_request: NextRequest, context: { params: Promise<unk
   try {
     const { id } = (await context.params) as { id: string };
     const supabase = getSupabaseAdmin();
-    const body = await _request.json().catch(() => null);
-    const clientPdfBase64 = typeof body?.pdfBase64 === 'string' && body.pdfBase64.length > 0 ? body.pdfBase64 : null;
 
     const { data: paymentRow, error } = await supabase
       .from('payments')
@@ -200,7 +198,7 @@ export async function POST(_request: NextRequest, context: { params: Promise<unk
     const generatedAt = new Date().toISOString();
     const guestName = `${guest.firstName} ${guest.lastName}`.trim() || 'Guest';
 
-    const generatedPdfBase64 = buildInvoicePdfBase64({
+    const pdfBase64 = buildInvoicePdfBase64({
       invoiceReference,
       generatedAt,
       invoiceStatus: billingSummary.status,
@@ -231,7 +229,7 @@ export async function POST(_request: NextRequest, context: { params: Promise<unk
       to: guest.email,
       guestName,
       invoiceReference,
-      pdfBase64: clientPdfBase64 ?? generatedPdfBase64,
+      pdfBase64,
     });
 
     return NextResponse.json({ success: true, message: 'Invoice sent' });

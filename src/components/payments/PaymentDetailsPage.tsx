@@ -1,8 +1,9 @@
 'use client';
 
 import { useParams } from 'next/navigation';
+import { useState } from 'react';
 import { Download, Printer } from 'lucide-react';
-import { jsPDF } from 'jspdf';
+import { toast } from 'sonner';
 import { useApi } from '@/hooks/useApi';
 import { PageHeader } from '@/components/PageHeader';
 
@@ -42,118 +43,30 @@ type PaymentDetailResponse = {
   invoiceReference: string;
 };
 
-type PdfHtmlOptions = {
-  margin: [number, number, number, number];
-  autoPaging: 'text';
-  x: number;
-  y: number;
-  width: number;
-  windowWidth: number;
-  html2canvas: {
-    scale: number;
-    useCORS: boolean;
-    backgroundColor: string;
-    scrollX: number;
-    scrollY: number;
-    logging: boolean;
-  };
-};
-
-type HtmlCapablePdf = jsPDF & {
-  html: (element: HTMLElement, options: PdfHtmlOptions) => Promise<jsPDF>;
-};
-
-function cloneInvoiceForPdf(invoiceElement: HTMLElement) {
-  const clonedElement = invoiceElement.cloneNode(true) as HTMLElement;
-  clonedElement.id = '';
-  clonedElement.style.position = 'relative';
-  clonedElement.style.left = '0';
-  clonedElement.style.top = '0';
-  clonedElement.style.width = '900px';
-  clonedElement.style.maxWidth = '900px';
-  clonedElement.style.margin = '0';
-  clonedElement.style.background = '#ffffff';
-  clonedElement.style.transform = 'none';
-  clonedElement.style.webkitTransform = 'none';
-  clonedElement.style.webkitTransformOrigin = 'top left';
-
-  Array.from(clonedElement.querySelectorAll<HTMLElement>('*')).forEach((element) => {
-    element.style.overflowX = 'visible';
-    element.style.overflowY = 'visible';
-  });
-
-  const wrapper = document.createElement('div');
-  wrapper.appendChild(clonedElement);
-  wrapper.style.position = 'fixed';
-  wrapper.style.left = '0';
-  wrapper.style.top = '-20000px';
-  wrapper.style.width = '900px';
-  wrapper.style.height = 'auto';
-  wrapper.style.overflow = 'visible';
-  wrapper.style.opacity = '0';
-  wrapper.style.pointerEvents = 'none';
-  wrapper.style.zIndex = '-1';
-  document.body.appendChild(wrapper);
-
-  return wrapper;
-}
-
 export function PaymentDetailsPage() {
   const params = useParams<{ id: string }>();
   const { data } = useApi<PaymentDetailResponse>(`/api/payments/${params.id}`);
+  const [isSending, setIsSending] = useState(false);
 
   const detail = data;
 
   async function emailInvoice() {
-    if (!detail) return;
+    if (!detail || isSending) return;
 
-    let wrapper: HTMLElement | null = null;
-
+    setIsSending(true);
     try {
-      const invoiceElement = document.getElementById('invoice-print-area');
-      if (!invoiceElement) {
-        throw new Error('Invoice layout not found');
-      }
-
-      wrapper = cloneInvoiceForPdf(invoiceElement);
-      const clonedInvoiceElement = wrapper.firstElementChild as HTMLElement;
-      const contentWidth = parseFloat(clonedInvoiceElement.style.width);
-      const pdf = new jsPDF({ unit: 'pt', format: 'a4' });
-      const pdfPageWidth = pdf.internal.pageSize.getWidth();
-      const margin = 24; // 24pt (~0.33in) margins on each side
-      const usablePdfWidth = pdfPageWidth - margin * 2;
-
-      await (pdf as unknown as HtmlCapablePdf).html(clonedInvoiceElement, {
-        margin: [margin, margin, margin, margin],
-        autoPaging: 'text',
-        x: 0,
-        y: 0,
-        width: usablePdfWidth,
-        windowWidth: contentWidth,
-        html2canvas: {
-          scale: 2,
-          useCORS: true,
-          backgroundColor: '#ffffff',
-          scrollX: 0,
-          scrollY: 0,
-          logging: false,
-        },
-      });
-
-      const pdfBase64 = pdf.output('datauristring').split(',')[1] ?? '';
-
       const resp = await fetch(`/api/payments/${detail.payment.id}/send-invoice`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pdfBase64 }),
       });
-      if (!resp.ok) throw new Error('Failed to send invoice');
-      alert('Invoice PDF emailed to guest');
+      const payload = await resp.json().catch(() => ({}));
+      if (!resp.ok || !payload.success) throw new Error(payload.error || 'Failed to send invoice');
+      toast.success(`Invoice emailed to ${detail.guest?.email ?? 'guest'}`);
     } catch (err) {
       console.error('Send invoice via API failed', err);
-      alert('Failed to email invoice');
+      toast.error('Failed to email invoice. Please try again.');
     } finally {
-      wrapper?.remove();
+      setIsSending(false);
     }
   }
 
@@ -169,9 +82,9 @@ export function PaymentDetailsPage() {
           subtitle={`Detailed billing view for ${detail.invoiceReference}`}
           action={(
             <div className="flex flex-wrap gap-3">
-              <button type="button" onClick={emailInvoice} className="btn-primary inline-flex items-center gap-2">
+              <button type="button" onClick={emailInvoice} disabled={isSending} className="btn-primary inline-flex items-center gap-2 disabled:opacity-60">
                 <Download className="h-4 w-4" />
-                Email Invoice
+                {isSending ? 'Sending...' : 'Email Invoice'}
               </button>
               <button type="button" onClick={() => window.print()} className="btn-secondary inline-flex items-center gap-2">
                 <Printer className="h-4 w-4" />

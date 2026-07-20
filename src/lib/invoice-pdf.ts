@@ -41,13 +41,15 @@ function split(pdf: jsPDF, value: string | number | null | undefined, width: num
 }
 
 export function buildInvoicePdfBase64(input: InvoicePdfInput) {
-  const pdf = new jsPDF({ unit: 'pt', format: 'a4' });
+  const pdf = new jsPDF({ unit: 'pt', format: [pageWidth, pageHeight] });
   let y = margin;
+  let itemsHeaderDrawnOnPage = false;
 
   const addPageIfNeeded = (required: number) => {
     if (y + required <= pageHeight - margin) return;
     pdf.addPage();
     y = margin;
+    itemsHeaderDrawnOnPage = false;
   };
 
   const drawHorizontalLine = (yy: number) => {
@@ -159,6 +161,7 @@ export function buildInvoicePdfBase64(input: InvoicePdfInput) {
   y = writeBlockTitle('Itemized charges', y);
   drawTableHeader(y);
   y += 8;
+  itemsHeaderDrawnOnPage = true;
 
   const descWidth = contentWidth * 0.42;
   const dateWidth = contentWidth * 0.13;
@@ -187,7 +190,11 @@ export function buildInvoicePdfBase64(input: InvoicePdfInput) {
       const rowHeight = maxLines * tableLineHeight + 10;
 
       addPageIfNeeded(rowHeight + 12);
-      if (y < 150) drawTableHeader(y);
+      if (!itemsHeaderDrawnOnPage) {
+        drawTableHeader(y);
+        y += 8;
+        itemsHeaderDrawnOnPage = true;
+      }
 
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(7);
