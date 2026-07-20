@@ -111,7 +111,7 @@ async function loadActivities(activityIds: string[]): Promise<Map<string, Activi
 
   const { data, error } = await getSupabaseAdmin()
     .from('sustainability_activities')
-    .select('id, name, color')
+    .select('id, name, color, carbon_offset_kg')
     .in('id', activityIds);
 
   if (error?.code === 'PGRST205') return new Map<string, ActivityRow>();
@@ -132,9 +132,9 @@ export async function GET(request: NextRequest) {
     const [eventsResult, tiersResult, activitiesResult] = await Promise.all([
       admin
         .from('guest_eco_point_events')
-        .select('guest_id, activity_id, points, created_at'),
+        .select('guest_id, activity_id, points, carbon_offset_kg, created_at'),
       admin.from('eco_tiers').select('name, min_points, sort_order').order('sort_order', { ascending: true }),
-      admin.from('sustainability_activities').select('id, name, color').eq('is_active', true),
+      admin.from('sustainability_activities').select('id, name, color, carbon_offset_kg').eq('is_active', true),
     ]);
 
     if (eventsResult.error) {
@@ -157,7 +157,7 @@ export async function GET(request: NextRequest) {
     const events = (eventsResult.data ?? []) as EventRow[];
 
     const guestIds = [...new Set(events.map((row) => row.guest_id))];
-    const activityIds = [...new Set(events.map((row) => row.activity_id))];
+    const activityIds = [...new Set(events.map((row) => row.activity_id).filter((id): id is string => Boolean(id)))];
     const [guestsByName, activitiesByName] = await Promise.all([
       loadGuestNames(guestIds),
       loadActivities(activityIds),

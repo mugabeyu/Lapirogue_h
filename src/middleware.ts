@@ -215,10 +215,7 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/',
-    '/(login|forgot-password|reset-password|register)(/.*)?',
-    '/api/:path*',
-    '/((?!dining|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };
 

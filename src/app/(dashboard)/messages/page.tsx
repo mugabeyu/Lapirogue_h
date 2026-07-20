@@ -1,13 +1,12 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
-import { PaperclipIcon, SearchIcon, SendIcon, XIcon } from 'lucide-react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { SearchIcon, SendIcon } from 'lucide-react';
 import { useApi } from '@/hooks/useApi';
 import { PageHeader } from '@/components/PageHeader';
 import { GuestNameCell } from '@/components/ui/GuestNameCell';
 import { getSupabaseBrowserClient } from '@/lib/supabase-browser';
-import { uploadImage } from '@/lib/upload-image';
 import { toast } from 'sonner';
 import { Guest } from '@/types';
 
@@ -19,10 +18,6 @@ type MessageRow = {
   content: string;
   isRead: boolean;
   createdAt: string;
-  fileUrl?: string | null;
-  fileName?: string | null;
-  fileType?: string | null;
-  fileSize?: number | null;
 };
 
 type MessageInsertResponse = {
@@ -61,9 +56,6 @@ export default function MessagesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [tab, setTab] = useState<'all' | 'unread'>('all');
   const [draft, setDraft] = useState('');
-  const [uploadingFile, setUploadingFile] = useState(false);
-  const [pendingFile, setPendingFile] = useState<File | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const rows = useMemo(() => data ?? [], [data]);
   const guests = useMemo(() => guestsData ?? [], [guestsData]);
@@ -214,50 +206,16 @@ export default function MessagesPage() {
       .catch(() => null);
   }, [mutate, selectedConversation]);
 
-  async function uploadFile(file: File): Promise<{ url: string; name: string; type: string } | null> {
-    setUploadingFile(true);
-    try {
-      const result = await uploadImage({
-        file,
-        bucket: 'chat_uploads',
-        id: `msg_${Date.now()}`,
-        target: 'message',
-      });
-      return { url: result, name: file.name, type: file.type };
-    } catch (e) {
-      toast.error('Failed to upload file');
-      return null;
-    } finally {
-      setUploadingFile(false);
-    }
-  }
-
   async function handleSend(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const guestId = selectedGuestId;
 
-    if (!guestId || (!draft.trim() && !pendingFile)) {
-      toast.error('Select a conversation and enter a message or attach a file.');
+    if (!guestId || !draft.trim()) {
+      toast.error('Select a conversation and enter a message.');
       return;
     }
 
     setIsSending(true);
-
-    let fileUrl: string | null = null;
-    let fileName: string | null = null;
-    let fileType: string | null = null;
-    let fileSize: number | null = null;
-
-    if (pendingFile) {
-      const result = await uploadFile(pendingFile);
-      if (result) {
-        fileUrl = result.url;
-        fileName = result.name;
-        fileType = result.type;
-        fileSize = pendingFile.size;
-      }
-      setPendingFile(null);
-    }
 
     const response = await fetch('/api/messages', {
       method: 'POST',
@@ -266,10 +224,6 @@ export default function MessagesPage() {
         guestId,
         senderType: 'admin',
         content: draft.trim(),
-        fileUrl,
-        fileName,
-        fileType,
-        fileSize,
       }),
       credentials: 'include',
     });
@@ -291,10 +245,6 @@ export default function MessagesPage() {
         content: payload.data.content,
         isRead: payload.data.isRead,
         createdAt: payload.data.createdAt,
-        fileUrl: payload.data.fileUrl,
-        fileName: payload.data.fileName,
-        fileType: payload.data.fileType,
-        fileSize: payload.data.fileSize,
       };
 
       const nextRows = rows.some((message) => message.id === savedMessage.id) ? rows : [savedMessage, ...rows];
@@ -464,25 +414,6 @@ export default function MessagesPage() {
                   return (
                     <div key={message.id} className={`flex ${isReceptionist ? 'justify-end' : 'justify-start'}`}>
                         <div className={`max-w-[82%] rounded-[24px] px-4 py-3 shadow-sm ${isReceptionist ? 'rounded-br-md bg-primary text-[var(--color-text-primary)]' : 'rounded-bl-md bg-surface text-[var(--color-text-primary)]'}`}>
-                          {message.fileUrl && (
-                            <div className="mb-2">
-                              {message.fileType?.startsWith('image/') ? (
-                                <a href={message.fileUrl} target="_blank" rel="noopener noreferrer">
-                                  <img src={message.fileUrl} alt={message.fileName ?? 'Image'} className="max-w-[200px] max-h-[150px] rounded-lg object-cover" />
-                                </a>
-                              ) : (
-                                <a
-                                  href={message.fileUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm underline ${isReceptionist ? 'bg-white/10 text-white' : 'bg-primary/10 text-primary'}`}
-                                >
-                                  <PaperclipIcon className="h-4 w-4" />
-                                  {message.fileName ?? 'Attachment'}
-                                </a>
-                              )}
-                            </div>
-                          )}
                           {message.content && <p className="text-sm leading-6">{message.content}</p>}
                           <div className={`mt-2 text-[11px] ${isReceptionist ? 'text-[var(--color-text-secondary)]' : 'text-[var(--color-text-secondary)]'}`}>
                           {new Date(message.createdAt).toLocaleString([], { hour: '2-digit', minute: '2-digit', month: 'short', day: 'numeric' })}
@@ -496,50 +427,18 @@ export default function MessagesPage() {
           </div>
 
           <form onSubmit={handleSend} className="border-t border-border bg-surface p-5">
-            <div className="flex flex-col gap-3">
-              {pendingFile && (
-                <div className="flex items-center gap-2 rounded-xl border border-border bg-surface-secondary px-3 py-2">
-                  <PaperclipIcon className="h-4 w-4 text-[var(--color-text-secondary)]" />
-                  <span className="flex-1 truncate text-sm text-[var(--color-text-primary)]">{pendingFile.name}</span>
-                  <span className="text-xs text-[var(--color-text-secondary)]">{(pendingFile.size / 1024).toFixed(0)} KB</span>
-                  <button type="button" onClick={() => setPendingFile(null)} className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]">
-                    <XIcon className="h-4 w-4" />
-                  </button>
-                </div>
-              )}
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-                <div className="relative flex-1">
-                  <textarea
-                    className="input-field min-h-28 w-full resize-none pr-10"
-                    placeholder={selectedGuestId ? 'Type your message...' : 'Select a conversation to start messaging...'}
-                    value={draft}
-                    onChange={(event) => setDraft(event.target.value)}
-                    disabled={!selectedGuestId}
-                  />
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) setPendingFile(file);
-                      e.target.value = '';
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={!selectedGuestId || uploadingFile}
-                    className="absolute bottom-3 right-3 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] disabled:opacity-50"
-                  >
-                    <PaperclipIcon className="h-5 w-5" />
-                  </button>
-                </div>
-                <button type="submit" disabled={isSending || uploadingFile || !selectedGuestId || (!draft.trim() && !pendingFile)} className="btn-primary inline-flex items-center justify-center gap-2">
-                  <SendIcon className="h-4 w-4" />
-                  {isSending || uploadingFile ? 'Sending...' : 'Send'}
-                </button>
-              </div>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+              <textarea
+                className="input-field min-h-28 w-full resize-none"
+                placeholder={selectedGuestId ? 'Type your message...' : 'Select a conversation to start messaging...'}
+                value={draft}
+                onChange={(event) => setDraft(event.target.value)}
+                disabled={!selectedGuestId}
+              />
+              <button type="submit" disabled={isSending || !selectedGuestId || !draft.trim()} className="btn-primary inline-flex items-center justify-center gap-2">
+                <SendIcon className="h-4 w-4" />
+                {isSending ? 'Sending...' : 'Send'}
+              </button>
             </div>
           </form>
         </section>
