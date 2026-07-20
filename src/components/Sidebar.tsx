@@ -108,6 +108,7 @@ const receptionistNav: NavItem[] = [
       { path: '/reservations/new', label: 'New Reservation' },
     ],
   },
+  { path: '/payments', label: 'Payments', icon: CreditCardIcon },
   {
     path: '/activities',
     label: 'Activities & Tours',

@@ -100,11 +100,12 @@ const ROLE_RESTRICTED_PATHS: { prefixes: string[]; roles: string[] }[] = [
   { prefixes: ['/departments', '/managers', '/audit-log', '/api/departments', '/api/managers', '/api/audit-log'], roles: ['ADMIN'] },
   {
     prefixes: [
-      '/receptionists', '/payments', '/sustainability', '/feedback', '/hotel-information', '/reports',
-      '/api/receptionists', '/api/payments', '/api/sustainability', '/api/feedback', '/api/content', '/api/reports',
+      '/receptionists', '/sustainability', '/feedback', '/hotel-information', '/reports',
+      '/api/receptionists', '/api/sustainability', '/api/feedback', '/api/content', '/api/reports',
     ],
     roles: ['MANAGER'],
   },
+  { prefixes: ['/payments', '/api/payments'], roles: ['MANAGER', 'RECEPTIONIST'] },
   { prefixes: ['/schedule', '/messages', '/api/schedule', '/api/messages'], roles: ['RECEPTIONIST'] },
 ];
 

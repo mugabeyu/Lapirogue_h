@@ -1,22 +1,8 @@
 'use client';
 
-import { useApi } from '@/hooks/useApi';
 import CrudDataTablePage from '@/components/CrudDataTablePage';
 
 export default function PaymentsPage() {
-  const { data: user } = useApi<{ role: string }>('/api/auth/me');
-
-  if (user?.role === 'RECEPTIONIST') {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center">
-        <div className="text-center">
-          <h1 className="font-display text-4xl text-[var(--color-text-primary)]">Access Denied</h1>
-          <p className="mt-2 text-[var(--color-text-secondary)]">You do not have permission to view payments.</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <CrudDataTablePage
       title="Payments"

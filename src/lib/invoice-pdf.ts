@@ -57,6 +57,18 @@ export function buildInvoicePdfBase64(input: InvoicePdfInput) {
     pdf.line(margin, yy, margin + contentWidth, yy);
   };
 
+  // Single source of truth for the itemized-charges column layout, shared by
+  // the header row and every data row so they can never drift out of sync.
+  const descWidth = contentWidth * 0.42;
+  const dateWidth = contentWidth * 0.13;
+  const qtyWidth = contentWidth * 0.08;
+  const rateWidth = contentWidth * 0.17;
+  const amountWidth = contentWidth * 0.20;
+  const xDate = margin + descWidth;
+  const xQty = xDate + dateWidth;
+  const xRate = xQty + qtyWidth;
+  const xAmount = xRate + rateWidth;
+
   const write = (
     value: string | number | null | undefined,
     x: number,
@@ -74,7 +86,7 @@ export function buildInvoicePdfBase64(input: InvoicePdfInput) {
   };
 
   const writeBlockTitle = (title: string, yy: number) => {
-    pdf.setFillColor(29, 58, 50);
+    pdf.setFillColor(254, 127, 45);
     pdf.rect(margin, yy - 10, contentWidth, 18, 'F');
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(9);
@@ -91,15 +103,15 @@ export function buildInvoicePdfBase64(input: InvoicePdfInput) {
     pdf.setFontSize(7);
     pdf.setTextColor(75, 85, 99);
     pdf.text('Description', margin, yy);
-    pdf.text('Date', margin + contentWidth * 0.42, yy, { align: 'right' });
-    pdf.text('Qty', margin + contentWidth * 0.55, yy, { align: 'right' });
-    pdf.text('Rate (Rs)', margin + contentWidth * 0.63, yy, { align: 'right' });
-    pdf.text('Amount (Rs)', margin + contentWidth * 0.80, yy, { align: 'right' });
+    pdf.text('Date', xDate + dateWidth - 3, yy, { align: 'right' });
+    pdf.text('Qty', xQty + qtyWidth - 3, yy, { align: 'right' });
+    pdf.text('Rate (Rs)', xRate + rateWidth - 3, yy, { align: 'right' });
+    pdf.text('Amount (Rs)', xAmount + amountWidth - 3, yy, { align: 'right' });
     pdf.setTextColor(31, 41, 55);
   };
 
   // Header in the style of the Payment Details receipt.
-  pdf.setFillColor(29, 58, 50);
+  pdf.setFillColor(254, 127, 45);
   pdf.rect(0, 0, pageWidth, 110, 'F');
   pdf.setTextColor(255, 255, 255);
   pdf.setFont('helvetica', 'bold');
@@ -162,16 +174,6 @@ export function buildInvoicePdfBase64(input: InvoicePdfInput) {
   drawTableHeader(y);
   y += 8;
   itemsHeaderDrawnOnPage = true;
-
-  const descWidth = contentWidth * 0.42;
-  const dateWidth = contentWidth * 0.13;
-  const qtyWidth = contentWidth * 0.08;
-  const rateWidth = contentWidth * 0.17;
-  const amountWidth = contentWidth * 0.20;
-  const xDate = margin + descWidth;
-  const xQty = xDate + dateWidth;
-  const xRate = xQty + qtyWidth;
-  const xAmount = xRate + rateWidth;
 
   if (input.items.length === 0) {
     addPageIfNeeded(42);

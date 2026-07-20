@@ -168,13 +168,15 @@ export default function Topbar() {
 
         {!isAdmin && (
           <nav className="flex items-center gap-3">
-            <Link
-              href="/schedule"
-              className="inline-flex items-center gap-2 rounded-xl bg-[var(--color-button-primary)] px-4 py-2 text-sm font-medium text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-button-primary-hover)] active:bg-[var(--color-button-primary-active)]"
-            >
-              <CalendarIcon className="h-4 w-4" />
-              <span className="hidden sm:inline">Daily Schedules</span>
-            </Link>
+            {user?.role === "RECEPTIONIST" && (
+              <Link
+                href="/schedule"
+                className="inline-flex items-center gap-2 rounded-xl bg-[var(--color-button-primary)] px-4 py-2 text-sm font-medium text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-button-primary-hover)] active:bg-[var(--color-button-primary-active)]"
+              >
+                <CalendarIcon className="h-4 w-4" />
+                <span className="hidden sm:inline">Daily Schedules</span>
+              </Link>
+            )}
             <button
               type="button"
               onClick={() => setIsGuestModalOpen(true)}
