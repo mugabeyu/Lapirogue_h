@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { PageHeader } from '@/components/PageHeader';
 import Button from '@/components/ui/Button';
@@ -13,12 +13,14 @@ import { ConfirmDialog } from '@/components/ConfirmDialog';
 import type { Receptionist, Department, Manager, User } from '@/types';
 
 export default function ReceptionistsPage() {
+  const PAGE_SIZE = 15;
   const router = useRouter();
   const { data: receptionists, mutate } = useApi<Receptionist[]>('/api/receptionists');
   const { data: departments } = useApi<Department[]>('/api/departments');
   const { data: managers } = useApi<Manager[]>('/api/managers');
   const { data: currentUser } = useApi<User>('/api/auth/me');
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editRec, setEditRec] = useState<Receptionist | null>(null);
   const [blockTarget, setBlockTarget] = useState<Receptionist | null>(null);
@@ -32,6 +34,18 @@ export default function ReceptionistsPage() {
     return [r.firstName, r.lastName, r.email, r.employeeCode, r.departmentName]
       .filter(Boolean).join(' ').toLowerCase().includes(q);
   });
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const start = (page - 1) * PAGE_SIZE;
+  const paginatedRows = filtered.slice(start, start + PAGE_SIZE);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search]);
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
 
   async function handleSave(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -145,7 +159,7 @@ export default function ReceptionistsPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((rec) => (
+              {paginatedRows.map((rec) => (
                 <tr
                   key={rec.id}
                   className="border-b border-border transition-colors hover:bg-surface-secondary/50 cursor-pointer"
@@ -191,6 +205,19 @@ export default function ReceptionistsPage() {
             </tbody>
           </table>
         )}
+        {filtered.length > PAGE_SIZE ? (
+          <div className="table-footer">
+            <span>Page {page} of {totalPages}</span>
+            <div className="flex items-center gap-2">
+              <button type="button" className="btn-secondary" disabled={page <= 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>
+                Previous
+              </button>
+              <button type="button" className="btn-secondary" disabled={page >= totalPages} onClick={() => setPage((current) => Math.min(totalPages, current + 1))}>
+                Next
+              </button>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       <Modal

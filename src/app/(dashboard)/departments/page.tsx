@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { PageHeader } from '@/components/PageHeader';
 import Button from '@/components/ui/Button';
 import { Modal } from '@/components/Modal';
@@ -11,10 +11,21 @@ import { Plus, Pencil, Trash2, Building2 } from 'lucide-react';
 import type { Department } from '@/types';
 
 export default function DepartmentsPage() {
+  const PAGE_SIZE = 15;
   const { data: departments, mutate } = useApi<Department[]>('/api/departments');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editDept, setEditDept] = useState<Department | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+
+  const rows = departments ?? [];
+  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  const start = (page - 1) * PAGE_SIZE;
+  const paginatedRows = rows.slice(start, start + PAGE_SIZE);
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
 
   async function handleSave(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -89,7 +100,7 @@ export default function DepartmentsPage() {
               </tr>
             </thead>
             <tbody>
-              {departments?.map((dept) => (
+              {paginatedRows.map((dept) => (
                 <tr key={dept.id} className="border-b border-border transition-colors hover:bg-surface-secondary/50">
                   <td className="px-6 py-4 text-sm font-medium text-[var(--color-text-primary)]">{dept.name}</td>
                   <td className="border-l border-border px-6 py-4 text-sm text-[var(--color-text-secondary)]">{dept.description || '-'}</td>
@@ -121,6 +132,19 @@ export default function DepartmentsPage() {
             </tbody>
           </table>
         )}
+        {rows.length > PAGE_SIZE ? (
+          <div className="table-footer">
+            <span>Page {page} of {totalPages}</span>
+            <div className="flex items-center gap-2">
+              <button type="button" className="btn-secondary" disabled={page <= 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>
+                Previous
+              </button>
+              <button type="button" className="btn-secondary" disabled={page >= totalPages} onClick={() => setPage((current) => Math.min(totalPages, current + 1))}>
+                Next
+              </button>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       <Modal

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { BellIcon } from 'lucide-react';
 import { useApi } from '@/hooks/useApi';
 import { PageHeader } from '@/components/PageHeader';
@@ -25,7 +25,9 @@ function formatTimestamp(value: string) {
 }
 
 export default function NotificationsPage() {
+  const PAGE_SIZE = 15;
   const { data, isLoading, mutate } = useApi<NotificationRow[]>('/api/notifications');
+  const [page, setPage] = useState(1);
 
   const notifications = useMemo(
     () =>
@@ -35,6 +37,13 @@ export default function NotificationsPage() {
     [data],
   );
   const unreadCount = notifications.filter((notification) => notification.status === 'UNREAD').length;
+  const totalPages = Math.max(1, Math.ceil(notifications.length / PAGE_SIZE));
+  const start = (page - 1) * PAGE_SIZE;
+  const paginatedNotifications = notifications.slice(start, start + PAGE_SIZE);
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
 
   async function markRead(id: string) {
     await fetch(`/api/notifications?id=${id}`, { method: 'PATCH', credentials: 'include' });
@@ -70,7 +79,7 @@ export default function NotificationsPage() {
           </div>
         ) : (
           <ul className="divide-y divide-border">
-            {notifications.map((notification) => (
+            {paginatedNotifications.map((notification) => (
               <li
                 key={notification.id}
                 className={`flex items-start gap-4 px-5 py-4 ${notification.status === 'UNREAD' ? 'bg-primary/5' : ''}`}
@@ -107,6 +116,19 @@ export default function NotificationsPage() {
             ))}
           </ul>
         )}
+        {notifications.length > PAGE_SIZE ? (
+          <div className="table-footer">
+            <span>Page {page} of {totalPages}</span>
+            <div className="flex items-center gap-2">
+              <button type="button" className="btn-secondary" disabled={page <= 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>
+                Previous
+              </button>
+              <button type="button" className="btn-secondary" disabled={page >= totalPages} onClick={() => setPage((current) => Math.min(totalPages, current + 1))}>
+                Next
+              </button>
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );

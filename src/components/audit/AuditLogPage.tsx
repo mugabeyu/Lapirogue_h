@@ -53,7 +53,7 @@ export default function AuditLogPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const url = useMemo(() => {
-    const params = new URLSearchParams({ page: String(page), limit: '20' });
+    const params = new URLSearchParams({ page: String(page), limit: '15' });
     if (tableFilter) params.set('table', tableFilter);
     return `/api/audit-log?${params}`;
   }, [page, tableFilter]);

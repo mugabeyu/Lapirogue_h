@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { PageHeader } from '@/components/PageHeader';
 import Button from '@/components/ui/Button';
@@ -13,11 +13,13 @@ import { ConfirmDialog } from '@/components/ConfirmDialog';
 import type { Manager, Department, User } from '@/types';
 
 export default function ManagersPage() {
+  const PAGE_SIZE = 15;
   const router = useRouter();
   const { data: managers, mutate } = useApi<Manager[]>('/api/managers');
   const { data: departments } = useApi<Department[]>('/api/departments');
   const { data: currentUser } = useApi<User>('/api/auth/me');
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editMgr, setEditMgr] = useState<Manager | null>(null);
   const [blockTarget, setBlockTarget] = useState<Manager | null>(null);
@@ -29,6 +31,18 @@ export default function ManagersPage() {
     return [m.firstName, m.lastName, m.email, m.managerId, m.departmentName]
       .filter(Boolean).join(' ').toLowerCase().includes(q);
   });
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const start = (page - 1) * PAGE_SIZE;
+  const paginatedRows = filtered.slice(start, start + PAGE_SIZE);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search]);
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
 
   async function handleSave(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -137,7 +151,7 @@ export default function ManagersPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((mgr) => (
+              {paginatedRows.map((mgr) => (
                 <tr
                   key={mgr.id}
                   className="border-b border-border transition-colors hover:bg-surface-secondary/50 cursor-pointer"
@@ -187,6 +201,19 @@ export default function ManagersPage() {
             </tbody>
           </table>
         )}
+        {filtered.length > PAGE_SIZE ? (
+          <div className="table-footer">
+            <span>Page {page} of {totalPages}</span>
+            <div className="flex items-center gap-2">
+              <button type="button" className="btn-secondary" disabled={page <= 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>
+                Previous
+              </button>
+              <button type="button" className="btn-secondary" disabled={page >= totalPages} onClick={() => setPage((current) => Math.min(totalPages, current + 1))}>
+                Next
+              </button>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       <Modal

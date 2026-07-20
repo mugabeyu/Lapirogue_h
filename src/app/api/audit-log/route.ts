@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = request.nextUrl;
     const page = Math.max(1, Number(searchParams.get('page') ?? '1'));
-    const limit = Math.min(50, Math.max(1, Number(searchParams.get('limit') ?? '20')));
+    const limit = Math.min(50, Math.max(1, Number(searchParams.get('limit') ?? '15')));
     const tableFilter = searchParams.get('table') || undefined;
     const actionFilter = searchParams.get('action') || undefined;
 
