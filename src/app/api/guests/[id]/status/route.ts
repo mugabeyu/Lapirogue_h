@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { getAuditActor, recordAuditLog } from '@/lib/audit';
 import { createApiResponse } from '@/lib/api-response';
+import { notifyGuest } from '@/lib/guest-notifications';
 import { z } from 'zod';
 
 const statusSchema = z.object({
@@ -63,6 +64,21 @@ export async function PUT(request: NextRequest, context: { params: Promise<unkno
       before: existing as Record<string, unknown>,
       after: data as Record<string, unknown>,
     });
+
+    if (existing.account_status !== body.accountStatus) {
+      const guestMessage = {
+        ACTIVE: 'Your account has been reactivated. You can book and use hotel services again.',
+        FROZEN: 'Your account has been put on hold. Please contact reception to resume bookings.',
+        BANNED: 'Your account has been closed and any upcoming bookings were cancelled. Please contact reception.',
+      }[body.accountStatus];
+
+      await notifyGuest({
+        guestId: id,
+        title: 'Account status updated',
+        message: guestMessage,
+        category: 'Account',
+      });
+    }
 
     return createApiResponse(true, {
       id: data.id,

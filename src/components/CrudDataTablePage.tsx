@@ -9,6 +9,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import Button from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useApi } from "@/hooks/useApi";
+import { useRealtimeRefresh } from "@/hooks/useRealtimeRefresh";
 import { toast } from "sonner";
 import { AddReservationModal } from "@/components/modals/AddReservationModal";
 import { RoomModal } from "@/components/modals/RoomModal";
@@ -23,6 +24,25 @@ import {
   getTableValue,
   type TableColumnType,
 } from "@/lib/table";
+
+/**
+ * Which Postgres tables a list endpoint actually reflects.
+ *
+ * A row here is not always one table: the reservations list renders the
+ * guest's name and room number, so a rename or a room change has to refresh
+ * it too, even though `reservations` itself did not change.
+ */
+const REALTIME_TABLES_BY_PATH: Record<string, string[]> = {
+  "/api/reservations": ["reservations", "guests", "rooms"],
+  "/api/payments": ["payments", "guests", "payment_extra_items"],
+  "/api/guests": ["guests", "reservations"],
+  "/api/rooms": ["rooms", "reservations"],
+};
+
+function realtimeTablesForEndpoint(endpoint: string): string[] {
+  const [path] = endpoint.split("?");
+  return REALTIME_TABLES_BY_PATH[path] ?? [path.replace("/api/", "")];
+}
 
 export type CrudColumn = {
   key: string;
@@ -136,6 +156,11 @@ export default function CrudDataTablePage({
   }, [endpoint, search]);
 
   const { data, mutate, error } = useApi<Record<string, unknown>[]>(url);
+
+  // Every list here is a live operational view — a booking made in the guest
+  // app or by a colleague at another desk has to show up without a reload.
+  useRealtimeRefresh(realtimeTablesForEndpoint(endpoint), mutate);
+
   const rows = data ?? [];
   const apiError = error;
   const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));

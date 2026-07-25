@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { awardEcoPoints } from '@/lib/eco-points';
+import { notifyGuest } from '@/lib/guest-notifications';
 import { z } from 'zod';
 
 const foodOrderSchema = z.object({
@@ -245,6 +246,24 @@ export async function PUT(request: NextRequest) {
         label: 'Food order completed',
         points: 25,
       }).catch((ecoError) => console.error('Failed to award eco points for food order', ecoError));
+    }
+
+    if (status !== undefined && status !== existing.status) {
+      const guestFacingMessage: Record<string, string> = {
+        PREPARING: 'The kitchen has started preparing your order.',
+        SERVED: 'Your order is on its way to you. Enjoy.',
+        CANCELLED: 'Your food order has been cancelled. Contact reception if this is unexpected.',
+      };
+
+      const message = guestFacingMessage[status];
+      if (message) {
+        await notifyGuest({
+          guestId: guestId ?? existing.guest_id,
+          title: 'Room service update',
+          message,
+          category: 'Order',
+        });
+      }
     }
 
     return NextResponse.json({ success: true, data });

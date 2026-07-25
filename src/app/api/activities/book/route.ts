@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { z } from 'zod';
 import { awardEcoPoints, removeEcoPointsBySource } from '@/lib/eco-points';
+import { formatStayDate, notifyGuest } from '@/lib/guest-notifications';
 
 type ActivityBookingRow = {
   id: string;
@@ -236,6 +237,24 @@ export async function PUT(request: NextRequest) {
       await removeEcoPointsBySource('ACTIVITY_BOOKING', data.id).catch((removeError) =>
         console.error('Failed to remove eco points for booking', removeError),
       );
+    }
+
+    if (existingBooking && resultingStatus !== existingBooking.status) {
+      const guestFacingMessage: Record<string, string> = {
+        CONFIRMED: 'Your activity booking is confirmed.',
+        COMPLETED: 'Thanks for joining us — your activity is marked complete.',
+        CANCELLED: 'Your activity booking has been cancelled. Contact reception if this is unexpected.',
+      };
+
+      const message = guestFacingMessage[resultingStatus];
+      if (message) {
+        await notifyGuest({
+          guestId: updateData.guestId,
+          title: 'Activity booking updated',
+          message: `${message} Booked for ${formatStayDate(updateData.date)}.`,
+          category: 'Activity',
+        });
+      }
     }
 
     return NextResponse.json({ success: true, data });

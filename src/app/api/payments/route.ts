@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { getAuditActor } from '@/lib/audit';
 import { attachSupabaseCookies, getRouteHandlerSupabaseSession } from '@/lib/supabase-server';
+import { notifyGuest } from '@/lib/guest-notifications';
 import { z } from 'zod';
 
 const extraChargeSchema = z.object({
@@ -273,6 +274,25 @@ export async function PUT(request: NextRequest) {
         })),
       );
       if (extrasError) throw extrasError;
+    }
+
+    if (existingPayment.status !== status) {
+      const guestFacingMessage: Record<string, string> = {
+        PAID: `Your payment of Rs ${amount.toLocaleString()} has been received. Thank you.`,
+        PARTIALLY_PAID: `A part payment of Rs ${amount.toLocaleString()} has been recorded on your account.`,
+        REFUNDED: `A refund of Rs ${amount.toLocaleString()} has been issued to you.`,
+        PENDING: `A charge of Rs ${amount.toLocaleString()} is now pending on your account.`,
+      };
+
+      const message = status ? guestFacingMessage[status] : undefined;
+      if (message) {
+        await notifyGuest({
+          guestId,
+          title: 'Payment updated',
+          message,
+          category: 'Payment',
+        });
+      }
     }
 
     return attachSupabaseCookies(NextResponse.json({ success: true, data }), response);

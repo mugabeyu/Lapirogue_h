@@ -5,6 +5,7 @@ import { getAuditActor, recordAuditLog } from "@/lib/audit";
 import { z } from "zod";
 import { validationErrorResponse } from "@/lib/api-response";
 import { toGuest, type GuestRow } from "@/lib/guests";
+import { notifyGuest } from "@/lib/guest-notifications";
 
 const guestUpdateSchema = z.object({
   id: z.string().uuid().optional(),
@@ -210,6 +211,25 @@ export async function PATCH(
             .update({ status: reservationStatus })
             .eq("id", targetReservation.id);
         }
+      }
+    }
+
+    if (isManager && validatedData.status !== undefined) {
+      const guestFacingMessage: Record<string, string> = {
+        CHECKED_IN: 'You are checked in. Enjoy your stay with us.',
+        CHECKED_OUT: 'You have been checked out. Thank you for staying with us.',
+        RESERVED: 'Your booking is confirmed and waiting for you.',
+        CANCELLED: 'Your booking has been cancelled. Contact reception if this is unexpected.',
+      };
+
+      const message = guestFacingMessage[validatedData.status];
+      if (message) {
+        await notifyGuest({
+          guestId: id,
+          title: 'Stay status updated',
+          message,
+          category: 'Stay',
+        });
       }
     }
 

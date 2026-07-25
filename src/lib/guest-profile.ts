@@ -22,7 +22,7 @@ async function loadGuestProfile(guestId: string): Promise<GuestProfile | null> {
 
   const { data: reservations } = await supabase
     .from('reservations')
-    .select('id,room_id,check_in,check_out,status,total_amount,rooms(room_number,type),reservation_id')
+    .select('id,room_id,check_in,check_out,adults,children,status,total_amount,rooms(room_number,type),reservation_id')
     .eq('guest_id', guestId)
     .order('check_in', { ascending: false });
 
@@ -32,8 +32,8 @@ async function loadGuestProfile(guestId: string): Promise<GuestProfile | null> {
     roomId: r.room_id as string,
     checkIn: r.check_in,
     checkOut: r.check_out,
-    adults: 1,
-    children: 0,
+    adults: r.adults ?? 1,
+    children: r.children ?? 0,
     status: r.status,
     totalAmount: Number(r.total_amount ?? 0),
     roomNumber: (r.rooms as { room_number?: string | null } | null)?.room_number ?? null,
@@ -63,7 +63,7 @@ export async function loadGuestProfileData(guestId: string): Promise<GuestProfil
   const [reservationsResult, activityBookingsResult, foodOrdersResult, paymentsResult] = await Promise.all([
     supabase
       .from('reservations')
-      .select('id,room_id,check_in,check_out,status,total_amount,rooms(room_number,type),reservation_id,created_at,updated_at')
+      .select('id,room_id,check_in,check_out,adults,children,status,total_amount,rooms(room_number,type),reservation_id,created_at,updated_at')
       .eq('guest_id', guestId)
       .order('check_in', { ascending: false }),
     supabase
@@ -88,8 +88,8 @@ export async function loadGuestProfileData(guestId: string): Promise<GuestProfil
     roomId: r.room_id as string,
     checkIn: r.check_in,
     checkOut: r.check_out,
-    adults: 1, // TODO: fetch actual adults and children from reservations table? Currently not stored.
-    children: 0,
+    adults: r.adults ?? 1,
+    children: r.children ?? 0,
     status: r.status,
     totalAmount: Number(r.total_amount ?? 0),
     roomNumber: (r.rooms as { room_number?: string | null } | null)?.room_number ?? null,

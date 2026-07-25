@@ -19,6 +19,7 @@ import {
 import { StatusBadge } from '@/components/StatusBadge';
 import { EditGuestModal } from '@/components/modals/EditGuestModal';
 import { useApi } from '@/hooks/useApi';
+import { useRealtimeRefresh } from '@/hooks/useRealtimeRefresh';
 import type { Guest, GuestAccountStatus, GuestProfileData, GuestStay } from '@/types';
 import { toast } from 'sonner';
 
@@ -47,6 +48,14 @@ export default function GuestDetailsPage() {
     `/api/guests/${params.id}/profile`,
   );
   const { data: currentUser } = useApi<{ role: string }>('/api/auth/me');
+
+  // Keeps this page true to the database while it is open — the guest can
+  // change their own booking from the mobile app, and other staff can edit
+  // the same guest at the same time.
+  useRealtimeRefresh(
+    ['reservations', 'guests', 'payments', 'food_orders', 'activity_bookings'],
+    mutate,
+  );
 
   async function handleStatusChange(newStatus: GuestAccountStatus) {
     setIsStatusChanging(true);

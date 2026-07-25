@@ -4,6 +4,16 @@ import { getAuditActor, recordAuditLog } from "@/lib/audit";
 import { z } from "zod";
 import { createApiResponse, validationErrorResponse } from "@/lib/api-response";
 import { sendGuestPortalInvitationEmail } from "@/lib/mailer";
+import { describeStayPeriod, notifyGuest } from "@/lib/guest-notifications";
+
+const reservationStatusEnum = z.enum([
+  "RESERVED",
+  "CONFIRMED",
+  "CHECKED_IN",
+  "CHECKED_OUT",
+  "CANCELLED",
+  "NO_SHOW",
+]);
 
 const reservationSchema = z.object({
   id: z.string().uuid().optional(),
@@ -14,17 +24,26 @@ const reservationSchema = z.object({
   adults: z.number().int().positive(),
   children: z.number().int().min(0),
   totalAmount: z.number().min(0),
-  status: z
-    .enum([
-      "RESERVED",
-      "CONFIRMED",
-      "CHECKED_IN",
-      "CHECKED_OUT",
-      "CANCELLED",
-      "NO_SHOW",
-    ])
-    .optional(),
+  status: reservationStatusEnum.optional(),
   origin: z.enum(["MOBILE_APP", "RECEPTION_DESK", "MANAGER_PORTAL"]).optional(),
+});
+
+/**
+ * Updates are partial: anything the caller omits keeps whatever is already
+ * stored. The edit forms only know about the fields they render, and an
+ * earlier version of this route required every field — so callers padded the
+ * gaps with guesses and silently overwrote occupancy on unrelated edits.
+ */
+const reservationUpdateSchema = z.object({
+  id: z.string().uuid(),
+  guestId: z.string().uuid().optional(),
+  roomId: z.string().uuid().optional(),
+  checkIn: z.string().min(1).optional(),
+  checkOut: z.string().min(1).optional(),
+  adults: z.number().int().positive().optional(),
+  children: z.number().int().min(0).optional(),
+  totalAmount: z.number().min(0).optional(),
+  status: reservationStatusEnum.optional(),
 });
 
 type ReservationRow = {
@@ -51,6 +70,32 @@ function toDateKey(date = new Date()) {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+/**
+ * Stays are half-open intervals: a room is occupied from the check-in day up
+ * to — but not including — the check-out day. Two stays therefore clash only
+ * when `a.check_in < b.check_out && a.check_out > b.check_in`. Using `lte`/`gte`
+ * here instead would flag same-day turnovers (one guest leaves, the next
+ * arrives) as double bookings, which is normal hotel operation.
+ */
+function findConflictingReservations(
+  supabase: ReturnType<typeof getSupabaseAdmin>,
+  params: { roomId: string; checkIn: string; checkOut: string; excludeId?: string },
+) {
+  let query = supabase
+    .from("reservations")
+    .select("id,reservation_id,check_in,check_out")
+    .eq("room_id", params.roomId)
+    .lt("check_in", params.checkOut)
+    .gt("check_out", params.checkIn)
+    .not("status", "in", '("CANCELLED","NO_SHOW","CHECKED_OUT")');
+
+  if (params.excludeId) {
+    query = query.neq("id", params.excludeId);
+  }
+
+  return query;
 }
 
 function toGuestReservationStatus(status: string | undefined) {
@@ -155,18 +200,27 @@ export async function POST(request: NextRequest) {
     // book — they get a set-password invite email with their stay details
     // instead. Only frozen/banned accounts are blocked above.
 
-    const { data: conflicting, error: conflictError } = await supabase
-      .from("reservations")
-      .select("id")
-      .eq("room_id", body.roomId)
-      .or(`and(check_in.lte.${body.checkOut},check_out.gte.${body.checkIn})`)
-      .neq("status", "CANCELLED");
+    if (body.checkOut <= body.checkIn) {
+      return createApiResponse(
+        false,
+        "Check-out date must be after the check-in date",
+        { status: 400 },
+      );
+    }
+
+    const { data: conflicting, error: conflictError } =
+      await findConflictingReservations(supabase, {
+        roomId: body.roomId,
+        checkIn: body.checkIn,
+        checkOut: body.checkOut,
+      });
 
     if (conflictError) throw conflictError;
     if (conflicting && conflicting.length > 0) {
+      const clash = conflicting[0];
       return createApiResponse(
         false,
-        "Room is not available for the selected dates",
+        `Room is already booked for those dates by reservation ${clash.reservation_id} (${clash.check_in} to ${clash.check_out})`,
         { status: 409 },
       );
     }
@@ -275,23 +329,51 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    const parsed = reservationSchema
-      .extend({ id: z.string().uuid() })
-      .parse(body);
-    const {
-      id,
-      guestId,
-      roomId,
-      checkIn,
-      checkOut,
-      adults,
-      children,
-      totalAmount,
-      status,
-    } = parsed;
+    const parsed = reservationUpdateSchema.parse(body);
+    const { id } = parsed;
     const supabase = getSupabaseAdmin();
 
-    if (status === "CHECKED_IN") {
+    const { data: previousReservation, error: previousReservationError } =
+      await supabase
+        .from("reservations")
+        .select(
+          "id,reservation_id,guest_id,room_id,check_in,check_out,adults,children,total_amount,status,guests(first_name,last_name,email),rooms(room_number,type)",
+        )
+        .eq("id", id)
+        .maybeSingle();
+
+    if (previousReservationError) throw previousReservationError;
+
+    if (!previousReservation) {
+      return createApiResponse(false, "Reservation not found", { status: 404 });
+    }
+
+    // Anything the caller left out keeps its stored value, so a form that only
+    // edits the stay dates can't reset occupancy or the room it doesn't render.
+    const guestId = parsed.guestId ?? previousReservation.guest_id;
+    const roomId = parsed.roomId ?? previousReservation.room_id;
+    const checkIn = parsed.checkIn ?? previousReservation.check_in;
+    const checkOut = parsed.checkOut ?? previousReservation.check_out;
+    const adults = parsed.adults ?? previousReservation.adults;
+    const children = parsed.children ?? previousReservation.children;
+    const totalAmount = parsed.totalAmount ?? Number(previousReservation.total_amount);
+    const status = parsed.status ?? previousReservation.status;
+
+    if (checkOut <= checkIn) {
+      return createApiResponse(
+        false,
+        "Check-out date must be after the check-in date",
+        { status: 400 },
+      );
+    }
+
+    // Only gate the moment a stay *becomes* checked in. Re-saving a stay that
+    // is already checked in — to extend or correct its dates — must stay
+    // possible even once the original check-out day has passed.
+    const isCheckingInNow =
+      status === "CHECKED_IN" && previousReservation.status !== "CHECKED_IN";
+
+    if (isCheckingInNow) {
       const today = toDateKey();
       if (today < checkIn || today >= checkOut) {
         return createApiResponse(
@@ -302,31 +384,21 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    const { data: previousReservation, error: previousReservationError } =
-      await supabase
-        .from("reservations")
-        .select(
-          "id,reservation_id,guest_id,room_id,check_in,check_out,status,guests(first_name,last_name,email),rooms(room_number,type)",
-        )
-        .eq("id", id)
-        .maybeSingle();
-
-    if (previousReservationError) throw previousReservationError;
-
-    const { data: conflicting, error: conflictError } = await supabase
-      .from("reservations")
-      .select("id")
-      .eq("room_id", roomId)
-      .or(`and(check_in.lte.${checkOut},check_out.gte.${checkIn})`)
-      .neq("status", "CANCELLED")
-      .neq("id", id);
+    const { data: conflicting, error: conflictError } =
+      await findConflictingReservations(supabase, {
+        roomId,
+        checkIn,
+        checkOut,
+        excludeId: id,
+      });
 
     if (conflictError) throw conflictError;
 
     if (conflicting && conflicting.length > 0) {
+      const clash = conflicting[0];
       return createApiResponse(
         false,
-        "Room is not available for the selected dates",
+        `Room is already booked for those dates by reservation ${clash.reservation_id} (${clash.check_in} to ${clash.check_out})`,
         { status: 409 },
       );
     }
@@ -348,6 +420,46 @@ export async function PUT(request: NextRequest) {
       .single();
 
     if (error) throw error;
+
+    const datesChanged =
+      previousReservation.check_in !== checkIn ||
+      previousReservation.check_out !== checkOut;
+    const roomChanged = previousReservation.room_id !== roomId;
+
+    if (datesChanged || roomChanged) {
+      const { data: newRoom } = roomChanged
+        ? await supabase
+            .from("rooms")
+            .select("room_number")
+            .eq("id", roomId)
+            .maybeSingle()
+        : { data: null };
+
+      const details = [
+        datesChanged ? `Your stay now runs ${describeStayPeriod(checkIn, checkOut)}.` : null,
+        roomChanged && newRoom?.room_number
+          ? `You have been moved to room ${newRoom.room_number}.`
+          : null,
+      ]
+        .filter(Boolean)
+        .join(' ');
+
+      await notifyGuest({
+        guestId,
+        title: roomChanged ? 'Your room has changed' : 'Your stay dates have changed',
+        message: `${details} Reservation ${previousReservation.reservation_id}.`,
+        category: roomChanged ? 'Room' : 'Stay',
+      });
+    }
+
+    if (parsed.status && previousReservation.status !== status) {
+      await notifyGuest({
+        guestId,
+        title: `Reservation ${status.toLowerCase().replace('_', ' ')}`,
+        message: `Reservation ${previousReservation.reservation_id} for ${describeStayPeriod(checkIn, checkOut)} is now ${status.toLowerCase().replace('_', ' ')}.`,
+        category: 'Reservation',
+      });
+    }
 
     if (status) {
       await supabase
