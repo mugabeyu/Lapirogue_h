@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from "@/lib/supabase";
 import { getAuditActor, recordAuditLog } from "@/lib/audit";
 import { z } from "zod";
 import { createApiResponse, validationErrorResponse } from "@/lib/api-response";
+import { getRouteHandlerSupabaseSession } from "@/lib/supabase-server";
 import { sendGuestPortalInvitationEmail } from "@/lib/mailer";
 import { describeStayPeriod, notifyGuest } from "@/lib/guest-notifications";
 
@@ -65,6 +66,36 @@ type ReservationRow = {
   rooms?: { room_number?: string | null; type?: string | null } | null;
 };
 
+/**
+ * Reservation records are staff-only: they carry guest names, room numbers and
+ * amounts, and cancelling one is destructive.
+ *
+ * Every handler below drives the service-role client, which bypasses RLS — so
+ * without this gate the whole collection was readable and cancellable by
+ * anyone who could reach the deployment. The guest app never calls these
+ * handlers; it goes to Supabase directly (under RLS) and to the
+ * `/api/reservations/*` sub-routes.
+ */
+async function requireStaff(request: NextRequest) {
+  const { user } = await getRouteHandlerSupabaseSession(request);
+  if (!user) {
+    return createApiResponse(false, "Not authenticated", { status: 401 });
+  }
+
+  const { data: profile } = await getSupabaseAdmin()
+    .from("profiles")
+    .select("role")
+    .eq("auth_id", user.id)
+    .maybeSingle();
+
+  const role = profile?.role as string | undefined;
+  if (!role || !["ADMIN", "MANAGER", "RECEPTIONIST"].includes(role)) {
+    return createApiResponse(false, "Not authorised", { status: 403 });
+  }
+
+  return null;
+}
+
 function toDateKey(date = new Date()) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -116,6 +147,9 @@ function toGuestReservationStatus(status: string | undefined) {
 
 export async function GET(request: NextRequest) {
   try {
+    const denied = await requireStaff(request);
+    if (denied) return denied;
+
     const search = request.nextUrl.searchParams.get("search") || "";
     const guestId = request.nextUrl.searchParams.get("guestId") || "";
     const supabase = getSupabaseAdmin();
@@ -165,6 +199,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const denied = await requireStaff(request);
+    if (denied) return denied;
+
     const body = reservationSchema.parse(await request.json());
     const supabase = getSupabaseAdmin();
 
@@ -225,8 +262,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Determine initial status based on origin
-    let initialStatus = body.status || "CONFIRMED";
+    // A new booking is simply reserved, wherever it was made. It used to land
+    // as CONFIRMED from the desk and RESERVED from the app, so the same action
+    // read differently depending on who performed it.
+    let initialStatus = body.status || "RESERVED";
     const origin = body.origin || "RECEPTION_DESK";
 
     // Mobile app reservations start as RESERVED (not yet checked in)
@@ -328,6 +367,9 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
+    const denied = await requireStaff(request);
+    if (denied) return denied;
+
     const body = await request.json();
     const parsed = reservationUpdateSchema.parse(body);
     const { id } = parsed;
@@ -562,6 +604,9 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    const denied = await requireStaff(request);
+    if (denied) return denied;
+
     const { searchParams } = request.nextUrl;
     const id = searchParams.get("id");
     if (!id) return createApiResponse(false, "ID required", { status: 400 });

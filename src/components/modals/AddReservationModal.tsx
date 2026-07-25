@@ -6,6 +6,25 @@ import { useApi } from '@/hooks/useApi';
 import { Guest, Room } from '@/types';
 import { toast } from 'sonner';
 
+/**
+ * The statuses reception actually sets by hand, matching the guest profile's
+ * dropdown so the same stay reads the same way in both places.
+ *
+ * CONFIRMED and NO_SHOW are deliberately absent: bookings land as RESERVED and
+ * move on from there, and the guest app already shows RESERVED as "Pending".
+ */
+const SELECTABLE_STATUSES: Array<[string, string]> = [
+  ['RESERVED', 'Reserved'],
+  ['CHECKED_IN', 'Checked In'],
+  ['CHECKED_OUT', 'Checked Out'],
+  ['CANCELLED', 'Cancelled'],
+];
+
+function formatStatusLabel(status: string) {
+  const cleaned = status.replace(/_/g, ' ').toLowerCase();
+  return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+}
+
 interface AddReservationModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -20,6 +39,7 @@ export function AddReservationModal({ isOpen, onClose, onSaved, editRow }: AddRe
   const [roomPrice, setRoomPrice] = useState(0);
   const [totalAmount, setTotalAmount] = useState(0);
   const isEdit = Boolean(editRow?.id);
+  const currentStatus = String(editRow?.status ?? 'RESERVED');
 
   const roomsUrl = useMemo(() => {
     if (isEdit) return null;
@@ -82,6 +102,9 @@ export function AddReservationModal({ isOpen, onClose, onSaved, editRow }: AddRe
       adults: Number(formData.get('adults')),
       children: Number(formData.get('children')),
       totalAmount: isEdit ? totalAmount : Number(formData.get('totalAmount')),
+      // Only sent when editing: a new booking's status is decided by where it
+      // came from (reception desk vs mobile app), not by this form.
+      ...(isEdit ? { status: formData.get('status') } : {}),
     };
 
     const response = await fetch('/api/reservations', {
@@ -177,6 +200,37 @@ export function AddReservationModal({ isOpen, onClose, onSaved, editRow }: AddRe
             <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Children</label>
             <input name="children" required type="number" min="0" className="input-field w-full" defaultValue={Number(editRow?.children ?? 0)} />
           </div>
+          {isEdit && (
+            <div className="md:col-span-2">
+              <label htmlFor="status" className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">
+                Status
+              </label>
+              <select
+                id="status"
+                name="status"
+                className="input-field w-full"
+                defaultValue={currentStatus}
+              >
+                {/* A reservation already sitting on a retired status (an older
+                    CONFIRMED or NO_SHOW booking) keeps that entry, so opening
+                    the form and saving cannot silently downgrade it. */}
+                {!SELECTABLE_STATUSES.some(([value]) => value === currentStatus) && (
+                  <option value={currentStatus}>
+                    {formatStatusLabel(currentStatus)} (current)
+                  </option>
+                )}
+                {SELECTABLE_STATUSES.map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
+                Changing this also updates the guest&apos;s stay status and notifies them.
+              </p>
+            </div>
+          )}
+
           <div className="md:col-span-2">
             <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Total amount</label>
             {isEdit ? (

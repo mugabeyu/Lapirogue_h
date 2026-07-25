@@ -142,7 +142,9 @@ export function PaymentModal({ isOpen, onClose, onSaved, editRow }: PaymentModal
       amount: autoAmountDue,
       method: formData.get('method'),
       status: formData.get('status'),
-      reference: formData.get('reference') || undefined,
+      // Never sent from the form: the API generates it on create and keeps the
+      // existing value on update.
+      ...(isEdit && editRow?.reference ? { reference: String(editRow.reference) } : {}),
       notes: formData.get('notes') || undefined,
       extraCharges: extraCharges
         .map((item) => ({
@@ -218,13 +220,17 @@ export function PaymentModal({ isOpen, onClose, onSaved, editRow }: PaymentModal
               ))}
             </select>
           </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Reference</label>
-            <input name="reference" className="input-field w-full" defaultValue={String(editRow?.reference ?? '')} placeholder={isEdit ? '' : 'Auto-generated as PAY-YYYY-XXXX'} />
-            {!isEdit && (
-              <p className="mt-1 text-xs text-[var(--color-text-secondary)]">Leave blank to auto-generate</p>
-            )}
-          </div>
+          {/* The reference is issued by the system (PAY-YYYY-XXXX), so it is
+              shown for an existing payment but never asked for when creating
+              one. */}
+          {isEdit && editRow?.reference ? (
+            <div>
+              <label className="mb-1 block text-sm font-medium text-[var(--color-text-primary)]">Reference</label>
+              <div className="input-field w-full bg-surface-secondary text-[var(--color-text-secondary)]">
+                {String(editRow.reference)}
+              </div>
+            </div>
+          ) : null}
         </div>
 
         {guest && (
