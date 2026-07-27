@@ -117,8 +117,14 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: false, error: lockoutMessage(attemptState), locked: true }, { status: 423 });
       }
 
+      // The countdown is only worth showing on the last chance. Announcing it
+      // from the first wrong password reads as a threat during an ordinary
+      // typo, and tells anyone guessing exactly how many tries they have left.
       const remaining = attemptState.remainingAttempts;
-      const suffix = typeof remaining === 'number' ? ` ${remaining} attempt${remaining === 1 ? '' : 's'} remaining before your account is temporarily locked.` : '';
+      const suffix =
+        remaining === 1
+          ? ' This is your last attempt before your account is temporarily locked.'
+          : '';
       return NextResponse.json({ success: false, error: `${signInError.message}.${suffix}` }, { status: 401 });
     }
 

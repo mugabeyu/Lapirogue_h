@@ -1,8 +1,30 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import type { NextRequest } from 'next/server';
 import { User } from '@/types';
 import { getSupabaseAdmin } from './supabase';
 import { getSupabaseConfig } from './supabase-config';
+import { getRouteHandlerSupabaseSession } from './supabase-server';
+
+/**
+ * The staff role behind a request, or null if it is unauthenticated or the
+ * caller is not staff.
+ *
+ * Route handlers drive the service-role client, which bypasses RLS, so any
+ * role gate has to be applied explicitly rather than relying on the database.
+ */
+export async function getRequestRole(request: NextRequest): Promise<string | null> {
+  const { user } = await getRouteHandlerSupabaseSession(request);
+  if (!user) return null;
+
+  const { data } = await getSupabaseAdmin()
+    .from('profiles')
+    .select('role')
+    .eq('auth_id', user.id)
+    .maybeSingle();
+
+  return (data?.role as string | undefined) ?? null;
+}
 
 type ProfileRow = {
   email: string | null;

@@ -6,7 +6,11 @@ import useSWR from 'swr';
 import { Plus, Search } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { GuestNameCell } from '@/components/ui/GuestNameCell';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { formatMenuPrice } from '@/lib/menu';
+import { canCancelFoodOrder, canRoleCancel } from '@/lib/cancellation';
+import { useApi } from '@/hooks/useApi';
+import { toast } from 'sonner';
 
 type FoodOrder = {
   id: string;
@@ -63,8 +67,37 @@ export default function FoodOrdersListPage() {
     return `/api/food-orders?${params}`;
   }, [search, statusFilter]);
 
-  const { data} = useSWR(url, fetchOrders);
+  const [cancelTarget, setCancelTarget] = useState<{ id: string; label: string } | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
+
+  const { data: currentUser } = useApi<{ role: string }>('/api/auth/me');
+  const canCancel = canRoleCancel(currentUser?.role);
+
+  const { data, mutate } = useSWR(url, fetchOrders);
   const orders = data?.data ?? [];
+
+  async function handleCancelOrder() {
+    if (!cancelTarget) return;
+    setIsCancelling(true);
+
+    const response = await fetch(`/api/food-orders?id=${cancelTarget.id}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+
+    setIsCancelling(false);
+    const body = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      toast.error(body.error || 'Unable to cancel this order');
+      return;
+    }
+
+    toast.success(`Order ${cancelTarget.label} cancelled`);
+    setCancelTarget(null);
+    await mutate();
+  }
+
   const totalPages = Math.max(1, Math.ceil(orders.length / PAGE_SIZE));
   const start = (page - 1) * PAGE_SIZE;
   const paginatedOrders = orders.slice(start, start + PAGE_SIZE);
@@ -152,13 +185,16 @@ export default function FoodOrdersListPage() {
                 <th scope="col" className="border-l border-border px-5 py-4 font-medium">Order total</th>
                 <th scope="col" className="border-l border-border px-5 py-4 font-medium">Kitchen status</th>
                 <th scope="col" className="border-l border-border px-5 py-4 font-medium">Time placed</th>
+                {canCancel && (
+                  <th scope="col" className="border-l border-border px-5 py-4 font-medium">Actions</th>
+                )}
               </tr>
             </thead>
             <tbody>
-            
+
               { orders.length === 0 && (
                 <tr className="border-b border-border">
-                  <td colSpan={6} className="px-5 py-12 text-center text-[var(--color-text-secondary)]">No orders found.</td>
+                  <td colSpan={canCancel ? 7 : 6} className="px-5 py-12 text-center text-[var(--color-text-secondary)]">No orders found.</td>
                 </tr>
               )}
               {paginatedOrders.map((order) => {
@@ -186,6 +222,29 @@ export default function FoodOrdersListPage() {
                       </span>
                     </td>
                     <td className="border-l border-border px-5 py-4 text-[var(--color-text-secondary)]">{order.time}</td>
+                    {canCancel && (
+                      <td className="border-l border-border px-5 py-4">
+                        {(() => {
+                          const check = canCancelFoodOrder(statusKey);
+                          return (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setCancelTarget({
+                                  id: order.id,
+                                  label: order.orderId ?? order.id.slice(0, 8),
+                                })
+                              }
+                              disabled={!check.allowed}
+                              title={check.allowed ? 'Cancel this order' : check.reason}
+                              className="rounded-lg px-2.5 py-1 text-xs font-medium text-[var(--color-danger)] transition-colors hover:bg-[var(--color-danger)]/10 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+                            >
+                              Cancel
+                            </button>
+                          );
+                        })()}
+                      </td>
+                    )}
                   </tr>
                 );
               })}
@@ -206,6 +265,16 @@ export default function FoodOrdersListPage() {
           </div>
         ) : null}
       </section>
+
+      <ConfirmDialog
+        isOpen={Boolean(cancelTarget)}
+        onClose={() => setCancelTarget(null)}
+        onConfirm={handleCancelOrder}
+        title="Cancel order"
+        message={`Cancel order ${cancelTarget?.label ?? ''}? The guest will be notified and not charged.`}
+        confirmLabel="Cancel order"
+        isLoading={isCancelling}
+      />
     </div>
   );
 }

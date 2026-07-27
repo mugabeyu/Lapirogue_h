@@ -20,6 +20,12 @@ import { StatusBadge } from '@/components/StatusBadge';
 import { EditGuestModal } from '@/components/modals/EditGuestModal';
 import { useApi } from '@/hooks/useApi';
 import { useRealtimeRefresh } from '@/hooks/useRealtimeRefresh';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
+import {
+  canCancelActivityBooking,
+  canCancelFoodOrder,
+  canRoleCancel,
+} from '@/lib/cancellation';
 import type { Guest, GuestAccountStatus, GuestProfileData, GuestStay } from '@/types';
 import { toast } from 'sonner';
 
@@ -43,6 +49,10 @@ export default function GuestDetailsPage() {
   const [activeTab, setActiveTab] = useState<TabId>('overview');
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isStatusChanging, setIsStatusChanging] = useState(false);
+  const [cancelTarget, setCancelTarget] = useState<
+    { kind: 'activity' | 'order'; id: string; label: string } | null
+  >(null);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   const { data: profile, mutate } = useApi<GuestProfileData>(
     `/api/guests/${params.id}/profile`,
@@ -76,10 +86,36 @@ export default function GuestDetailsPage() {
     await mutate();
   }
 
+  async function handleCancel() {
+    if (!cancelTarget) return;
+    setIsCancelling(true);
+
+    const endpoint =
+      cancelTarget.kind === 'activity'
+        ? `/api/activities/book?id=${cancelTarget.id}`
+        : `/api/food-orders?id=${cancelTarget.id}`;
+
+    const response = await fetch(endpoint, { method: 'DELETE', credentials: 'include' });
+    setIsCancelling(false);
+    const body = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      toast.error(body.error || 'Unable to cancel');
+      return;
+    }
+
+    toast.success(
+      cancelTarget.kind === 'activity' ? 'Activity booking cancelled' : 'Order cancelled',
+    );
+    setCancelTarget(null);
+    await mutate();
+  }
+
   if (!profile) return null;
 
   const { guest, currentStay, reservations, activityBookings, foodOrders, payments, stats } = profile;
   const isManager = currentUser?.role === 'MANAGER';
+  const canCancel = canRoleCancel(currentUser?.role);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -117,25 +153,39 @@ export default function GuestDetailsPage() {
       {activeTab === 'activities' && (
         <TabList
           emptyMessage="No activity bookings found."
-          rows={activityBookings.map((b) => ({
-            id: b.id,
-            primary: b.activity ?? 'Activity',
-            secondary: formatDate(b.date),
-            meta: `${b.participants} participant(s)`,
-            status: b.status,
-          }))}
+          onCancel={(row) => setCancelTarget({ kind: 'activity', id: row.id, label: row.primary })}
+          rows={activityBookings.map((b) => {
+            const check = canCancelActivityBooking({ status: b.status, date: b.date });
+            return {
+              id: b.id,
+              primary: b.activity ?? 'Activity',
+              secondary: formatDate(b.date),
+              meta: `${b.participants} participant(s)`,
+              status: b.status,
+              cancel: canCancel
+                ? { disabledReason: check.allowed ? null : check.reason }
+                : undefined,
+            };
+          })}
         />
       )}
       {activeTab === 'food' && (
         <TabList
           emptyMessage="No food orders found."
-          rows={foodOrders.map((o) => ({
-            id: o.id,
-            primary: o.orderId,
-            secondary: formatDate(o.createdAt),
-            meta: formatCurrency(o.total),
-            status: o.status,
-          }))}
+          onCancel={(row) => setCancelTarget({ kind: 'order', id: row.id, label: row.primary })}
+          rows={foodOrders.map((o) => {
+            const check = canCancelFoodOrder(o.status);
+            return {
+              id: o.id,
+              primary: o.orderId,
+              secondary: formatDate(o.createdAt),
+              meta: formatCurrency(o.total),
+              status: o.status,
+              cancel: canCancel
+                ? { disabledReason: check.allowed ? null : check.reason }
+                : undefined,
+            };
+          })}
         />
       )}
       {activeTab === 'payments' && (
@@ -159,6 +209,16 @@ export default function GuestDetailsPage() {
         onSaved={async () => {
           await mutate();
         }}
+      />
+
+      <ConfirmDialog
+        isOpen={Boolean(cancelTarget)}
+        onClose={() => setCancelTarget(null)}
+        onConfirm={handleCancel}
+        title={cancelTarget?.kind === 'order' ? 'Cancel order' : 'Cancel activity booking'}
+        message={`Cancel ${cancelTarget?.label ?? 'this item'} for ${guest.firstName} ${guest.lastName}? They will be notified.`}
+        confirmLabel={cancelTarget?.kind === 'order' ? 'Cancel order' : 'Cancel booking'}
+        isLoading={isCancelling}
       />
     </div>
   );
@@ -417,12 +477,24 @@ function StatRow({ icon, label, value }: { icon: React.ReactNode; label: string;
   );
 }
 
+type TabRow = {
+  id: string;
+  primary: string;
+  secondary: string;
+  meta: string;
+  status: string;
+  /** Set when this row may be cancelled; absent rows show no action. */
+  cancel?: { disabledReason: string | null };
+};
+
 function TabList({
   rows,
   emptyMessage,
+  onCancel,
 }: {
-  rows: Array<{ id: string; primary: string; secondary: string; meta: string; status: string }>;
+  rows: TabRow[];
   emptyMessage: string;
+  onCancel?: (row: TabRow) => void;
 }) {
   if (rows.length === 0) {
     return (
@@ -442,6 +514,17 @@ function TabList({
             <div className="flex items-center gap-3">
               <span className="text-sm font-medium text-[var(--color-text-primary)]">{row.meta}</span>
               <StatusBadge status={row.status} />
+              {onCancel && row.cancel && (
+                <button
+                  type="button"
+                  onClick={() => onCancel(row)}
+                  disabled={Boolean(row.cancel.disabledReason)}
+                  title={row.cancel.disabledReason ?? 'Cancel this for the guest'}
+                  className="rounded-lg px-2.5 py-1 text-xs font-medium text-[var(--color-danger)] transition-colors hover:bg-[var(--color-danger)]/10 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+                >
+                  Cancel
+                </button>
+              )}
             </div>
           </li>
         ))}

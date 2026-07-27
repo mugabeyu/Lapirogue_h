@@ -65,7 +65,11 @@ type ActivityRow = {
   image_path?: string | null;
 };
 
-function mapActivity(row: ActivityRow, nextSession?: { date: string; time: string | null; label: string } | null) {
+function mapActivity(
+  row: ActivityRow,
+  nextSession?: { date: string; time: string | null; label: string } | null,
+  activeBookingCount = 0,
+) {
   return {
     id: row.id,
     name: row.name,
@@ -84,6 +88,9 @@ function mapActivity(row: ActivityRow, nextSession?: { date: string; time: strin
     status: row.status,
     imagePath: row.image_path ?? undefined,
     nextSession: nextSession ?? null,
+    // Lets the list disable Delete and say why, instead of offering an action
+    // that the DELETE handler will reject.
+    activeBookingCount,
   };
 }
 
@@ -112,6 +119,20 @@ export async function GET(request: NextRequest) {
       .neq('status', 'CANCELLED')
       .order('booking_date', { ascending: true });
 
+    // Counted over all dates, not just upcoming ones: a past booking still
+    // references the activity, so deleting it would orphan that record. This
+    // mirrors exactly what the DELETE handler checks.
+    const { data: bookedRows } = await supabase
+      .from('activity_bookings')
+      .select('activity_id')
+      .neq('status', 'CANCELLED');
+
+    const bookingCountByActivity = new Map<string, number>();
+    for (const row of bookedRows ?? []) {
+      const key = row.activity_id as string;
+      bookingCountByActivity.set(key, (bookingCountByActivity.get(key) ?? 0) + 1);
+    }
+
     const nextByActivity = new Map<string, { date: string; time: string | null; label: string }>();
     for (const booking of upcoming ?? []) {
       const activityId = booking.activity_id as string;
@@ -131,7 +152,11 @@ export async function GET(request: NextRequest) {
     }
 
     const activities = (data ?? []).map((row) =>
-      mapActivity(row as ActivityRow, nextByActivity.get(row.id) ?? null),
+      mapActivity(
+        row as ActivityRow,
+        nextByActivity.get(row.id) ?? null,
+        bookingCountByActivity.get(row.id) ?? 0,
+      ),
     );
 
     const categories = Array.from(new Set(activities.map((a) => a.category))).sort();

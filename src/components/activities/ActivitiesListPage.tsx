@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import useSWR from 'swr';
 import { useApi } from '@/hooks/useApi';
 import {
@@ -9,11 +9,14 @@ import {
   Grid3X3,
   LayoutList,
   MapPin,
+  Pencil,
   Plus,
+  SearchIcon,
   Users,
 } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { BookActivityModal } from '@/components/modals/BookActivityModal';
+import { ManageActivityModal } from '@/components/modals/ManageActivityModal';
 import Button from '@/components/ui/Button';
 import {
   ACTIVITY_CATEGORIES,
@@ -34,12 +37,32 @@ async function fetchActivities(url: string) {
   return response.json() as Promise<ActivitiesResponse>;
 }
 
+/**
+ * Opens edit/delete for an activity. Shown only to managers — reception can
+ * book an activity but not change the catalogue.
+ */
+function ManageActivityButton({ onManage, name }: { onManage: () => void; name: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onManage}
+      aria-label={`Edit ${name}`}
+      title={`Edit ${name}`}
+      className="rounded-xl border border-card-border bg-surface p-2 text-[var(--color-text-secondary)] transition-colors hover:bg-surface-secondary hover:text-[var(--color-text-primary)]"
+    >
+      <Pencil className="h-4 w-4" />
+    </button>
+  );
+}
+
 function ActivityListCard({
   activity,
   onBook,
+  onManage,
 }: {
   activity: ActivityListItem;
   onBook: () => void;
+  onManage?: () => void;
 }) {
   const scheduleLabel = activity.nextSession?.label ?? activity.meetingPoint ?? 'Schedule TBC';
 
@@ -61,7 +84,10 @@ function ActivityListCard({
 
         <div className="flex min-w-0 flex-1 flex-col justify-between gap-4">
           <div>
-            <h3 className="font-display text-2xl text-[var(--color-text-primary)]">{activity.name}</h3>
+            <div className="flex items-start justify-between gap-3">
+              <h3 className="font-display text-2xl text-[var(--color-text-primary)]">{activity.name}</h3>
+              {onManage && <ManageActivityButton onManage={onManage} name={activity.name} />}
+            </div>
             <ul className="mt-3 space-y-1.5 text-sm text-[var(--color-text-secondary)]">
               <li className="flex items-center gap-2">
                 <Clock className="h-4 w-4 text-[var(--color-text-secondary)]" />
@@ -92,9 +118,11 @@ function ActivityListCard({
 function ActivityGridCard({
   activity,
   onBook,
+  onManage,
 }: {
   activity: ActivityListItem;
   onBook: () => void;
+  onManage?: () => void;
 }) {
   return (
     <article className="flex h-full flex-col overflow-hidden rounded-xl border border-card-border bg-surface">
@@ -107,6 +135,11 @@ function ActivityGridCard({
         <span className="absolute left-3 top-3 rounded-full bg-surface px-3 py-1 text-xs font-medium text-[var(--color-text-primary)]">
           {activity.category}
         </span>
+        {onManage && (
+          <div className="absolute right-3 top-3">
+            <ManageActivityButton onManage={onManage} name={activity.name} />
+          </div>
+        )}
       </div>
         <div className="flex flex-1 flex-col p-4">
         <h3 className="font-display text-lg text-[var(--color-text-primary)]">{activity.name}</h3>
@@ -125,16 +158,29 @@ function ActivityGridCard({
 export default function ActivitiesListPage() {
   const { data: currentUser } = useApi<{ role: string }>('/api/auth/me');
   const [category, setCategory] = useState('All');
+  const [search, setSearch] = useState('');
   const [view, setView] = useState<ViewMode>('list');
   const [bookingActivity, setBookingActivity] = useState<ActivityListItem | null>(null);
+  const [managingActivity, setManagingActivity] = useState<ActivityListItem | null>(null);
+
+  // Debounced so typing doesn't fire a request per keystroke; the input stays
+  // fully responsive because only the fetch key lags behind it.
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   const url = useMemo(() => {
     const params = new URLSearchParams();
     if (category !== 'All') params.set('category', category);
+    if (debouncedSearch) params.set('search', debouncedSearch);
     return `/api/activities?${params}`;
-  }, [category]);
+  }, [category, debouncedSearch]);
 
-  const { data, mutate } = useSWR(url, fetchActivities);
+  // keepPreviousData stops the list emptying out between keystrokes, which
+  // otherwise flashes the "no activities match" state mid-search.
+  const { data, mutate } = useSWR(url, fetchActivities, { keepPreviousData: true });
   const activities = data?.data ?? [];
   const isManager = currentUser?.role === 'MANAGER';
   const categories = useMemo(() => {
@@ -157,6 +203,23 @@ export default function ActivitiesListPage() {
           </Link>
         ) : undefined}
       />
+
+      <div>
+        <label htmlFor="activity-search" className="sr-only">
+          Search activities and tours
+        </label>
+        <div className="relative w-full sm:w-96">
+          <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-secondary)]" />
+          <input
+            id="activity-search"
+            type="search"
+            placeholder="Search activities and tours..."
+            className="input-field w-full pl-10"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
+        </div>
+      </div>
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap gap-2">
@@ -202,8 +265,12 @@ className={`rounded-xl px-4 py-2 text-sm font-medium transition-colors ${
      
       { activities.length === 0 && (
         <div className="card rounded-xl border-dashed border-card-border px-6 py-16 text-center">
-          <p className="text-[var(--color-text-secondary)]">No activities in this category yet.</p>
-          {isManager && (
+          <p className="text-[var(--color-text-secondary)]">
+            {debouncedSearch
+              ? `No activities match “${debouncedSearch}”.`
+              : 'No activities in this category yet.'}
+          </p>
+          {isManager && !debouncedSearch && (
             <Link href="/activities/new" className="mt-4 inline-block">
               <Button variant="secondary">Add your first activity →</Button>
             </Link>
@@ -218,6 +285,7 @@ className={`rounded-xl px-4 py-2 text-sm font-medium transition-colors ${
               key={activity.id}
               activity={activity}
               onBook={() => setBookingActivity(activity)}
+              onManage={isManager ? () => setManagingActivity(activity) : undefined}
             />
           ))}
         </div>
@@ -230,6 +298,7 @@ className={`rounded-xl px-4 py-2 text-sm font-medium transition-colors ${
               key={activity.id}
               activity={activity}
               onBook={() => setBookingActivity(activity)}
+              onManage={isManager ? () => setManagingActivity(activity) : undefined}
             />
           ))}
         </div>
@@ -243,6 +312,17 @@ className={`rounded-xl px-4 py-2 text-sm font-medium transition-colors ${
           onBooked={() => {
             setBookingActivity(null);
             mutate();
+          }}
+        />
+      )}
+
+      {managingActivity && isManager && (
+        <ManageActivityModal
+          isOpen={Boolean(managingActivity)}
+          onClose={() => setManagingActivity(null)}
+          activity={managingActivity}
+          onSaved={async () => {
+            await mutate();
           }}
         />
       )}

@@ -96,7 +96,34 @@ async function getStaffRole(supabase: ReturnType<typeof createServerClient>, use
 // authenticated staff member (Admin/Manager/Receptionist), matching pre-existing
 // behaviour. This exists because the Sidebar only hides nav links client-side —
 // it does not by itself prevent a user from navigating directly to a hidden route.
-const ROLE_RESTRICTED_PATHS: { prefixes: string[]; roles: string[] }[] = [
+const READ_METHODS = ['GET', 'HEAD'];
+
+/**
+ * Route-level role restrictions. Each entry lists the ONLY roles permitted to
+ * access a path (and everything under it). Paths not listed here are
+ * accessible to any authenticated staff member. This exists because the
+ * Sidebar only hides nav links client-side — it does not by itself prevent a
+ * user from navigating directly to a hidden route.
+ *
+ * `methods` narrows an entry to specific HTTP verbs. That distinction matters
+ * for the department and manager lists: only an admin may change them, but a
+ * manager has to be able to *read* them to fill in the Department and
+ * Reporting Manager fields when adding a receptionist. Restricting those
+ * endpoints wholesale left both dropdowns permanently empty.
+ *
+ * Order matters — the first matching entry wins, so method-scoped read
+ * exceptions are listed before the broader write restriction.
+ */
+const ROLE_RESTRICTED_PATHS: {
+  prefixes: string[];
+  roles: string[];
+  methods?: string[];
+}[] = [
+  {
+    prefixes: ['/api/departments', '/api/managers'],
+    roles: ['ADMIN', 'MANAGER'],
+    methods: READ_METHODS,
+  },
   { prefixes: ['/departments', '/managers', '/audit-log', '/api/departments', '/api/managers', '/api/audit-log'], roles: ['ADMIN'] },
   {
     prefixes: [
@@ -109,9 +136,13 @@ const ROLE_RESTRICTED_PATHS: { prefixes: string[]; roles: string[] }[] = [
   { prefixes: ['/schedule', '/messages', '/api/schedule', '/api/messages'], roles: ['RECEPTIONIST'] },
 ];
 
-function matchRestriction(pathname: string) {
-  return ROLE_RESTRICTED_PATHS.find((entry) =>
-    entry.prefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))
+function matchRestriction(pathname: string, method: string) {
+  return ROLE_RESTRICTED_PATHS.find(
+    (entry) =>
+      (!entry.methods || entry.methods.includes(method)) &&
+      entry.prefixes.some(
+        (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+      ),
   );
 }
 
@@ -149,7 +180,7 @@ export async function middleware(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Guests must access via the mobile app' }, { status: 403 });
     }
 
-    const restriction = matchRestriction(pathname);
+    const restriction = matchRestriction(pathname, request.method);
     if (restriction) {
       const role = await getStaffRole(supabase, user.id);
       if (!role || !restriction.roles.includes(role)) {
@@ -203,7 +234,9 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  const restriction = matchRestriction(pathname);
+  // Page navigations are always reads; the method-scoped API entries above
+  // must not widen who can open the /departments and /managers pages.
+  const restriction = matchRestriction(pathname, 'PAGE');
   if (restriction) {
     const role = await getStaffRole(supabase, user.id);
     if (!role || !restriction.roles.includes(role)) {

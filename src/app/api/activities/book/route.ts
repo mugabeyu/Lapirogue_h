@@ -3,6 +3,8 @@ import { getSupabaseAdmin } from '@/lib/supabase';
 import { z } from 'zod';
 import { awardEcoPoints, removeEcoPointsBySource } from '@/lib/eco-points';
 import { formatStayDate, notifyGuest } from '@/lib/guest-notifications';
+import { getRequestRole } from '@/lib/auth-server';
+import { canCancelActivityBooking, canRoleCancel } from '@/lib/cancellation';
 
 type ActivityBookingRow = {
   id: string;
@@ -98,7 +100,9 @@ export async function POST(request: NextRequest) {
       .from('reservations')
       .select('id, check_in, check_out, status')
       .eq('guest_id', body.guestId)
-      .in('status', ['RESERVED', 'CHECKED_IN'])
+      // CONFIRMED is included for older bookings still carrying that status;
+      // leaving it out made those guests look like they had no reservation.
+      .in('status', ['RESERVED', 'CONFIRMED', 'CHECKED_IN'])
       .limit(1)
       .maybeSingle();
 
@@ -109,16 +113,54 @@ export async function POST(request: NextRequest) {
       }, { status: 403 });
     }
 
-    // If guest is RESERVED (not checked in), ensure booking date is within reservation dates
-    if (activeReservation.status === 'RESERVED') {
-      const bookingDate = new Date(body.date);
-      const checkIn = new Date(activeReservation.check_in);
-      const checkOut = new Date(activeReservation.check_out);
-      if (bookingDate < checkIn || bookingDate >= checkOut) {
-        return NextResponse.json({
-          success: false,
-          error: 'Activity booking date must be within your reservation period.'
-        }, { status: 403 });
+    // The date has to fall inside the stay whatever the reservation's status.
+    // This previously only ran for RESERVED guests, so a checked-in guest
+    // could be booked onto any date at all — including after they leave.
+    // Date keys are plain `YYYY-MM-DD`, so they compare correctly as strings
+    // and avoid the timezone shift that `new Date(...)` introduces.
+    if (body.date < activeReservation.check_in || body.date > activeReservation.check_out) {
+      return NextResponse.json({
+        success: false,
+        error: `Activity date must fall within the guest's stay (${activeReservation.check_in} to ${activeReservation.check_out}).`
+      }, { status: 403 });
+    }
+
+    // Capacity is per session, so two parties booking the same slot must not
+    // between them exceed it. Checked here as well as in the form because the
+    // form's count can be stale by the time it submits.
+    const sessionTime = parseTimeSlot(body.timeSlot);
+    const { data: activityRow } = await admin
+      .from('activities')
+      .select('capacity')
+      .eq('id', body.activityId)
+      .maybeSingle();
+
+    if (activityRow) {
+      const { data: sessionBookings } = await admin
+        .from('activity_bookings')
+        .select('participants')
+        .eq('activity_id', body.activityId)
+        .eq('booking_date', body.date)
+        .eq('booking_time', sessionTime)
+        .neq('status', 'CANCELLED');
+
+      const alreadyBooked = (sessionBookings ?? []).reduce(
+        (sum, row) => sum + Number(row.participants ?? 0),
+        0,
+      );
+      const capacity = Number(activityRow.capacity ?? 0);
+      const remaining = Math.max(0, capacity - alreadyBooked);
+
+      if (body.participants > remaining) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: remaining === 0
+              ? `That session is fully booked at ${body.timeSlot}.`
+              : `Only ${remaining} place(s) left at ${body.timeSlot}.`,
+          },
+          { status: 409 },
+        );
       }
     }
 
@@ -128,7 +170,7 @@ export async function POST(request: NextRequest) {
         activity_id: body.activityId,
         guest_id: body.guestId,
         booking_date: body.date,
-        booking_time: parseTimeSlot(body.timeSlot),
+        booking_time: sessionTime,
         participants: body.participants,
         pickup_point: body.pickupPoint,
         status: body.status ?? 'CONFIRMED',
@@ -266,17 +308,74 @@ export async function PUT(request: NextRequest) {
   }
 }
 
+/**
+ * Cancels a guest's activity booking.
+ *
+ * This is a soft cancel — the row is kept with status CANCELLED so the guest's
+ * history and the audit trail stay intact. It previously hard-deleted the row,
+ * with no role check and no cutoff, which destroyed the record and let a
+ * booking be removed after the activity had already started.
+ */
 export async function DELETE(request: NextRequest) {
   try {
-    const { searchParams } = request.nextUrl;
-    const id = searchParams.get('id');
+    const role = await getRequestRole(request);
+    if (!canRoleCancel(role)) {
+      return NextResponse.json(
+        { success: false, error: 'Only managers can cancel activity bookings.' },
+        { status: 403 },
+      );
+    }
+
+    const id = request.nextUrl.searchParams.get('id');
     if (!id) {
       return NextResponse.json({ success: false, error: 'ID required' }, { status: 400 });
     }
-    const { error } = await getSupabaseAdmin().from('activity_bookings').delete().eq('id', id);
+
+    const admin = getSupabaseAdmin();
+    const { data: booking } = await admin
+      .from('activity_bookings')
+      .select('id,guest_id,activity_id,booking_date,booking_time,status,activities(name)')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (!booking) {
+      return NextResponse.json({ success: false, error: 'Booking not found' }, { status: 404 });
+    }
+
+    const check = canCancelActivityBooking({
+      status: booking.status,
+      date: booking.booking_date as string,
+      time: booking.booking_time as string | null,
+    });
+
+    if (!check.allowed) {
+      return NextResponse.json({ success: false, error: check.reason }, { status: 409 });
+    }
+
+    const { error } = await admin
+      .from('activity_bookings')
+      .update({ status: 'CANCELLED' })
+      .eq('id', id);
+
     if (error) throw error;
-    return NextResponse.json({ success: true, message: 'Booking deleted' });
+
+    // The activity never happened, so any points awarded for it are withdrawn.
+    await removeEcoPointsBySource('ACTIVITY_BOOKING', id).catch((removeError) =>
+      console.warn('Failed to remove eco points for cancelled booking', removeError),
+    );
+
+    const activityName =
+      (booking.activities as { name?: string } | null)?.name ?? 'your activity';
+
+    await notifyGuest({
+      guestId: booking.guest_id as string,
+      title: 'Activity booking cancelled',
+      message: `Your booking for ${activityName} on ${formatStayDate(booking.booking_date as string)} has been cancelled.`,
+      category: 'Activity',
+    });
+
+    return NextResponse.json({ success: true, message: 'Booking cancelled' });
   } catch {
-    return NextResponse.json({ success: false, error: 'Failed to delete booking' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Failed to cancel booking' }, { status: 500 });
   }
 }

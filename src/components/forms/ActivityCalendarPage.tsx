@@ -3,7 +3,11 @@
 import { useMemo, useState } from 'react';
 import useSWR from 'swr';
 import { ChevronLeft, ChevronRight, User } from 'lucide-react';
+import { toast } from 'sonner';
 import { SESSION_COLOR_STYLES } from '@/lib/activities';
+import { canRoleCancel } from '@/lib/cancellation';
+import { useApi } from '@/hooks/useApi';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 
 type CalendarDay = {
   date: string;
@@ -50,6 +54,11 @@ export default function ActivityCalendarPage() {
   const [anchor, setAnchor] = useState(() => new Date().toISOString().slice(0, 10));
   const [category, setCategory] = useState('All');
   const [selectedSession, setSelectedSession] = useState<CalendarSession | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<{ id: string; name: string } | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
+
+  const { data: currentUser } = useApi<{ role: string }>('/api/auth/me');
+  const isManager = canRoleCancel(currentUser?.role);
 
   const url = useMemo(() => {
     const params = new URLSearchParams({ anchor });
@@ -57,9 +66,33 @@ export default function ActivityCalendarPage() {
     return `/api/activities/calendar?${params}`;
   }, [anchor, category]);
 
-  const { data } = useSWR(url, fetchCalendar);
+  const { data, mutate } = useSWR(url, fetchCalendar);
   const calendar = data?.data;
   const today = calendar?.today ?? anchor;
+
+  async function handleCancelBooking() {
+    if (!cancelTarget) return;
+    setIsCancelling(true);
+
+    const response = await fetch(`/api/activities/book?id=${cancelTarget.id}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+
+    setIsCancelling(false);
+    const body = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      // Surfaces the real reason — the cutoff, or the activity already run.
+      toast.error(body.error || 'Unable to cancel this booking');
+      return;
+    }
+
+    toast.success(`Booking cancelled for ${cancelTarget.name}`);
+    setCancelTarget(null);
+    setSelectedSession(null);
+    await mutate();
+  }
 
   const todayLabel = useMemo(() => {
     const date = new Date(today + 'T12:00:00');
@@ -196,12 +229,20 @@ export default function ActivityCalendarPage() {
                 <span className="rounded-full bg-surface-secondary px-2.5 py-1 text-xs font-semibold text-[var(--color-text-secondary)]">{activeSession.bookedLabel}</span>
               </div>
 
-              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">Attendance</p>
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">Guests booked</p>
               <ul className="space-y-2">
                 {activeSession.guests.slice(0, 3).map((guest) => (
-                  <li key={guest.id} className="flex items-center gap-2 text-sm text-[var(--color-text-primary)]">
-                    <input type="checkbox" className="h-4 w-4 rounded border-border" readOnly />
-                    {guest.name}
+                  <li key={guest.id} className="flex items-center justify-between gap-2 text-sm text-[var(--color-text-primary)]">
+                    <span className="min-w-0 truncate">{guest.name}</span>
+                    {isManager && (
+                      <button
+                        type="button"
+                        onClick={() => setCancelTarget(guest)}
+                        className="shrink-0 rounded-lg px-2 py-1 text-xs font-medium text-[var(--color-danger)] transition-colors hover:bg-[var(--color-danger)]/10"
+                      >
+                        Cancel
+                      </button>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -228,6 +269,16 @@ export default function ActivityCalendarPage() {
           )}
         </aside>
       </div>
+
+      <ConfirmDialog
+        isOpen={Boolean(cancelTarget)}
+        onClose={() => setCancelTarget(null)}
+        onConfirm={handleCancelBooking}
+        title="Cancel activity booking"
+        message={`Cancel ${cancelTarget?.name ?? 'this guest'}'s place on this session? They will be notified.`}
+        confirmLabel="Cancel booking"
+        isLoading={isCancelling}
+      />
     </div>
   );
 }

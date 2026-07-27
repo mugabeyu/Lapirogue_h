@@ -25,6 +25,8 @@ export type ActivityListItem = {
   status: string;
   imagePath?: string;
   nextSession?: { date: string; time: string | null; label: string } | null;
+  /** Non-cancelled bookings referencing this activity; blocks deletion. */
+  activeBookingCount?: number;
 };
 
 export const SESSION_COLOR_STYLES: Record<string, string> = {

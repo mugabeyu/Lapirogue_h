@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { awardEcoPoints } from '@/lib/eco-points';
 import { notifyGuest } from '@/lib/guest-notifications';
+import { getRequestRole } from '@/lib/auth-server';
+import { canCancelFoodOrder, canRoleCancel } from '@/lib/cancellation';
 import { z } from 'zod';
 
 const foodOrderSchema = z.object({
@@ -275,17 +277,60 @@ export async function PUT(request: NextRequest) {
   }
 }
 
+/**
+ * Cancels a guest's food order.
+ *
+ * A soft cancel, so the order stays on the guest's history and their bill
+ * reconciles. It previously hard-deleted the row for anyone who could reach
+ * the endpoint, at any stage — including after the food had been served.
+ */
 export async function DELETE(request: NextRequest) {
   try {
-    const { searchParams } = request.nextUrl;
-    const id = searchParams.get('id');
+    const role = await getRequestRole(request);
+    if (!canRoleCancel(role)) {
+      return NextResponse.json(
+        { success: false, error: 'Only managers can cancel food orders.' },
+        { status: 403 },
+      );
+    }
+
+    const id = request.nextUrl.searchParams.get('id');
     if (!id) {
       return NextResponse.json({ success: false, error: 'ID required' }, { status: 400 });
     }
-    const { error } = await getSupabaseAdmin().from('food_orders').delete().eq('id', id);
+
+    const supabase = getSupabaseAdmin();
+    const { data: order } = await supabase
+      .from('food_orders')
+      .select('id,guest_id,order_id,status')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (!order) {
+      return NextResponse.json({ success: false, error: 'Order not found' }, { status: 404 });
+    }
+
+    const check = canCancelFoodOrder(order.status);
+    if (!check.allowed) {
+      return NextResponse.json({ success: false, error: check.reason }, { status: 409 });
+    }
+
+    const { error } = await supabase
+      .from('food_orders')
+      .update({ status: 'CANCELLED' })
+      .eq('id', id);
+
     if (error) throw error;
-    return NextResponse.json({ success: true, message: 'Food order deleted' });
+
+    await notifyGuest({
+      guestId: order.guest_id as string,
+      title: 'Order cancelled',
+      message: `Your room service order ${order.order_id ?? ''} has been cancelled. You will not be charged for it.`.replace('  ', ' '),
+      category: 'Order',
+    });
+
+    return NextResponse.json({ success: true, message: 'Food order cancelled' });
   } catch {
-    return NextResponse.json({ success: false, error: 'Failed to delete food order' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Failed to cancel food order' }, { status: 500 });
   }
 }

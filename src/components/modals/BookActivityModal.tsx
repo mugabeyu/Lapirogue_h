@@ -1,9 +1,11 @@
 'use client';
 
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { Calendar } from 'lucide-react';
 import { Modal } from '@/components/Modal';
 import { GuestSearchPicker } from '@/components/pickers/GuestSearchPicker';
+import { formatStayDay, useGuestStayPeriod } from '@/hooks/useGuestStayPeriod';
+import { useApi } from '@/hooks/useApi';
 import { ActivityListItem, PICKUP_POINTS, TIME_SLOTS, formatRs } from '@/lib/activities';
 import { Guest } from '@/types';
 import { toast } from 'sonner';
@@ -26,6 +28,36 @@ export function BookActivityModal({ isOpen, onClose, activity, guestId, onBooked
   const [notes, setNotes] = useState('');
 
   const guestSelectedId = selectedGuest?.id ?? guestId ?? '';
+  const { stay, isLoading: isLoadingStay } = useGuestStayPeriod(guestSelectedId);
+
+  // Places left on this specific session, so staff can see whether the party
+  // fits before submitting rather than being rejected afterwards.
+  const { data: availability, isLoading: isLoadingAvailability } =
+    useApi<{ capacity: number; booked: number; remaining: number }>(
+      date
+        ? `/api/activities/availability?activityId=${activity.id}&date=${date}&time=${encodeURIComponent(timeSlot)}`
+        : null,
+    );
+
+  const remaining = availability?.remaining;
+  const exceedsRemaining =
+    remaining !== undefined && participants > remaining;
+
+  // A guest can only take part in an activity while they are staying, so the
+  // picker is bounded by their reservation instead of offering every date.
+  // Switching guest clears a date that falls outside the new guest's stay.
+  useEffect(() => {
+    if (!stay) return;
+    setDate((current) => {
+      if (!current) return stay.from;
+      if (current < stay.from || current > stay.to) return stay.from;
+      return current;
+    });
+  }, [stay]);
+
+  useEffect(() => {
+    if (!guestSelectedId) setDate('');
+  }, [guestSelectedId]);
 
   const priceLabel = useMemo(() => {
     if (activity.price <= 0) return 'Complimentary';
@@ -36,6 +68,15 @@ export function BookActivityModal({ isOpen, onClose, activity, guestId, onBooked
     event.preventDefault();
     if (!guestSelectedId) {
       toast.error('Please select a guest');
+      return;
+    }
+
+    if (exceedsRemaining) {
+      toast.error(
+        remaining === 0
+          ? `That session is fully booked at ${timeSlot}.`
+          : `Only ${remaining} place${remaining === 1 ? '' : 's'} left at ${timeSlot}.`,
+      );
       return;
     }
 
@@ -100,10 +141,22 @@ export function BookActivityModal({ isOpen, onClose, activity, guestId, onBooked
                 type="date"
                 required
                 value={date}
+                min={stay?.from}
+                max={stay?.to}
+                disabled={!guestSelectedId || !stay}
                 onChange={(event) => setDate(event.target.value)}
-                className="input-field pl-10"
+                className="input-field pl-10 disabled:cursor-not-allowed disabled:opacity-60"
               />
             </div>
+            <p className="text-xs text-[var(--color-text-secondary)]">
+              {!guestSelectedId
+                ? 'Select a guest first.'
+                : isLoadingStay
+                  ? 'Checking their stay dates...'
+                  : stay
+                    ? `Stay period: ${formatStayDay(stay.from)} — ${formatStayDay(stay.to)}`
+                    : 'This guest has no active reservation, so there are no dates to book.'}
+            </p>
           </label>
           <label className="block space-y-2">
             <span className="text-sm font-semibold text-[var(--color-text-primary)]">Time Slot</span>
@@ -124,12 +177,29 @@ export function BookActivityModal({ isOpen, onClose, activity, guestId, onBooked
             <input
               type="number"
               min={1}
-              max={activity.capacity}
+              max={remaining ?? activity.capacity}
               required
               value={participants}
               onChange={(event) => setParticipants(Number(event.target.value))}
               className="input-field"
             />
+            <p
+              className={`text-xs ${
+                exceedsRemaining || remaining === 0
+                  ? 'text-[var(--color-danger)]'
+                  : 'text-[var(--color-text-secondary)]'
+              }`}
+            >
+              {!date
+                ? 'Pick a date to see availability.'
+                : isLoadingAvailability || remaining === undefined
+                  ? 'Checking availability...'
+                  : remaining === 0
+                    ? `Fully booked at ${timeSlot} — no places left.`
+                    : exceedsRemaining
+                      ? `Only ${remaining} place${remaining === 1 ? '' : 's'} left at ${timeSlot}.`
+                      : `${remaining} of ${availability?.capacity} place${remaining === 1 ? '' : 's'} left at ${timeSlot}.`}
+            </p>
           </label>
           <label className="block space-y-2">
             <span className="text-sm font-semibold text-[var(--color-text-primary)]">Pickup Point</span>
