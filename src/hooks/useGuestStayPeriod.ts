@@ -11,12 +11,32 @@ type ReservationSummary = {
 };
 
 export type GuestStayPeriod = {
-  /** First day the guest may be booked for (their check-in). */
+  /** The stay itself — shown to staff so they know the guest's dates. */
   from: string;
-  /** Last day the guest may be booked for (their check-out). */
   to: string;
+  /**
+   * Earliest day that can actually be booked: the later of check-in and
+   * today. A stay that began last week is still current, but its past days
+   * are not bookable — the API rejects any slot less than ten minutes away,
+   * so offering them produced a booking that could only ever fail.
+   */
+  bookableFrom: string;
+  /** Latest bookable day: the guest's check-out. */
+  bookableTo: string;
+  /** False once the whole stay is in the past. */
+  hasBookableDays: boolean;
   status: string | null;
 };
+
+/** Today as a `YYYY-MM-DD` key in the browser's own timezone. */
+export function todayKey() {
+  const now = new Date();
+  return [
+    now.getFullYear(),
+    String(now.getMonth() + 1).padStart(2, '0'),
+    String(now.getDate()).padStart(2, '0'),
+  ].join('-');
+}
 
 /**
  * The stay a guest is currently on, used to bound date pickers so staff can
@@ -52,9 +72,16 @@ export function useGuestStayPeriod(guestId: string | null | undefined) {
         .sort((a, b) => (a.checkIn ?? '').localeCompare(b.checkIn ?? ''))[0] ??
       rows[0];
 
+    const from = active.checkIn as string;
+    const to = active.checkOut as string;
+    const bookableFrom = from > todayKey() ? from : todayKey();
+
     return {
-      from: active.checkIn as string,
-      to: active.checkOut as string,
+      from,
+      to,
+      bookableFrom,
+      bookableTo: to,
+      hasBookableDays: bookableFrom <= to,
       status: active.status,
     };
   }, [data]);

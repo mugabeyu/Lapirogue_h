@@ -49,6 +49,47 @@ export const TIME_SLOTS = [
 
 export const PICKUP_POINTS = ['Hotel Lobby', 'Beach Hut', 'Pool Deck', 'Marina Pier'];
 
+/**
+ * Registration closes this long before a session starts, so a guest is not
+ * signed up for something already under way.
+ */
+export const REGISTRATION_CUTOFF_MS = 10 * 60 * 1000;
+
+/** `'02:00 PM'` -> `'14:00:00'`. Returns null if the slot is unparseable. */
+export function parseTimeSlot(timeSlot?: string | null) {
+  const trimmed = timeSlot?.trim();
+  if (!trimmed) return null;
+
+  const match12 = trimmed.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)$/i);
+  if (match12) {
+    let hour = Number(match12[1]) % 12;
+    if (match12[4].toUpperCase() === 'PM') hour += 12;
+    return `${String(hour).padStart(2, '0')}:${match12[2]}:${match12[3] ?? '00'}`;
+  }
+  if (/^\d{2}:\d{2}(?::\d{2})?$/.test(trimmed)) {
+    const [h, m, s] = trimmed.split(':');
+    return `${h.padStart(2, '0')}:${m.padStart(2, '0')}:${s ?? '00'}`;
+  }
+  return null;
+}
+
+/**
+ * Whether a session is too close to start (or already past) to register for.
+ *
+ * Shared by the API and the booking form so the dropdown cannot offer a slot
+ * the server will then refuse — the mismatch is what produced a bare 409 with
+ * no way to tell which field was wrong.
+ */
+export function isWithinRegistrationCutoff(date: string, timeSlot?: string | null) {
+  const parsedTime = parseTimeSlot(timeSlot);
+  if (!parsedTime) return false;
+
+  const scheduledAt = new Date(`${date}T${parsedTime}`);
+  if (Number.isNaN(scheduledAt.getTime())) return false;
+
+  return scheduledAt.getTime() - Date.now() < REGISTRATION_CUTOFF_MS;
+}
+
 export function formatRs(price: number) {
   if (price <= 0) return 'Complimentary';
   return `Rs ${price.toLocaleString('en-IN')}`;

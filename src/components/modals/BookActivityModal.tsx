@@ -6,7 +6,13 @@ import { Modal } from '@/components/Modal';
 import { GuestSearchPicker } from '@/components/pickers/GuestSearchPicker';
 import { formatStayDay, useGuestStayPeriod } from '@/hooks/useGuestStayPeriod';
 import { useApi } from '@/hooks/useApi';
-import { ActivityListItem, PICKUP_POINTS, TIME_SLOTS, formatRs } from '@/lib/activities';
+import {
+  ActivityListItem,
+  PICKUP_POINTS,
+  TIME_SLOTS,
+  formatRs,
+  isWithinRegistrationCutoff,
+} from '@/lib/activities';
 import { Guest } from '@/types';
 import { toast } from 'sonner';
 
@@ -43,15 +49,31 @@ export function BookActivityModal({ isOpen, onClose, activity, guestId, onBooked
   const exceedsRemaining =
     remaining !== undefined && participants > remaining;
 
+  // On today's date the earlier sessions have already started, and the API
+  // refuses anything inside the cutoff. Offering them anyway is what produced
+  // a booking that failed on submit with no indication of which field to fix.
+  const selectableSlots = useMemo(
+    () => (date ? TIME_SLOTS.filter((slot) => !isWithinRegistrationCutoff(date, slot)) : TIME_SLOTS),
+    [date],
+  );
+
+  // Keep the selection on a slot that is still open once the date changes.
+  useEffect(() => {
+    if (selectableSlots.length === 0) return;
+    if (!selectableSlots.includes(timeSlot)) setTimeSlot(selectableSlots[0]);
+  }, [selectableSlots, timeSlot]);
+
   // A guest can only take part in an activity while they are staying, so the
-  // picker is bounded by their reservation instead of offering every date.
-  // Switching guest clears a date that falls outside the new guest's stay.
+  // picker is bounded by their reservation. The window starts at the later of
+  // check-in and today: a stay that began days ago is still current, but the
+  // API refuses any slot under ten minutes away, so defaulting to the
+  // check-in date handed staff a booking that could only ever be rejected.
   useEffect(() => {
     if (!stay) return;
     setDate((current) => {
-      if (!current) return stay.from;
-      if (current < stay.from || current > stay.to) return stay.from;
-      return current;
+      const withinWindow =
+        current >= stay.bookableFrom && current <= stay.bookableTo;
+      return current && withinWindow ? current : stay.bookableFrom;
     });
   }, [stay]);
 
@@ -102,7 +124,12 @@ export function BookActivityModal({ isOpen, onClose, activity, guestId, onBooked
       onClose();
       return;
     }
-    toast.error('Unable to confirm booking');
+
+    // Surface why it was refused. A flat "Unable to confirm booking" hid the
+    // actual reason — a past time slot, a full session — leaving no way to
+    // tell what to change.
+    const error = await response.json().catch(() => null);
+    toast.error(error?.error || 'Unable to confirm booking');
   }
 
   return (
@@ -141,9 +168,9 @@ export function BookActivityModal({ isOpen, onClose, activity, guestId, onBooked
                 type="date"
                 required
                 value={date}
-                min={stay?.from}
-                max={stay?.to}
-                disabled={!guestSelectedId || !stay}
+                min={stay?.bookableFrom}
+                max={stay?.bookableTo}
+                disabled={!guestSelectedId || !stay || !stay.hasBookableDays}
                 onChange={(event) => setDate(event.target.value)}
                 className="input-field pl-10 disabled:cursor-not-allowed disabled:opacity-60"
               />
@@ -153,9 +180,11 @@ export function BookActivityModal({ isOpen, onClose, activity, guestId, onBooked
                 ? 'Select a guest first.'
                 : isLoadingStay
                   ? 'Checking their stay dates...'
-                  : stay
-                    ? `Stay period: ${formatStayDay(stay.from)} — ${formatStayDay(stay.to)}`
-                    : 'This guest has no active reservation, so there are no dates to book.'}
+                  : !stay
+                    ? 'This guest has no active reservation, so there are no dates to book.'
+                    : !stay.hasBookableDays
+                      ? `Their stay ended on ${formatStayDay(stay.to)}, so there are no dates left to book.`
+                      : `Stay period: ${formatStayDay(stay.from)} — ${formatStayDay(stay.to)}`}
             </p>
           </label>
           <label className="block space-y-2">
@@ -163,14 +192,20 @@ export function BookActivityModal({ isOpen, onClose, activity, guestId, onBooked
             <select
               value={timeSlot}
               onChange={(event) => setTimeSlot(event.target.value)}
-              className="input-field"
+              disabled={selectableSlots.length === 0}
+              className="input-field disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {TIME_SLOTS.map((slot) => (
+              {selectableSlots.map((slot) => (
                 <option key={slot} value={slot}>
                   {slot}
                 </option>
               ))}
             </select>
+            {selectableSlots.length === 0 && (
+              <p className="text-xs text-[var(--color-text-secondary)]">
+                Every session for this date has already started. Pick a later date.
+              </p>
+            )}
           </label>
           <label className="block space-y-2">
             <span className="text-sm font-semibold text-[var(--color-text-primary)]">Participants</span>

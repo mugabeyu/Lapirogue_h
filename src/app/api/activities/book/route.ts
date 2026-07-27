@@ -5,6 +5,7 @@ import { awardEcoPoints, removeEcoPointsBySource } from '@/lib/eco-points';
 import { formatStayDate, notifyGuest } from '@/lib/guest-notifications';
 import { getRequestRole } from '@/lib/auth-server';
 import { canCancelActivityBooking, canRoleCancel } from '@/lib/cancellation';
+import { isWithinRegistrationCutoff, parseTimeSlot } from '@/lib/activities';
 
 type ActivityBookingRow = {
   id: string;
@@ -29,32 +30,6 @@ const bookingSchema = z.object({
   notes: z.string().optional(),
   origin: z.enum(['MOBILE_APP', 'RECEPTION_DESK', 'MANAGER_PORTAL']).optional(),
 });
-
-function parseTimeSlot(value?: string) {
-  if (!value) return null;
-  const trimmed = value.trim();
-  const match12 = trimmed.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)?$/i);
-  if (match12?.[4]) {
-    let hour = Number(match12[1]) % 12;
-    if (match12[4].toUpperCase() === 'PM') hour += 12;
-    return `${String(hour).padStart(2, '0')}:${match12[2]}:${match12[3] ?? '00'}`;
-  }
-  if (/^\d{2}:\d{2}(?::\d{2})?$/.test(trimmed)) {
-    const [h, m, s] = trimmed.split(':');
-    return `${h.padStart(2, '0')}:${m.padStart(2, '0')}:${s ?? '00'}`;
-  }
-  return null;
-}
-
-function isWithinRegistrationCutoff(date: string, timeSlot?: string) {
-  const parsedTime = parseTimeSlot(timeSlot);
-  if (!parsedTime) return false;
-
-  const scheduledAt = new Date(`${date}T${parsedTime}`);
-  if (Number.isNaN(scheduledAt.getTime())) return false;
-
-  return scheduledAt.getTime() - Date.now() < 10 * 60 * 1000;
-}
 
 export async function GET() {
   try {
